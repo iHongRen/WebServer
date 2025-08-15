@@ -12,9 +12,10 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { Utils } from './Utils';
 import { HttpRequest } from './HttpRequest';
 import { HttpResponse } from './HttpResponse';
+import { fileIo } from '@kit.CoreFileKit';
 
-// 定义请求处理函数类型
-export type RequestHandler = (req: HttpRequest, res: HttpResponse) => void;
+// 更新请求处理函数类型以支持 next 回调
+export type RequestHandler = (req: HttpRequest, res: HttpResponse, next: () => void) => void;
 
 interface Route {
   method: string;
@@ -28,15 +29,17 @@ export class WebServer {
   private routes: Route[] = [];
 
   constructor() {
-    // 默认404处理
-    this.use((req, res) => {
-      res.status(404).json({ error: 'Not Found', path: req.path });
+    // 默认404处理，作为最后一个中间件
+    this.use((req, res, next) => {
+      if (!res.isHeadersSent()) { // 检查头部是否已发送，避免重复响应
+        res.status(404).json({ error: 'Not Found', path: req.path });
+      }
     });
   }
 
-  // 注册中间件或最终处理
+  // 注册中间件
   public use(handler: RequestHandler) {
-    this.routes.push({ method: 'ANY', path: '*', handler });
+    this.addRoute('ANY', '*', handler);
   }
 
   public get(path: string, handler: RequestHandler) {
@@ -47,22 +50,54 @@ export class WebServer {
     this.addRoute('POST', path, handler);
   }
 
+  // 静态文件服务中间件
+  public serveStatic(directoryPath: string) {
+    const staticFileHandler: RequestHandler = async (req, res, next) => {
+      if (req.method !== 'GET') {
+        return next(); // 非GET请求，交给下一个处理器
+      }
+
+      // 安全性：规范化路径并防止目录遍历
+      const requestedPath = Utils.normalizePath(req.path);
+      if (requestedPath.includes('..')) {
+        return res.status(400).send('Invalid Path');
+      }
+
+      let fullPath = directoryPath + (requestedPath === '/' ? '/index.html' : requestedPath);
+
+      try {
+        const stat = await fileIo.stat(fullPath);
+        if (stat.isDirectory()) {
+          // 如果路径是目录，尝试服务该目录下的 index.html
+          fullPath = Utils.joinPath(fullPath, 'index.html');
+          await fileIo.stat(fullPath); // 检查 index.html 是否存在
+        }
+
+        const mimeType = Utils.getMimeType(fullPath);
+        res.setHeader('Content-Type', mimeType);
+
+
+        const buf = new ArrayBuffer(stat.size)
+        const file = fileIo.openSync(fullPath, fileIo.OpenMode.READ_WRITE)
+        fileIo.readSync(file.fd, buf)
+        fileIo.closeSync(file.fd); // 关闭文件描述符，避免资源泄漏
+        res.send(buf);
+
+      } catch (e) {
+        // 文件不存在或读取错误，交给下一个处理器
+        next();
+      }
+    };
+    // 静态文件处理器应有较高优先级，但需放在精确API路由之后，此处简化处理，放在前面
+    this.addRoute('GET', '*', staticFileHandler, true);
+  }
+
   public async startServer(port: number): Promise<ServerInfo> {
     try {
       this.tcpServer = socket.constructTCPSocketServerInstance();
-
-      this.tcpServer.on('connect', (clientSocket: socket.TCPSocketConnection) => {
-        this.clients.push(clientSocket);
-        this.handleClient(clientSocket);
-      });
-
-      this.tcpServer.on('error', (error: BusinessError) => {
-        console.error('服务器错误:', error);
-      });
-
-      const bindAddress: socket.NetAddress = { address: '0.0.0.0', port: port };
-      await this.tcpServer.listen(bindAddress);
-
+      this.tcpServer.on('connect', (clientSocket) => this.handleClient(clientSocket));
+      this.tcpServer.on('error', (error) => console.error('服务器错误:', error));
+      await this.tcpServer.listen({ address: '0.0.0.0', port: port });
       const ip = this.getLocalIP();
       console.log(`Server running at http://${ip}:${port}/`);
       return { address: ip, port: port };
@@ -84,54 +119,55 @@ export class WebServer {
     }
   }
 
-  private addRoute(method: string, path: string, handler: RequestHandler) {
-    // 插入到默认404处理之前
-    this.routes.splice(this.routes.length - 1, 0, { method, path, handler });
+  private addRoute(method: string, path: string, handler: RequestHandler, isStatic: boolean = false) {
+    const route: Route = { method, path, handler };
+    if (isStatic) {
+      // 静态处理器插入到API路由之前，但在更精确的API路由之后
+      // 一个简单的策略是找到第一个通用路由（'*')然后插入它之前
+      const firstWildcardIndex = this.routes.findIndex(r => r.path === '*');
+      this.routes.splice(firstWildcardIndex, 0, route);
+    } else {
+      // API路由插入到所有中间件和静态处理器之后，但在404处理器之前
+      this.routes.splice(this.routes.length - 1, 0, route);
+    }
   }
 
   private handleClient(clientSocket: socket.TCPSocketConnection) {
     let receivedData = new ArrayBuffer(0);
-
-    clientSocket.on('message', async (data: socket.SocketMessageInfo) => {
+    clientSocket.on('message', async (data) => {
       receivedData = Utils.mergeArrayBuffers(receivedData, data.message);
-
-      // 简单的HTTP请求完整性检查 (查找\r\n\r\n)
-      // 注意：这仍然无法完美处理所有分块情况，但对多数请求有效
       const requestStr = Utils.arrayBufferToStr(receivedData);
       if (requestStr.includes('\r\n\r\n')) {
         const req = new HttpRequest(receivedData);
         const res = new HttpResponse(clientSocket);
 
-        // 查找匹配的路由
-        const route = this.routes.find(r =>
-        (r.method === 'ANY' || r.method === req.method) &&
-          (r.path === '*' || r.path === req.path)
-        );
+        let routeIndex = -1;
+        const next = () => {
+          routeIndex++;
+          const route = this.routes[routeIndex];
+          if (route) {
+            // 检查路由是否匹配
+            if ((route.method === req.method || route.method === 'ANY') &&
+              (route.path === req.path || route.path === '*')) {
+              route.handler(req, res, next);
+            } else {
+              next(); // 不匹配，检查下一个路由
+            }
+          }
+        };
 
-        if (route) {
-          route.handler(req, res);
-        } else {
-          // 理论上不会执行到这里，因为有默认的404
-          res.status(500).send('No handler found and no default 404.');
-        }
-
-        // 重置缓冲区以接收下一个请求 (在keep-alive连接中)
+        next(); // 开始处理路由链
         receivedData = new ArrayBuffer(0);
       }
     });
-
-    clientSocket.on('error', (error: BusinessError) => {
-      console.error('客户端连接错误:', error);
-      this.removeClient(clientSocket);
-    });
-
-    clientSocket.on('close', () => {
-      console.log('客户端连接已关闭');
-      this.removeClient(clientSocket);
-    });
+    clientSocket.on('error', (err) => this.removeClient(clientSocket, err));
+    clientSocket.on('close', () => this.removeClient(clientSocket));
   }
 
-  private removeClient(clientSocket: socket.TCPSocketConnection) {
+  private removeClient(clientSocket: socket.TCPSocketConnection, error?: BusinessError) {
+    if (error) {
+      console.error('客户端连接错误:', error);
+    }
     const index = this.clients.indexOf(clientSocket);
     if (index > -1) {
       this.clients.splice(index, 1);
@@ -141,9 +177,8 @@ export class WebServer {
   private getLocalIP(): string {
     try {
       const ipAddress = wifiManager.getIpInfo().ipAddress;
-      const ip =
-        (ipAddress >>> 24) + "." + (ipAddress >> 16 & 0xFF) + "." + (ipAddress >> 8 & 0xFF) + "." + (ipAddress & 0xFF);
-      return ip
+      return (ipAddress >>> 24) + "." + (ipAddress >> 16 & 0xFF) + "." + (ipAddress >> 8 & 0xFF) + "." +
+        (ipAddress & 0xFF);
     } catch (e) {
       console.error("Get local IP failed", e);
       return '127.0.0.1';

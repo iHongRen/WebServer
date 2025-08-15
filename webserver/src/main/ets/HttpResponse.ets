@@ -21,6 +21,7 @@ export class HttpResponse {
   private socket: socket.TCPSocketConnection;
   private statusCode: number = 200;
   private headers: Map<string, string> = new Map();
+  private _headersSent: boolean = false;
 
   constructor(socket: socket.TCPSocketConnection) {
     this.socket = socket;
@@ -29,6 +30,10 @@ export class HttpResponse {
     this.setHeader('Access-Control-Allow-Origin', '*');
     this.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     this.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  }
+
+  public isHeadersSent(): boolean {
+    return this._headersSent;
   }
 
   public setHeader(name: string, value: string): HttpResponse {
@@ -42,6 +47,11 @@ export class HttpResponse {
   }
 
   public async send(body?: string | ArrayBuffer): Promise<void> {
+    if (this._headersSent) {
+      console.error("Headers already sent.");
+      return;
+    }
+
     const bodyBytes = this.getBodyBytes(body);
     this.setHeader('Content-Length', bodyBytes.byteLength.toString());
 
@@ -56,6 +66,7 @@ export class HttpResponse {
     const responseData = Utils.mergeArrayBuffers(headerBytes, bodyBytes);
 
     await this.socket.send({ data: responseData });
+    this._headersSent = true;
   }
 
   public async json(data: ESObject): Promise<void> {

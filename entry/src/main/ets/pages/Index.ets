@@ -1,18 +1,40 @@
-import { ServerInfo, WebServer } from '@cxy/webserver';
 import { BusinessError } from '@kit.BasicServicesKit';
-
+import { fileIo } from '@kit.CoreFileKit';
+import { common } from '@kit.AbilityKit';
+import { ServerInfo, WebServer } from '@cxy/webserver';
 
 @Entry
 @Component
 struct Index {
-  @State message: string = 'Hello World';
   @State server: WebServer | null = null;
   @State serverInfo: ServerInfo | null = null;
   @State isRunning: boolean = false;
   @State port: number = 8080;
+  @State staticFilesRoot: string = '';
 
   aboutToAppear() {
+    this.initContext();
+  }
+
+  async initContext() {
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    this.staticFilesRoot = context.filesDir;
+    await this.createSampleFile();
     this.initServer();
+  }
+
+  async createSampleFile() {
+    const filePath = this.staticFilesRoot + '/index.html';
+    const fileContent =
+      '<!DOCTYPE html><html><head><title>Welcome</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f0f0; color: #333; } div { text-align: center; } h1 { color: #007aff; } p { font-size: 1.2em; }</style></head><body><div><h1>Hello from ArkTS Web Server!</h1><p>This file is served from the device.</p></div></body></html>';
+    try {
+      const file = await fileIo.open(filePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);
+      await fileIo.write(file.fd, fileContent);
+      await fileIo.close(file);
+      console.log('Sample file created at:', filePath);
+    } catch (e) {
+      console.error('Failed to create sample file:', e)
+    }
   }
 
   aboutToDisappear() {
@@ -22,27 +44,27 @@ struct Index {
   initServer() {
     this.server = new WebServer();
 
-    // 添加默认路由
-    this.server.get('/', (req, res) => {
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.send('<h1>鸿蒙 Web Server</h1><p>It works!</p>');
-    });
+    // 注册静态文件服务，这是最先被检查的路由之一
+    this.server.serveStatic(this.staticFilesRoot);
 
-    this.server.get('/api/device', (req, res) => {
-      // 示例API，返回一些设备信息
+    // 注册API路由
+    this.server.get('/api/device', (req, res, next) => {
       res.json({
         model: 'My HarmonyOS Device',
-        timestamp: new Date().getTime()
+        timestamp: new Date().getTime(),
+        filesDir: this.staticFilesRoot
       });
     });
 
-    this.server.post('/api/echo', (req, res) => {
-      // 示例POST，回显body
+    this.server.post('/api/echo', (req, res, next) => {
       res.json(req.getBodyAsJson());
     });
   }
 
   async start() {
+    if (!this.server) {
+      this.initServer();
+    }
     if (!this.server) {
       return;
     }
@@ -75,14 +97,22 @@ struct Index {
         Text('ArkTS Web Server')
           .fontSize(30)
           .fontWeight(FontWeight.Bold)
-          .margin({ bottom: 30 })
+          .margin({ bottom: 20 })
 
         if (this.isRunning && this.serverInfo) {
           Column({
             space: 10
           }) {
-            Text('服务器运行中...').fontColor(Color.Green)
+            Text('服务器运行中...').fontColor(Color.Green).fontWeight(FontWeight.Bold)
             Text(`访问地址: http://${this.serverInfo.address}:${this.serverInfo.port}`)
+            Text('服务目录:').margin({ top: 10 })
+            Text(this.staticFilesRoot)
+              .fontSize(12)
+              .fontColor(Color.Gray)
+              .width('90%')
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .maxLines(2)
+
           }.margin({ bottom: 20 })
 
           Button('停止服务器')
@@ -97,7 +127,7 @@ struct Index {
           Column({
             space: 10
           }) {
-            Text('服务器已停止').fontColor(Color.Red)
+            Text('服务器已停止').fontColor(Color.Red).fontWeight(FontWeight.Bold).margin({ bottom: 10 })
             TextInput({
               text: this.port.toString(),
               placeholder: '请输入端口号'
@@ -108,7 +138,6 @@ struct Index {
               })
               .width('80%')
               .height(50)
-              .margin({ bottom: 10 })
 
           }.margin({ bottom: 20 })
 
@@ -123,6 +152,7 @@ struct Index {
       }
       .width('100%')
       .height('100%')
+      .padding({ left: 20, right: 20 })
       .justifyContent(FlexAlign.Center)
     }
     .height('100%')
