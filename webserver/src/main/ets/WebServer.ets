@@ -23,6 +23,11 @@ interface Route {
   handler: RequestHandler;
 }
 
+interface Cors {
+  origin?: string | string[]
+}
+
+
 export class WebServer {
   private tcpServer: socket.TCPSocketServer | null = null;
   private clients: socket.TCPSocketConnection[] = [];
@@ -48,6 +53,103 @@ export class WebServer {
 
   public post(path: string, handler: RequestHandler) {
     this.addRoute('POST', path, handler);
+  }
+
+  /**
+   * 内置的JSON请求体解析中间件
+   * @description
+   * 解析 content-type 为 'application/json' 的请求体,
+   * 并将解析后的JS对象赋值给 req.body。
+   * 如果解析失败，会自动响应400错误。
+   *
+   * @example
+   * server.json(); // 在定义路由前调用
+   * server.post('/api/data', (req, res) => {
+   *   console.log(req.body); // 已经是一个JS对象
+   *   res.json({ received: true });
+   * });
+   */
+  public json() {
+    const jsonParser: RequestHandler = (req, res, next) => {
+      const contentType = req.headers.get('content-type');
+      // 检查 content-type 是否为 application/json 并且请求体存在
+      if (contentType && contentType.includes('application/json') && req.body) {
+        try {
+          // 此刻 req.body 是一个 ArrayBuffer，我们将其解析
+          const bodyStr = Utils.arrayBufferToStr(req.body);
+          // 然后用解析后的对象替换 req.body
+          req.body = JSON.parse(bodyStr);
+        } catch (error) {
+          // 如果JSON格式错误，发送400错误并停止处理
+          console.error('Failed to parse JSON body:', error);
+          res.status(400).json({ error: 'Bad Request', message: 'Invalid JSON format.' });
+          // 请求已处理（虽然是错误处理），所以不调用 next()
+          return;
+        }
+      }
+      // 如果不是JSON请求或没有请求体，直接进入下一个处理器
+      next();
+    };
+    this.use(jsonParser);
+  }
+
+  /**
+   * CORS (Cross-Origin Resource Sharing) 中间件
+   * @description
+   * 为服务器启用CORS支持，可以灵活配置。
+   *
+   * @param {object} [options] - CORS 配置选项
+   * @param {string|string[]} [options.origin='*'] - 配置允许的来源。可以是'*', 单个域名, 或一个域名数组。
+   * @example
+   * // 允许所有来源
+   * server.cors();
+   *
+   * // 只允许特定来源
+   * server.cors({ origin: 'https://my-app.com' });
+   *
+   * // 支持多个来源
+   * server.cors({ origin: ['https://app1.com', 'https://app2.com'] });
+   */
+  public cors(options?: Cors) {
+    const corsMiddleware: RequestHandler = (req, res, next) => {
+      const requestOrigin = req.headers.get('origin');
+      // 如果请求没有Origin头，则不是一个CORS请求，直接跳过
+      if (!requestOrigin) {
+        return next();
+      }
+
+      const configuredOrigin = options?.origin || '*';
+      let allowedOrigin: string | null = null;
+
+      // 检查配置的origin类型
+      if (typeof configuredOrigin === 'string') {
+        allowedOrigin = configuredOrigin; // e.g., '*' or 'https://my-app.com'
+      } else if (Array.isArray(configuredOrigin)) {
+        // 如果是数组，检查请求的origin是否在白名单内
+        if (configuredOrigin.includes(requestOrigin)) {
+          allowedOrigin = requestOrigin; // 动态反射请求的origin
+        }
+      }
+
+      // 如果origin有效，则设置CORS头
+      if (allowedOrigin) {
+        res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+        // 当动态设置ACAO时，建议添加Vary头
+        res.setHeader('Vary', 'Origin');
+      }
+
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+      // 专门处理 "预检" 请求 (preflight request)
+      if (req.method === 'OPTIONS') {
+        res.status(204).send(); // 204 No Content
+        return; // 终止请求链
+      }
+
+      next();
+    };
+    this.use(corsMiddleware);
   }
 
   // 静态文件服务中间件

@@ -27,9 +27,6 @@ export class HttpResponse {
     this.socket = socket;
     // Default headers
     this.setHeader('Connection', 'keep-alive');
-    this.setHeader('Access-Control-Allow-Origin', '*');
-    this.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    this.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   }
 
   public isHeadersSent(): boolean {

@@ -47,6 +47,17 @@ struct Index {
     // 注册静态文件服务，这是最先被检查的路由之一
     this.server.serveStatic(this.staticFilesRoot);
 
+    // 1. 在定义API路由之前，调用 server.json()
+    // 这会为所有请求启用JSON请求体自动解析
+    this.server.json();
+    // 2. 定义一个POST路由
+    this.server.post('/api/users', (req, res, next) => {
+      // 3. 直接使用 req.body，它已经是解析好的JavaScript对象
+      console.log('Received user data:', req.body);
+
+      res.status(201).json(req.body);
+    });
+
     // 注册API路由
     this.server.get('/api/device', (req, res, next) => {
       res.json({
