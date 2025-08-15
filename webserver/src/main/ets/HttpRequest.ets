@@ -13,6 +13,7 @@ export class HttpRequest {
   public headers: Map<string, string> = new Map();
   public body: ArrayBuffer | null = null;
   public query: Map<string, string> = new Map();
+  public params: Record<string, string> = {};
 
   constructor(requestData: ArrayBuffer) {
     this.parse(requestData);

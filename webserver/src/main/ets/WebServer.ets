@@ -23,9 +23,11 @@ export type ErrorHandler = (error: Error, req: HttpRequest, res: HttpResponse, n
 
 interface Route {
   method: string;
-  path: string;
+  path: string; // The original path string, e.g., /users/:id
   handler: RequestHandler | ErrorHandler;
   isErrorHandler: boolean;
+  pathRegex: RegExp | null; // Regex for path matching
+  paramNames: string[]; // Names of the params, e.g., ['id']
 }
 
 interface Cors {
@@ -60,38 +62,29 @@ export class WebServer {
     this.addRoute('POST', path, handler, false, false);
   }
 
-  /**
-   * 内置的JSON请求体解析中间件
-   */
   public json() {
-    const jsonParser: RequestHandler = (req, res, next) => {
+    this.use((req: HttpRequest, res: HttpResponse, next: NextFunction) => {
       const contentType = req.headers.get('content-type');
       if (contentType && contentType.includes('application/json') && req.body) {
         try {
           const bodyStr = Utils.arrayBufferToStr(req.body);
           req.body = JSON.parse(bodyStr);
         } catch (error) {
-          // 将解析错误传递给错误处理链
           return next(error);
         }
       }
       next();
-    };
-    this.use(jsonParser);
+    });
   }
 
-  /**
-   * CORS (Cross-Origin Resource Sharing) 中间件
-   */
   public cors(options?: Cors) {
-    const corsMiddleware: RequestHandler = (req, res, next) => {
+    this.use((req: HttpRequest, res: HttpResponse, next: NextFunction) => {
       const requestOrigin = req.headers.get('origin');
       if (!requestOrigin) {
         return next();
       }
       const configuredOrigin = options?.origin || '*';
       let allowedOrigin: string | null = null;
-
       if (typeof configuredOrigin === 'string') {
         allowedOrigin = configuredOrigin;
       } else if (Array.isArray(configuredOrigin)) {
@@ -99,24 +92,20 @@ export class WebServer {
           allowedOrigin = requestOrigin;
         }
       }
-
       if (allowedOrigin) {
         res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
         res.setHeader('Vary', 'Origin');
       }
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
       if (req.method === 'OPTIONS') {
         res.status(204).send();
         return;
       }
       next();
-    };
-    this.use(corsMiddleware);
+    });
   }
 
-  // 静态文件服务中间件
   public serveStatic(directoryPath: string) {
     const staticFileHandler: RequestHandler = async (req, res, next) => {
       if (req.method !== 'GET') {
@@ -128,7 +117,6 @@ export class WebServer {
         return res.status(400).send('Invalid Path');
       }
       let fullPath = directoryPath + (requestedPath === '/' ? '/index.html' : requestedPath);
-
       try {
         const stat = await fileIo.stat(fullPath);
         if (stat.isDirectory()) {
@@ -177,11 +165,24 @@ export class WebServer {
 
   private addRoute(method: string, path: string, handler: RequestHandler | ErrorHandler, isStatic: boolean = false,
     isErrorHandler: boolean = false) {
+    let pathRegex: RegExp | null = null;
+    const paramNames: string[] = [];
+
+    if (path !== '*' && path.includes(':')) {
+      const regexString = path.replace(/:(\w+)/g, (_, name: string) => {
+        paramNames.push(name);
+        return '([^/]+)';
+      });
+      pathRegex = new RegExp(`^${regexString}/?$`);
+    }
+
     const route: Route = {
       method,
       path,
       handler,
-      isErrorHandler
+      isErrorHandler,
+      pathRegex,
+      paramNames
     };
     const insertIndex = this.routes.length > 0 ? this.routes.length - 1 : 0;
     if (isStatic) {
@@ -204,10 +205,8 @@ export class WebServer {
 
         const next: NextFunction = (err?: Error) => {
           routeIndex++;
-          // 如果路由已处理完毕
           if (routeIndex >= this.routes.length) {
             if (err && !res.isHeadersSent()) {
-              // 如果链条末端还有未处理的错误，发送500
               res.status(500).json({ error: 'Internal Server Error' });
             }
             return;
@@ -217,35 +216,40 @@ export class WebServer {
 
           try {
             if (err) {
-              // --- 错误处理模式 ---
               if (route.isErrorHandler) {
                 (route.handler as ErrorHandler)(err, req, res, next);
               } else {
-                // 非错误处理器，继续在错误模式下寻找下一个
                 next(err);
               }
             } else {
-              // --- 常规请求处理模式 ---
               if (!route.isErrorHandler) {
-                if ((route.method === req.method || route.method === 'ANY') &&
-                  (route.path === req.path || route.path === '*')) {
+                let match: RegExpExecArray | null = null;
+                const simpleMatch = route.path === req.path || route.path === '*';
+                const regexMatch = route.pathRegex && (match = route.pathRegex.exec(req.path));
+
+                if (simpleMatch || regexMatch) {
+                  if (regexMatch && match) {
+                    req.params = {}; // Clear old params
+                    route.paramNames.forEach((name, index) => {
+                      if (match) {
+                        req.params[name] = match[index + 1];
+                      }
+                    });
+                  }
                   (route.handler as RequestHandler)(req, res, next);
                 } else {
-                  // 路由不匹配，继续寻找下一个
                   next();
                 }
               } else {
-                // 是错误处理器，在常规模式下跳过
                 next();
               }
             }
           } catch (e) {
-            // 捕获所有同步错误，并转入错误处理模式
             next(e);
           }
         };
 
-        next(); // 启动路由处理链
+        next();
         receivedData = new ArrayBuffer(0);
       }
     });

@@ -52,6 +52,21 @@ struct Index {
     this.server.json();
     this.server.cors();
 
+    // Define a route with multiple parameters
+    // http://<your-ip>:8080/users/123/books/abc
+    this.server.get('/users/:userId/books/:bookId', (req, res, next) => {
+      // Access parameters through req.params
+      const userId = req.params.userId;
+      const bookId = req.params.bookId;
+
+      res.json({
+        message: `You requested book ${bookId} for user ${userId}.`,
+        user: userId,
+        book: bookId
+      });
+    });
+
+
     // 这是一个会触发错误的路由
     this.server.get('/oops', (req, res, next) => {
       // 模拟一个异步操作后发生的错误
