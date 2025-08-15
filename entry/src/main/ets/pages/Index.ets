@@ -1,7 +1,7 @@
 import { BusinessError } from '@kit.BasicServicesKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
-import { ServerInfo, WebServer } from '@cxy/webserver';
+import { ErrorHandler, ServerInfo, WebServer } from '@cxy/webserver';
 
 @Entry
 @Component
@@ -50,9 +50,30 @@ struct Index {
     // 1. 在定义API路由之前，调用 server.json()
     // 这会为所有请求启用JSON请求体自动解析
     this.server.json();
-    // 2. 定义一个POST路由
+    this.server.cors();
+
+    // 这是一个会触发错误的路由
+    this.server.get('/oops', (req, res, next) => {
+      // 模拟一个异步操作后发生的错误
+      const err = new Error('Something went wrong!');
+      // 将错误传递给 next()，启动错误处理流程
+      next(err);
+    });
+
+    // 这是一个会直接抛出同步异常的路由
+    this.server.get('/crash', (req, res, next) => {
+      // 框架会自动捕获这个同步异常，并调用 next(error)
+      throw new Error('This route crashed!');
+    });
+
+    // ... 其他正常路由 ...
+    this.server.get('/', (req, res, next) => {
+      res.send('<h1>Welcome</h1>');
+    });
+
+    //  定义一个POST路由
     this.server.post('/api/users', (req, res, next) => {
-      // 3. 直接使用 req.body，它已经是解析好的JavaScript对象
+      // 直接使用 req.body，它已经是解析好的JavaScript对象
       console.log('Received user data:', req.body);
 
       res.status(201).json(req.body);
@@ -70,6 +91,24 @@ struct Index {
     this.server.post('/api/echo', (req, res, next) => {
       res.json(req.getBodyAsJson());
     });
+
+
+    // --- 统一错误处理中间件 ---
+    // **注意**: 它有4个参数，并且通常注册在所有其他中间件和路由之后
+    const customErrorHandler: ErrorHandler = (error, req, res, next) => {
+      console.error('An error occurred:', error.message);
+
+      // 避免在已经发送响应头后再次发送
+      if (res.isHeadersSent()) {
+        return next(error); // 交给默认的最终处理器
+      }
+
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: error.message || 'An unknown error occurred.'
+      });
+    };
+    this.server.use(customErrorHandler);
   }
 
   async start() {
