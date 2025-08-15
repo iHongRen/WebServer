@@ -37,6 +37,10 @@
           ]
         }
       ]
+    },
+    {
+      "name": "webserver",
+      "srcPath": "./webserver",
     }
   ]
 }
