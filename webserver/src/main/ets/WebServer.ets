@@ -30,8 +30,12 @@ interface Route {
   paramNames: string[]; // Names of the params, e.g., ['id']
 }
 
-interface Cors {
+interface CorsOptions {
   origin?: string | string[]
+}
+
+interface CacheOptions {
+  maxAge?: number
 }
 
 export class WebServer {
@@ -77,7 +81,7 @@ export class WebServer {
     });
   }
 
-  public cors(options?: Cors) {
+  public cors(options?: CorsOptions) {
     this.use((req: HttpRequest, res: HttpResponse, next: NextFunction) => {
       const requestOrigin = req.headers.get('origin');
       if (!requestOrigin) {
@@ -106,7 +110,7 @@ export class WebServer {
     });
   }
 
-  public serveStatic(directoryPath: string) {
+  public serveStatic(directoryPath: string, options?: CacheOptions) {
     const staticFileHandler: RequestHandler = async (req, res, next) => {
       if (req.method !== 'GET') {
         return next();
@@ -118,11 +122,28 @@ export class WebServer {
       }
       let fullPath = directoryPath + (requestedPath === '/' ? '/index.html' : requestedPath);
       try {
-        const stat = await fileIo.stat(fullPath);
+        let stat = await fileIo.stat(fullPath);
         if (stat.isDirectory()) {
           fullPath = Utils.joinPath(fullPath, 'index.html');
-          await fileIo.stat(fullPath);
+          stat = await fileIo.stat(fullPath); // Get stats for index.html
         }
+
+        // --- Caching Logic ---
+        const maxAge = options?.maxAge ?? 3600; // Default to 1 hour
+        // Generate a weak ETag based on file size and modification time
+        const etag = `W/"${stat.size}-${stat.mtime}"`;
+
+        // Check if the client's cached version is still fresh
+        const ifNoneMatch = req.headers.get('if-none-match');
+        if (ifNoneMatch === etag) {
+          return res.status(304).send(); // Not Modified
+        }
+        // --- End Caching Logic ---
+
+        // Set caching headers for the new response
+        res.setHeader('Cache-Control', `public, max-age=${maxAge}`);
+        res.setHeader('ETag', etag);
+
         const mimeType = Utils.getMimeType(fullPath);
         res.setHeader('Content-Type', mimeType);
         const buf = new ArrayBuffer(stat.size);
@@ -131,6 +152,7 @@ export class WebServer {
         fileIo.closeSync(file.fd);
         res.send(buf);
       } catch (e) {
+        // If file doesn't exist or other error, pass to the next handler (e.g., 404)
         next();
       }
     };
