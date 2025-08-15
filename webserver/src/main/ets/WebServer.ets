@@ -57,8 +57,11 @@ export class WebServer {
         return next(); // 非GET请求，交给下一个处理器
       }
 
+      // 解码URL路径中的特殊字符（如 %20 -> ' '）
+      const decodedPath = decodeURIComponent(req.path);
+
       // 安全性：规范化路径并防止目录遍历
-      const requestedPath = Utils.normalizePath(req.path);
+      const requestedPath = Utils.normalizePath(decodedPath);
       if (requestedPath.includes('..')) {
         return res.status(400).send('Invalid Path');
       }
