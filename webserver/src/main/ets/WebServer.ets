@@ -69,10 +69,36 @@ export class WebServer {
   public json() {
     this.use((req: HttpRequest, res: HttpResponse, next: NextFunction) => {
       const contentType = req.headers.get('content-type');
-      if (contentType && contentType.includes('application/json') && req.body) {
+      if (contentType && contentType.includes('application/json') && req.body instanceof ArrayBuffer) {
         try {
           const bodyStr = Utils.arrayBufferToStr(req.body);
           req.body = JSON.parse(bodyStr);
+        } catch (error) {
+          return next(error);
+        }
+      }
+      next();
+    });
+  }
+
+  public urlencoded() {
+    this.use((req: HttpRequest, res: HttpResponse, next: NextFunction) => {
+      const contentType = req.headers.get('content-type');
+      if (contentType && contentType.includes('application/x-www-form-urlencoded') && req.body instanceof ArrayBuffer) {
+        try {
+          const bodyStr = Utils.arrayBufferToStr(req.body);
+          const params: Record<string, string> = {};
+          const pairs = bodyStr.split('&');
+          for (const pair of pairs) {
+            const parts = pair.split('=');
+            if (parts.length === 2) {
+              // Decode + as space, then decode percent-encoded characters
+              const key = decodeURIComponent(parts[0].replace(/\+/g, ' '));
+              const value = decodeURIComponent(parts[1].replace(/\+/g, ' '));
+              params[key] = value;
+            }
+          }
+          req.body = params;
         } catch (error) {
           return next(error);
         }

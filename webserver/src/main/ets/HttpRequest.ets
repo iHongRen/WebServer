@@ -11,7 +11,7 @@ export class HttpRequest {
   public path: string = '';
   public version: string = '';
   public headers: Map<string, string> = new Map();
-  public body: ArrayBuffer | null = null;
+  public body: ArrayBuffer | Record<string, Object> | null = null;
   public query: Map<string, string> = new Map();
   public params: Record<string, string> = {};
 
@@ -20,7 +20,7 @@ export class HttpRequest {
   }
 
   public getBodyAsJson(): object | null {
-    if (this.body) {
+    if (this.body instanceof ArrayBuffer) {
       try {
         const bodyStr = Utils.arrayBufferToStr(this.body)
         return JSON.parse(bodyStr);

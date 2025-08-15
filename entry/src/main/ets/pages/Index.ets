@@ -44,18 +44,14 @@ struct Index {
   initServer() {
     this.server = new WebServer();
 
-    // 注册静态文件服务，这是最先被检查的路由之一
+    // 1. 注册中间件
     this.server.serveStatic(this.staticFilesRoot);
-
-    // 1. 在定义API路由之前，调用 server.json()
-    // 这会为所有请求启用JSON请求体自动解析
-    this.server.json();
     this.server.cors();
+    this.server.json();
+    this.server.urlencoded(); // 新增：处理表单数据
 
-    // Define a route with multiple parameters
-    // http://<your-ip>:8080/users/123/books/abc
+    // 2. 注册API路由
     this.server.get('/users/:userId/books/:bookId', (req, res, next) => {
-      // Access parameters through req.params
       const userId = req.params.userId;
       const bookId = req.params.bookId;
 
@@ -66,35 +62,6 @@ struct Index {
       });
     });
 
-
-    // 这是一个会触发错误的路由
-    this.server.get('/oops', (req, res, next) => {
-      // 模拟一个异步操作后发生的错误
-      const err = new Error('Something went wrong!');
-      // 将错误传递给 next()，启动错误处理流程
-      next(err);
-    });
-
-    // 这是一个会直接抛出同步异常的路由
-    this.server.get('/crash', (req, res, next) => {
-      // 框架会自动捕获这个同步异常，并调用 next(error)
-      throw new Error('This route crashed!');
-    });
-
-    // ... 其他正常路由 ...
-    this.server.get('/', (req, res, next) => {
-      res.send('<h1>Welcome</h1>');
-    });
-
-    //  定义一个POST路由
-    this.server.post('/api/users', (req, res, next) => {
-      // 直接使用 req.body，它已经是解析好的JavaScript对象
-      console.log('Received user data:', req.body);
-
-      res.status(201).json(req.body);
-    });
-
-    // 注册API路由
     this.server.get('/api/device', (req, res, next) => {
       res.json({
         model: 'My HarmonyOS Device',
@@ -103,21 +70,34 @@ struct Index {
       });
     });
 
-    this.server.post('/api/echo', (req, res, next) => {
-      res.json(req.getBodyAsJson());
+    this.server.post('/api/users', (req, res, next) => {
+      console.log('Received user data (JSON): ', req.body);
+      res.status(201).json(req.body);
     });
 
+    // 新增：处理 application/x-www-form-urlencoded 请求的路由
+    this.server.post('/login', (req, res, next) => {
+      console.log('Received login data (urlencoded): ', req.body);
+      const body = req.body as Record<string, Object>
+      const username = body.username || 'guest';
+      res.json({ message: `Welcome, ${username}!` });
+    });
 
-    // --- 统一错误处理中间件 ---
-    // **注意**: 它有4个参数，并且通常注册在所有其他中间件和路由之后
+    // 3. 注册错误触发示例路由
+    this.server.get('/oops', (req, res, next) => {
+      next(new Error('Something went wrong!'));
+    });
+
+    this.server.get('/crash', (req, res, next) => {
+      throw new Error('This route crashed!');
+    });
+
+    // 4. 注册统一错误处理中间件 (必须在最后)
     const customErrorHandler: ErrorHandler = (error, req, res, next) => {
       console.error('An error occurred:', error.message);
-
-      // 避免在已经发送响应头后再次发送
       if (res.isHeadersSent()) {
-        return next(error); // 交给默认的最终处理器
+        return next(error);
       }
-
       res.status(500).json({
         error: 'Internal Server Error',
         message: error.message || 'An unknown error occurred.'
