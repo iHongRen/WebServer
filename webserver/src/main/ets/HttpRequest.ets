@@ -5,6 +5,7 @@
  * @description : HTTP 请求解析类
  */
 import { Utils } from "./Utils";
+import type { WebServer } from './WebServer';
 
 export interface File {
   fieldName: string;
@@ -14,6 +15,7 @@ export interface File {
 }
 
 export class HttpRequest {
+  public app: WebServer;
   public method: string = '';
   public path: string = '';
   public version: string = '';
@@ -23,8 +25,42 @@ export class HttpRequest {
   public params: Record<string, string> = {};
   public files: Record<string, File> = {};
 
-  constructor(requestData: ArrayBuffer) {
+  constructor(app: WebServer, requestData: ArrayBuffer) {
+    this.app = app;
     this.parseHeadersAndPath(requestData);
+  }
+
+  public getConfig(key: string): Object | undefined {
+    return this.app.getConfig(key);
+  }
+
+  public parseBody(): void {
+    const contentType = this.headers.get('content-type');
+    if (contentType && this.body instanceof ArrayBuffer) {
+      if (contentType.includes('application/json')) {
+        try {
+          const bodyStr = Utils.arrayBufferToStr(this.body);
+          this.body = JSON.parse(bodyStr);
+        } catch (error) {
+          console.error("Failed to parse JSON body", error);
+        }
+      } else if (contentType.includes('application/x-www-form-urlencoded')) {
+        const bodyStr = Utils.arrayBufferToStr(this.body);
+        const params: Record<string, string> = {};
+        const pairs = bodyStr.split('&');
+        for (const pair of pairs) {
+          const parts = pair.split('=');
+          if (parts.length === 2) {
+            const key = decodeURIComponent(parts[0].replace(/\+/g, ' '));
+            const value = decodeURIComponent(parts[1].replace(/\+/g, ' '));
+            params[key] = value;
+          }
+        }
+        this.body = params;
+      } else if (contentType.includes('multipart/form-data')) {
+        this.parseMultipartFormData(this.body, contentType);
+      }
+    }
   }
 
   private parseHeadersAndPath(requestData: ArrayBuffer): void {
@@ -70,35 +106,6 @@ export class HttpRequest {
     }
   }
 
-  public parseBody(): void {
-    const contentType = this.headers.get('content-type');
-    if (contentType && this.body instanceof ArrayBuffer) {
-      if (contentType.includes('application/json')) {
-        try {
-          const bodyStr = Utils.arrayBufferToStr(this.body);
-          this.body = JSON.parse(bodyStr);
-        } catch (error) {
-          console.error("Failed to parse JSON body", error);
-        }
-      } else if (contentType.includes('application/x-www-form-urlencoded')) {
-        const bodyStr = Utils.arrayBufferToStr(this.body);
-        const params: Record<string, string> = {};
-        const pairs = bodyStr.split('&');
-        for (const pair of pairs) {
-          const parts = pair.split('=');
-          if (parts.length === 2) {
-            const key = decodeURIComponent(parts[0].replace(/\+/g, ' '));
-            const value = decodeURIComponent(parts[1].replace(/\+/g, ' '));
-            params[key] = value;
-          }
-        }
-        this.body = params;
-      } else if (contentType.includes('multipart/form-data')) {
-        this.parseMultipartFormData(this.body, contentType);
-      }
-    }
-  }
-
   private parseQuery(queryString: string): void {
     const params = queryString.split('&');
     params.forEach(param => {
@@ -111,10 +118,11 @@ export class HttpRequest {
 
   private parseBoundary(contentType: string): string | null {
     const match = contentType.match(/boundary=(.+)/);
-    return match ? match[1] : null;
+    return match ? match[1].trim() : null;
   }
 
   private parseMultipartFormData(body: ArrayBuffer, contentType: string): void {
+    this.body = {}; // Initialize
     const boundary = this.parseBoundary(contentType);
     if (!boundary) {
       return;
@@ -122,7 +130,6 @@ export class HttpRequest {
 
     const bodyStr = Utils.arrayBufferToStr(body, 'binary');
     const parts = bodyStr.split('--' + boundary);
-    const formFields: Record<string, string> = {};
 
     for (const part of parts) {
       if (part.trim() === '' || part.trim() === '--') {
@@ -134,34 +141,30 @@ export class HttpRequest {
         continue;
       }
 
-      const headerPart = part.substring(0, headerEndIndex);
-      const bodyPartStr = part.substring(headerEndIndex + 4, part.length - 2); // Exclude trailing \r\n
+      const headerPart = part.substring(0, headerEndIndex).trim();
+      const bodyPartStr = part.substring(headerEndIndex + 4).trim();
 
-      const contentDispositionMatch = headerPart.match(/Content-Disposition: form-data; name="([^"]+)"(?:; filename="([^"]+)")?/);
+      const contentDispositionMatch =
+        headerPart.match(/Content-Disposition: form-data; name=\"([^\"]+)\"(?:; filename=\"([^\"]+)\")?/);
       if (!contentDispositionMatch) {
         continue;
       }
 
       const fieldName = contentDispositionMatch[1];
       const fileName = contentDispositionMatch[2];
-      const contentTypeMatch = headerPart.match(/Content-Type: (.+)/);
-      const contentType = contentTypeMatch ? contentTypeMatch[1] : 'application/octet-stream';
 
       if (fileName) {
-        // It's a file
+        const contentTypeMatch = headerPart.match(/Content-Type: (.+)/);
+        const contentTypeHeader = contentTypeMatch ? contentTypeMatch[1].trim() : 'application/octet-stream';
         this.files[fieldName] = {
           fieldName: fieldName,
           fileName: fileName,
-          contentType: contentType,
+          contentType: contentTypeHeader,
           data: Utils.strToArrayBuffer(bodyPartStr, 'binary')
         };
       } else {
-        // It's a regular form field
-        formFields[fieldName] = bodyPartStr;
+        (this.body as Record<string, string>)[fieldName] = bodyPartStr;
       }
-    }
-    if (Object.keys(formFields).length > 0) {
-      this.body = formFields;
     }
   }
 }

@@ -1,7 +1,7 @@
 import { BusinessError } from '@kit.BasicServicesKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
-import { ErrorHandler, ServerInfo, WebServer } from '@cxy/webserver';
+import { WebServer, checkChunk, handleChunkUpload, ErrorHandler, ServerInfo } from '@cxy/webserver';
 import { http } from '@kit.NetworkKit';
 
 @Entry
@@ -12,6 +12,7 @@ struct Index {
   @State isRunning: boolean = false;
   @State port: number = 8080;
   @State staticFilesRoot: string = '';
+  @State tempUploadsRoot: string = '';
   @State fileList: string[] = [];
 
   aboutToAppear() {
@@ -21,8 +22,28 @@ struct Index {
   async initContext() {
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
     this.staticFilesRoot = context.filesDir + '/webserver';
+    this.tempUploadsRoot = context.filesDir + '/temp_uploads';
     await this.createSampleFile();
+    // 创建临时上传目录
+    if (!fileIo.accessSync(this.tempUploadsRoot)) {
+      await fileIo.mkdir(this.tempUploadsRoot);
+    }
+    await this.createUploadTestPage();
+    await this.createUploadTestPage();
     this.initServer();
+  }
+
+  async createUploadTestPage() {
+    const uploadTestPagePath = `${this.staticFilesRoot}/upload_test.html`;
+    const uploadTestPageContent = '';
+    try {
+      const file = await fileIo.open(uploadTestPagePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);
+      await fileIo.write(file.fd, uploadTestPageContent);
+      await fileIo.close(file);
+      console.log('Upload test page created at:', uploadTestPagePath);
+    } catch (e) {
+      console.error('Failed to create upload test page:', e)
+    }
   }
 
   async createSampleFile() {
@@ -49,35 +70,19 @@ struct Index {
   initServer() {
     this.server = new WebServer();
 
+    this.server.setConfig('staticFilesRoot', this.staticFilesRoot);
+    this.server.setConfig('tempUploadsRoot', this.tempUploadsRoot);
+
     // 注册中间件
     this.server.serveStatic(this.staticFilesRoot);
     this.server.cors();
     this.server.json();
-    this.server.urlencoded(); // 新增：处理表单数据
-    this.server.multipart(); // 新增：处理文件上传
+    this.server.urlencoded();
+    this.server.multipart();
 
-    // 新增：文件上传路由
-    this.server.post('/upload', async (req, res, next) => {
-      try {
-        const files = req.files;
-        if (Object.keys(files).length === 0) {
-          return res.status(400).json({ message: 'No files were uploaded.' });
-        }
-
-        for (const fieldName of Object.keys(files)) {
-          const file = files[fieldName];
-          const filePath = `${this.staticFilesRoot}/${file.fileName}`;
-          const fileStream = await fileIo.open(filePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);
-          await fileIo.write(fileStream.fd, file.data);
-          await fileIo.close(fileStream);
-          console.log(`File saved: ${filePath}`);
-        }
-
-        res.json({ message: 'Files uploaded successfully!' });
-      } catch (error) {
-        next(error);
-      }
-    });
+    // 注册分片上传路由
+    this.server.post('/upload', handleChunkUpload);
+    this.server.get('/upload', checkChunk);
 
     // 新增：获取文件列表路由
     this.server.get('/api/files', async (req, res, next) => {
@@ -178,18 +183,21 @@ struct Index {
     if (!this.serverInfo) {
       return;
     }
+
+    const request = http.createHttp();
     try {
       const url = `http://${this.serverInfo?.address}:${this.serverInfo?.port}/api/files`;
 
-      const request = http.createHttp();
       const response = await request.request(url, { method: http.RequestMethod.GET });
       if (response.responseCode === 200) {
         this.fileList = JSON.parse(response.result as string);
       } else {
         console.error('Failed to fetch file list:', response.responseCode);
       }
+      request.destroy()
     } catch (e) {
       console.error('Error fetching file list:', e);
+    } finally {
     }
   }
 
@@ -249,19 +257,8 @@ struct Index {
           .width('90%')
           .layoutWeight(1)
 
-          // 上传说明
-          Text('使用 curl 上传文件:')
-            .fontSize(14)
-            .fontColor(Color.Gray)
-            .margin({ top: 20 })
-          Text(`curl -X POST -F "file=@/path/to/your/file" http://${this.serverInfo.address}:${this.serverInfo.port}/upload`)
-            .fontSize(12)
-            .fontColor(Color.Gray)
-            .fontFamily('monospace')
-            .width('90%')
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .maxLines(3)
 
+          Text(`http://${this.serverInfo.address}:${this.serverInfo.port}/upload.html`)
         } else {
           Column({
             space: 10

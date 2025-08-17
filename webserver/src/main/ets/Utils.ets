@@ -148,4 +148,10 @@ export class Utils {
     const joined = resultSegments.join('/');
     return isAbsolute ? `/${joined}` : joined;
   }
+
+  static sanitizeFilename(filename: string): string {
+    // 移除路径遍历字符和其它非法字符
+    // 只允许字母、数字、下划线、连字符、点
+    return filename.replace(/[^a-zA-Z0-9_.-]/g, '');
+  }
 }
