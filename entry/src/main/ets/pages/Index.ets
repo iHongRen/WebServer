@@ -48,19 +48,8 @@ struct Index {
     this.server.serveStatic(this.staticFilesRoot);
     this.server.cors();
     this.server.json();
-    // this.server.urlencoded(); // 新增：处理表单数据
-
-    // 注册API路由
-    this.server.get('/users/:userId/books/:bookId', (req, res, next) => {
-      const userId = req.params.userId;
-      const bookId = req.params.bookId;
-
-      res.json({
-        message: `You requested book ${bookId} for user ${userId}.`,
-        user: userId,
-        book: bookId
-      });
-    });
+    this.server.urlencoded(); // 新增：处理表单数据
+    
 
     this.server.get('/api/device', (req, res, next) => {
       res.json({
@@ -83,11 +72,19 @@ struct Index {
       res.json({ message: `Welcome, ${username}!` });
     });
 
-    // 注册错误触发示例路由
-    this.server.get('/oops', (req, res, next) => {
-      next(new Error('Something went wrong!'));
+
+    this.server.get('/users/:userId/books/:bookId', (req, res, next) => {
+      const userId = req.params.userId;
+      const bookId = req.params.bookId;
+
+      res.json({
+        message: `You requested book ${bookId} for user ${userId}.`,
+        user: userId,
+        book: bookId
+      });
     });
 
+    // 注册错误触发示例路由
     this.server.get('/crash', (req, res, next) => {
       throw new Error('This route crashed!');
     });
@@ -179,7 +176,7 @@ struct Index {
             })
               .type(InputType.Number)
               .onChange((val) => {
-                this.port = parseInt(val) || 8080;
+                this.port = parseInt(val);
               })
               .width('80%')
               .height(50)
@@ -196,10 +193,11 @@ struct Index {
 
       }
       .width('100%')
-      .height('100%')
       .padding({ left: 20, right: 20 })
       .justifyContent(FlexAlign.Center)
     }
     .height('100%')
+    .alignItems(VerticalAlign.Top)
+    .padding({ top: 100 })
   }
 }

@@ -25,7 +25,6 @@ interface Route {
   method: string;
   path: string; // The original path string, e.g., /users/:id
   handler: RequestHandler | ErrorHandler;
-  isErrorHandler: boolean;
   pathRegex: RegExp | null; // Regex for path matching
   paramNames: string[]; // Names of the params, e.g., ['id']
 }
@@ -55,15 +54,15 @@ export class WebServer {
   // 注册中间件或错误处理中间件
   public use(handler: RequestHandler | ErrorHandler): void {
     const isErrorHandler = handler.length === 4;
-    this.addRoute('ANY', '*', handler, false, isErrorHandler);
+    this.addRoute('ANY', '*', handler, false);
   }
 
   public get(path: string, handler: RequestHandler) {
-    this.addRoute('GET', path, handler, false, false);
+    this.addRoute('GET', path, handler, false);
   }
 
   public post(path: string, handler: RequestHandler) {
-    this.addRoute('POST', path, handler, false, false);
+    this.addRoute('POST', path, handler, false);
   }
 
   public json() {
@@ -182,7 +181,7 @@ export class WebServer {
         next();
       }
     };
-    this.addRoute('GET', '*', staticFileHandler, true, false);
+    this.addRoute('GET', '*', staticFileHandler, true);
   }
 
   public async startServer(port: number): Promise<ServerInfo> {
@@ -211,8 +210,7 @@ export class WebServer {
     }
   }
 
-  private addRoute(method: string, path: string, handler: RequestHandler | ErrorHandler, isStatic: boolean = false,
-    isErrorHandler: boolean = false) {
+  private addRoute(method: string, path: string, handler: RequestHandler | ErrorHandler, isStatic: boolean = false) {
     let pathRegex: RegExp | null = null;
     const paramNames: string[] = [];
 
@@ -228,7 +226,6 @@ export class WebServer {
       method,
       path,
       handler,
-      isErrorHandler,
       pathRegex,
       paramNames
     };
@@ -264,13 +261,13 @@ export class WebServer {
 
           try {
             if (err) {
-              if (route.isErrorHandler) {
+              if (route.handler.length === 4) {
                 (route.handler as ErrorHandler)(err, req, res, next);
               } else {
                 next(err);
               }
             } else {
-              if (!route.isErrorHandler) {
+              if (route.handler.length !== 4) {
                 let match: RegExpExecArray | null = null;
                 const simpleMatch = route.path === req.path || route.path === '*';
                 const regexMatch = route.pathRegex && (match = route.pathRegex.exec(req.path));
