@@ -18,12 +18,15 @@ struct Index {
 
   async initContext() {
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    this.staticFilesRoot = context.filesDir;
+    this.staticFilesRoot = context.filesDir + '/webserver';
     await this.createSampleFile();
     this.initServer();
   }
 
   async createSampleFile() {
+    if (!fileIo.accessSync(this.staticFilesRoot)) {
+      await fileIo.mkdir(this.staticFilesRoot)
+    }
     const filePath = this.staticFilesRoot + '/index.html';
     const fileContent =
       '<!DOCTYPE html><html><head><title>Welcome</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f0f0; color: #333; } div { text-align: center; } h1 { color: #007aff; } p { font-size: 1.2em; }</style></head><body><div><h1>Hello from ArkTS Web Server!</h1><p>This file is served from the device.</p></div></body></html>';
@@ -49,7 +52,7 @@ struct Index {
     this.server.cors();
     this.server.json();
     this.server.urlencoded(); // 新增：处理表单数据
-    
+
 
     this.server.get('/api/device', (req, res, next) => {
       res.json({
