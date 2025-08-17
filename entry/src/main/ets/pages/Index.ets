@@ -2,6 +2,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
 import { ErrorHandler, ServerInfo, WebServer } from '@cxy/webserver';
+import { http } from '@kit.NetworkKit';
 
 @Entry
 @Component
@@ -11,6 +12,7 @@ struct Index {
   @State isRunning: boolean = false;
   @State port: number = 8080;
   @State staticFilesRoot: string = '';
+  @State fileList: string[] = [];
 
   aboutToAppear() {
     this.initContext();
@@ -52,6 +54,40 @@ struct Index {
     this.server.cors();
     this.server.json();
     this.server.urlencoded(); // 新增：处理表单数据
+    this.server.multipart(); // 新增：处理文件上传
+
+    // 新增：文件上传路由
+    this.server.post('/upload', async (req, res, next) => {
+      try {
+        const files = req.files;
+        if (Object.keys(files).length === 0) {
+          return res.status(400).json({ message: 'No files were uploaded.' });
+        }
+
+        for (const fieldName of Object.keys(files)) {
+          const file = files[fieldName];
+          const filePath = `${this.staticFilesRoot}/${file.fileName}`;
+          const fileStream = await fileIo.open(filePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);
+          await fileIo.write(fileStream.fd, file.data);
+          await fileIo.close(fileStream);
+          console.log(`File saved: ${filePath}`);
+        }
+
+        res.json({ message: 'Files uploaded successfully!' });
+      } catch (error) {
+        next(error);
+      }
+    });
+
+    // 新增：获取文件列表路由
+    this.server.get('/api/files', async (req, res, next) => {
+      try {
+        const fileNames = await fileIo.listFile(this.staticFilesRoot);
+        res.json(fileNames);
+      } catch (error) {
+        next(error);
+      }
+    });
 
 
     this.server.get('/api/device', (req, res, next) => {
@@ -118,6 +154,7 @@ struct Index {
       if (info.address) {
         this.serverInfo = info;
         this.isRunning = true;
+        this.fetchFileList();
       } else {
         console.error("启动失败，未获取到地址");
       }
@@ -134,6 +171,26 @@ struct Index {
     await this.server.stopServer();
     this.isRunning = false;
     this.serverInfo = null;
+    this.fileList = [];
+  }
+
+  async fetchFileList() {
+    if (!this.serverInfo) {
+      return;
+    }
+    try {
+      const url = `http://${this.serverInfo?.address}:${this.serverInfo?.port}/api/files`;
+
+      const request = http.createHttp();
+      const response = await request.request(url, { method: http.RequestMethod.GET });
+      if (response.responseCode === 200) {
+        this.fileList = JSON.parse(response.result as string);
+      } else {
+        console.error('Failed to fetch file list:', response.responseCode);
+      }
+    } catch (e) {
+      console.error('Error fetching file list:', e);
+    }
   }
 
   build() {
@@ -167,6 +224,43 @@ struct Index {
             .onClick(() => {
               this.stop();
             })
+
+          // 文件列表
+          Text('可下载文件:')
+            .fontSize(18)
+            .fontWeight(FontWeight.Bold)
+            .margin({ top: 20, bottom: 10 })
+
+          List({ space: 10 }) {
+            ForEach(this.fileList, (fileName: string) => {
+              ListItem() {
+                Row() {
+                  Text(fileName)
+                    .fontSize(16)
+
+                  Text(`http://${this.serverInfo?.address}:${this.serverInfo?.port}/${fileName}`)
+                  Text('下载')
+                    .fontColor(Color.Blue)
+
+                }.justifyContent(FlexAlign.SpaceBetween).width('100%')
+              }
+            }, (item: string) => item)
+          }
+          .width('90%')
+          .layoutWeight(1)
+
+          // 上传说明
+          Text('使用 curl 上传文件:')
+            .fontSize(14)
+            .fontColor(Color.Gray)
+            .margin({ top: 20 })
+          Text(`curl -X POST -F "file=@/path/to/your/file" http://${this.serverInfo.address}:${this.serverInfo.port}/upload`)
+            .fontSize(12)
+            .fontColor(Color.Gray)
+            .fontFamily('monospace')
+            .width('90%')
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .maxLines(3)
 
         } else {
           Column({

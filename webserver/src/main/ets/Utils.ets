@@ -8,9 +8,17 @@
 import { util } from "@kit.ArkTS";
 
 export class Utils {
-  static arrayBufferToStr(arr: ArrayBuffer): string {
+  static arrayBufferToStr(arr: ArrayBuffer, encoding: 'utf-8' | 'binary' = 'utf-8'): string {
     const uint8Array = new Uint8Array(arr)
-    return Utils.uint8ToStr(uint8Array)
+    if (encoding === 'binary') {
+      let binaryString = '';
+      for (let i = 0; i < uint8Array.length; i++) {
+        binaryString += String.fromCharCode(uint8Array[i]);
+      }
+      return binaryString;
+    } else {
+      return Utils.uint8ToStr(uint8Array)
+    }
   }
 
   static uint8ToStr(arr: Uint8Array): string {
@@ -21,8 +29,17 @@ export class Utils {
     return util.TextEncoder.create().encodeInto(str)
   }
 
-  static strToArrayBuffer(str: string): ArrayBuffer {
-    return Utils.strToUint8Array(str).buffer
+  static strToArrayBuffer(str: string, encoding: 'utf-8' | 'binary' = 'utf-8'): ArrayBuffer {
+    if (encoding === 'binary') {
+      const buf = new ArrayBuffer(str.length);
+      const bufView = new Uint8Array(buf);
+      for (let i = 0, strLen = str.length; i < strLen; i++) {
+        bufView[i] = str.charCodeAt(i);
+      }
+      return buf;
+    } else {
+      return Utils.strToUint8Array(str).buffer
+    }
   }
 
   // 工具方法：合并ArrayBuffer

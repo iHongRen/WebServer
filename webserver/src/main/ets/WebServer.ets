@@ -67,41 +67,21 @@ export class WebServer {
 
   public json() {
     this.use((req: HttpRequest, res: HttpResponse, next: NextFunction) => {
-      const contentType = req.headers.get('content-type');
-      if (contentType && contentType.includes('application/json') && req.body instanceof ArrayBuffer) {
-        try {
-          const bodyStr = Utils.arrayBufferToStr(req.body);
-          req.body = JSON.parse(bodyStr);
-        } catch (error) {
-          return next(error);
-        }
-      }
+      req.parseBody();
       next();
     });
   }
 
   public urlencoded() {
     this.use((req: HttpRequest, res: HttpResponse, next: NextFunction) => {
-      const contentType = req.headers.get('content-type');
-      if (contentType && contentType.includes('application/x-www-form-urlencoded') && req.body instanceof ArrayBuffer) {
-        try {
-          const bodyStr = Utils.arrayBufferToStr(req.body);
-          const params: Record<string, string> = {};
-          const pairs = bodyStr.split('&');
-          for (const pair of pairs) {
-            const parts = pair.split('=');
-            if (parts.length === 2) {
-              // Decode + as space, then decode percent-encoded characters
-              const key = decodeURIComponent(parts[0].replace(/\+/g, ' '));
-              const value = decodeURIComponent(parts[1].replace(/\+/g, ' '));
-              params[key] = value;
-            }
-          }
-          req.body = params;
-        } catch (error) {
-          return next(error);
-        }
-      }
+      req.parseBody();
+      next();
+    });
+  }
+
+  public multipart() {
+    this.use((req: HttpRequest, res: HttpResponse, next: NextFunction) => {
+      req.parseBody();
       next();
     });
   }
@@ -239,64 +219,58 @@ export class WebServer {
   }
 
   private handleClient(clientSocket: socket.TCPSocketConnection) {
-    let receivedData = new ArrayBuffer(0);
     clientSocket.on('message', async (data) => {
-      receivedData = Utils.mergeArrayBuffers(receivedData, data.message);
-      const requestStr = Utils.arrayBufferToStr(receivedData);
-      if (requestStr.includes('\r\n\r\n')) {
-        const req = new HttpRequest(receivedData);
-        const res = new HttpResponse(clientSocket);
-        let routeIndex = -1;
+      const req = new HttpRequest(data.message);
+      const res = new HttpResponse(clientSocket);
+      let routeIndex = -1;
 
-        const next: NextFunction = (err?: Error) => {
-          routeIndex++;
-          if (routeIndex >= this.routes.length) {
-            if (err && !res.isHeadersSent()) {
-              res.status(500).json({ error: 'Internal Server Error' });
-            }
-            return;
+      const next: NextFunction = (err?: Error) => {
+        routeIndex++;
+        if (routeIndex >= this.routes.length) {
+          if (err && !res.isHeadersSent()) {
+            res.status(500).json({ error: 'Internal Server Error' });
           }
+          return;
+        }
 
-          const route = this.routes[routeIndex];
+        const route = this.routes[routeIndex];
 
-          try {
-            if (err) {
-              if (route.handler.length === 4) {
-                (route.handler as ErrorHandler)(err, req, res, next);
-              } else {
-                next(err);
-              }
+        try {
+          if (err) {
+            if (route.handler.length === 4) {
+              (route.handler as ErrorHandler)(err, req, res, next);
             } else {
-              if (route.handler.length !== 4) {
-                let match: RegExpExecArray | null = null;
-                const simpleMatch = route.path === req.path || route.path === '*';
-                const regexMatch = route.pathRegex && (match = route.pathRegex.exec(req.path));
+              next(err);
+            }
+          } else {
+            if (route.handler.length !== 4) {
+              let match: RegExpExecArray | null = null;
+              const simpleMatch = (route.method === req.method || route.method === 'ANY') && (route.path === req.path || route.path === '*');
+              const regexMatch = route.pathRegex && (match = route.pathRegex.exec(req.path));
 
-                if (simpleMatch || regexMatch) {
-                  if (regexMatch && match) {
-                    req.params = {}; // Clear old params
-                    route.paramNames.forEach((name, index) => {
-                      if (match) {
-                        req.params[name] = match[index + 1];
-                      }
-                    });
-                  }
-                  (route.handler as RequestHandler)(req, res, next);
-                } else {
-                  next();
+              if ((route.method === req.method || route.method === 'ANY') && (simpleMatch || regexMatch)) {
+                if (regexMatch && match) {
+                  req.params = {}; // Clear old params
+                  route.paramNames.forEach((name, index) => {
+                    if (match) {
+                      req.params[name] = match[index + 1];
+                    }
+                  });
                 }
+                (route.handler as RequestHandler)(req, res, next);
               } else {
                 next();
               }
+            } else {
+              next();
             }
-          } catch (e) {
-            next(e);
           }
-        };
+        } catch (e) {
+          next(e);
+        }
+      };
 
-        next();
-        receivedData = new ArrayBuffer(0);
-      }
+      next();
     });
     clientSocket.on('error', (err) => this.removeClient(clientSocket, err));
     clientSocket.on('close', () => this.removeClient(clientSocket));
