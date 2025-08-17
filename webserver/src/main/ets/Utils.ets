@@ -2,7 +2,7 @@
  * @fileName : Utils.ets
  * @author : @cxy
  * @date : 2025/8/15
- * @description : 文件描述
+ * @description : 工具类
  */
 
 import { util } from "@kit.ArkTS";

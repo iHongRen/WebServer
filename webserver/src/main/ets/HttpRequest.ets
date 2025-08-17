@@ -19,19 +19,6 @@ export class HttpRequest {
     this.parse(requestData);
   }
 
-  public getBodyAsJson(): object | null {
-    if (this.body instanceof ArrayBuffer) {
-      try {
-        const bodyStr = Utils.arrayBufferToStr(this.body)
-        return JSON.parse(bodyStr);
-      } catch (e) {
-        console.error("Failed to parse body as JSON", e);
-        return null;
-      }
-    }
-    return null;
-  }
-
   private parse(requestData: ArrayBuffer): void {
     const requestStr = Utils.arrayBufferToStr(requestData)
     const headerEndIndex = requestStr.indexOf('\r\n\r\n');

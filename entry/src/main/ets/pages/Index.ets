@@ -44,13 +44,13 @@ struct Index {
   initServer() {
     this.server = new WebServer();
 
-    // 1. 注册中间件
+    // 注册中间件
     this.server.serveStatic(this.staticFilesRoot);
     this.server.cors();
     this.server.json();
-    this.server.urlencoded(); // 新增：处理表单数据
+    // this.server.urlencoded(); // 新增：处理表单数据
 
-    // 2. 注册API路由
+    // 注册API路由
     this.server.get('/users/:userId/books/:bookId', (req, res, next) => {
       const userId = req.params.userId;
       const bookId = req.params.bookId;
@@ -83,7 +83,7 @@ struct Index {
       res.json({ message: `Welcome, ${username}!` });
     });
 
-    // 3. 注册错误触发示例路由
+    // 注册错误触发示例路由
     this.server.get('/oops', (req, res, next) => {
       next(new Error('Something went wrong!'));
     });
@@ -92,7 +92,7 @@ struct Index {
       throw new Error('This route crashed!');
     });
 
-    // 4. 注册统一错误处理中间件 (必须在最后)
+    // 注册统一错误处理中间件 (必须在最后)
     const customErrorHandler: ErrorHandler = (error, req, res, next) => {
       console.error('An error occurred:', error.message);
       if (res.isHeadersSent()) {
