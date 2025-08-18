@@ -255,11 +255,11 @@ export class WebServer {
           } else {
             if (route.handler.length !== 4) {
               let match: RegExpExecArray | null = null;
-              const simpleMatch = (route.method === req.method || route.method === 'ANY') &&
-                (route.path === req.path || route.path === '*');
-              const regexMatch = route.pathRegex && (match = route.pathRegex.exec(req.path));
+              const methodMath = route.method === req.method || route.method === 'ANY';
+              const simpleMatch = methodMath && (route.path === req.path || route.path === '*');
+              const regexMatch = methodMath && route.pathRegex && (match = route.pathRegex.exec(req.path));
 
-              if ((route.method === req.method || route.method === 'ANY') && (simpleMatch || regexMatch)) {
+              if (simpleMatch || regexMatch) {
                 if (regexMatch && match) {
                   req.params = {}; // Clear old params
                   route.paramNames.forEach((name, index) => {
