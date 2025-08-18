@@ -4,6 +4,61 @@
 
 这是一个基于HarmonyOS的轻量级Web服务器框架，提供了类似Express.js的API设计，支持路由、中间件、静态文件服务等功能。
 
+## 特性
+
+- ✅ 类Express.js的API设计
+
+- ✅ 支持路由参数和查询字符串
+
+- ✅ 内置多种请求体解析器
+
+- ✅ CORS跨域支持
+
+- ✅ 静态文件服务
+
+- ✅ 文件上传支持
+
+- ✅ 缓存控制
+
+- ✅ 错误处理
+
+- ✅ 中间件系统
+
+- ✅ 多种日志格式支持
+
+
+
+## 使用示例
+
+```typescript
+import { WebServer } from './WebServer';
+
+const app = new WebServer();
+
+// 启用中间件
+app.logger(); // 启用日志记录
+app.json();
+app.cors();
+app.serveStatic('/static');
+
+// 注册路由
+app.get('/', (req, res) => {
+  res.json({ message: 'Hello World!' });
+});
+
+app.post('/api/data', (req, res) => {
+  console.log('收到数据:', req.body);
+  res.json({ success: true });
+});
+
+// 启动服务器
+app.startServer(3000).then(info => {
+  console.log(`服务器启动成功: http://${info.address}:${info.port}`);
+});
+```
+
+
+
 ## 核心类
 
 ### WebServer 类
@@ -28,6 +83,8 @@ constructor()
 - `multipart()` - 启用多部分表单解析
 - `serveStatic(directoryPath: string, options?: CacheOptions)` - 启用静态文件服务
 - `cors(options?: CorsOptions)` - 启用CORS跨域支持
+- `logger()` - 启用日志中间件（开发环境格式）
+- `loggerWithFormat(format: LogFormat)` - 启用自定义格式的日志中间件
 - `startServer(port: number): Promise<ServerInfo>` - 启动服务器
 - `stopServer(): Promise<void>` - 停止服务器
 
@@ -101,6 +158,17 @@ CORS跨域资源共享中间件。
 
 - `static serve(directoryPath: string, options?: CacheOptions): RequestHandler` - 创建静态文件服务中间件
 
+### Logger 类
+
+日志中间件，提供HTTP请求日志记录功能。
+
+- `static create(options?: LoggerOptions): RequestHandler` - 创建自定义日志中间件
+- `static dev(): RequestHandler` - 开发环境日志格式
+- `static combined(): RequestHandler` - 生产环境日志格式（Apache Combined）
+- `static common(): RequestHandler` - 通用日志格式（Apache Common）
+- `static short(): RequestHandler` - 简短日志格式
+- `static tiny(): RequestHandler` - 最简日志格式
+
 ## 工具类
 
 ### Utils 类
@@ -129,45 +197,10 @@ CORS跨域资源共享中间件。
 - `Route` - 路由接口
 - `CorsOptions` - CORS配置选项
 - `CacheOptions` - 缓存配置选项
+- `LoggerOptions` - 日志配置选项
 - `ServerInfo` - 服务器信息接口
 
-## 使用示例
+### 枚举定义
 
-```typescript
-import { WebServer } from './WebServer';
+- `LogFormat` - 日志格式枚举（DEV, TINY, SHORT, COMMON, COMBINED）
 
-const app = new WebServer();
-
-// 启用中间件
-app.json();
-app.cors();
-app.serveStatic('/static');
-
-// 注册路由
-app.get('/', (req, res) => {
-  res.json({ message: 'Hello World!' });
-});
-
-app.post('/api/data', (req, res) => {
-  console.log('收到数据:', req.body);
-  res.json({ success: true });
-});
-
-// 启动服务器
-app.startServer(3000).then(info => {
-  console.log(`服务器启动成功: http://${info.address}:${info.port}`);
-});
-```
-
-## 特性
-
-- ✅ 类Express.js的API设计
-- ✅ 支持路由参数和查询字符串
-- ✅ 内置多种请求体解析器
-- ✅ CORS跨域支持
-- ✅ 静态文件服务
-- ✅ 文件上传支持
-- ✅ 缓存控制
-- ✅ 错误处理
-- ✅ 中间件系统
-- ✅ 完整的中文注释

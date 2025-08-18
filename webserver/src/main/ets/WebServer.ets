@@ -21,7 +21,9 @@ import {
   CacheOptions,
   BodyParser,
   Cors,
-  StaticFiles
+  StaticFiles,
+  Logger,
+  LogFormat
 } from './middleware';
 
 /**
@@ -127,6 +129,21 @@ export class WebServer {
    */
   public cors(options?: CorsOptions) {
     this.use(Cors.create(options));
+  }
+
+  /**
+   * 启用日志中间件（开发环境格式）
+   */
+  public logger() {
+    this.use(Logger.dev());
+  }
+
+  /**
+   * 启用自定义格式的日志中间件
+   * @param format 日志格式
+   */
+  public loggerWithFormat(format: LogFormat) {
+    this.use(Logger.create({ format }));
   }
 
   /**

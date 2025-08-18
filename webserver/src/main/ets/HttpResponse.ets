@@ -21,6 +21,11 @@ const STATUS_CODES: Record<number, string> = {
 };
 
 /**
+ * 响应完成回调函数类型
+ */
+export type ResponseFinishCallback = (statusCode: number, responseSize: number) => void;
+
+/**
  * HTTP响应类
  * 用于构建和发送HTTP响应
  */
@@ -29,6 +34,7 @@ export class HttpResponse {
   private statusCode: number = 200; // HTTP状态码
   private headers: Map<string, string> = new Map(); // 响应头集合
   private _headersSent: boolean = false; // 响应头是否已发送
+  private finishCallbacks: ResponseFinishCallback[] = []; // 响应完成回调列表
 
   /**
    * 构造函数
@@ -70,6 +76,36 @@ export class HttpResponse {
   }
 
   /**
+   * 获取当前状态码
+   * @returns 状态码
+   */
+  public getStatusCode(): number {
+    return this.statusCode;
+  }
+
+  /**
+   * 添加响应完成回调
+   * @param callback 回调函数
+   */
+  public onFinish(callback: ResponseFinishCallback): void {
+    this.finishCallbacks.push(callback);
+  }
+
+  /**
+   * 触发响应完成回调
+   * @param responseSize 响应大小
+   */
+  private triggerFinishCallbacks(responseSize: number): void {
+    this.finishCallbacks.forEach(callback => {
+      try {
+        callback(this.statusCode, responseSize);
+      } catch (error) {
+        console.error('响应完成回调执行错误:', error);
+      }
+    });
+  }
+
+  /**
    * 发送响应数据
    * @param body 响应体数据
    */
@@ -80,7 +116,8 @@ export class HttpResponse {
     }
 
     const bodyBytes = this.getBodyBytes(body);
-    this.setHeader('Content-Length', bodyBytes.byteLength.toString());
+    const responseSize = bodyBytes.byteLength;
+    this.setHeader('Content-Length', responseSize.toString());
 
     const statusText = STATUS_CODES[this.statusCode] || 'OK';
     let headerString = `HTTP/1.1 ${this.statusCode} ${statusText}\r\n`;
@@ -94,6 +131,9 @@ export class HttpResponse {
 
     await this.socket.send({ data: responseData });
     this._headersSent = true;
+
+    // 触发响应完成回调
+    this.triggerFinishCallbacks(responseSize);
   }
 
   /**

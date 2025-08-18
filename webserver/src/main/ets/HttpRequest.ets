@@ -52,6 +52,14 @@ export class HttpRequest {
   }
 
   /**
+   * 获取请求的Referer
+   * @returns Referer字符串
+   */
+  public get referer(): string {
+    return this.get('referer') || this.get('referrer') || '';
+  }
+
+  /**
    * 获取请求的Content-Length
    * @returns 内容长度
    */

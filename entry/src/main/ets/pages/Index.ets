@@ -69,13 +69,14 @@ struct Index {
 
   initServer() {
     this.server = new WebServer();
-    
+
     // 注册中间件
     this.server.serveStatic(this.staticFilesRoot);
     this.server.cors();
     this.server.json();
     this.server.urlencoded();
     this.server.multipart();
+    this.server.logger()
 
     // 新增：获取文件列表路由
     this.server.get('/api/files', async (req, res, next) => {
@@ -197,7 +198,7 @@ struct Index {
   build() {
     Row() {
       Column() {
-        Text('ArkTS Web Server')
+        Text('鸿蒙 Web Server')
           .fontSize(30)
           .fontWeight(FontWeight.Bold)
           .margin({ bottom: 20 })
@@ -226,32 +227,6 @@ struct Index {
               this.stop();
             })
 
-          // 文件列表
-          Text('可下载文件:')
-            .fontSize(18)
-            .fontWeight(FontWeight.Bold)
-            .margin({ top: 20, bottom: 10 })
-
-          List({ space: 10 }) {
-            ForEach(this.fileList, (fileName: string) => {
-              ListItem() {
-                Row() {
-                  Text(fileName)
-                    .fontSize(16)
-
-                  Text(`http://${this.serverInfo?.address}:${this.serverInfo?.port}/${fileName}`)
-                  Text('下载')
-                    .fontColor(Color.Blue)
-
-                }.justifyContent(FlexAlign.SpaceBetween).width('100%')
-              }
-            }, (item: string) => item)
-          }
-          .width('90%')
-          .layoutWeight(1)
-
-
-          Text(`http://${this.serverInfo.address}:${this.serverInfo.port}/upload.html`)
         } else {
           Column({
             space: 10
