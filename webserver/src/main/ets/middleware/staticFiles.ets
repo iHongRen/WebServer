@@ -43,7 +43,7 @@ export class StaticFiles {
         const etag = `W/"${stat.size}-${stat.mtime}"`;
 
         // 检查客户端缓存
-        const ifNoneMatch = req.headers.get('if-none-match');
+        const ifNoneMatch = req.get('if-none-match');
         if (ifNoneMatch === etag) {
           return res.status(304).send(); // Not Modified
         }

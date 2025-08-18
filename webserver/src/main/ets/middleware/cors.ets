@@ -15,7 +15,7 @@ export class Cors {
    */
   static create(options?: CorsOptions): RequestHandler {
     return (req: HttpRequest, res: HttpResponse, next: NextFunction) => {
-      const requestOrigin = req.headers.get('origin');
+      const requestOrigin = req.get('origin');
       if (!requestOrigin) {
         return next();
       }

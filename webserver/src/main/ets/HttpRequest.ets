@@ -20,10 +20,11 @@ export class HttpRequest {
   public path: string = '';
   public version: string = '';
   public headers: Map<string, string> = new Map();
-  public body: ArrayBuffer | Record<string, Object> = new ArrayBuffer(0);
-  public query: Map<string, string> = new Map();
-  public params: Record<string, string> = {};
-  public files: Record<string, File> = {};
+  public body: Record<string, string> = {}; // 解析后的请求体数据
+  public query: Map<string, string> = new Map(); // 查询字符串参数
+  public params: Record<string, string> = {}; // 路由参数
+  public files: Record<string, File> = {}; // 上传的文件
+  private rawBody: ArrayBuffer = new ArrayBuffer(0); // 原始请求体数据
 
   constructor(app: WebServer, requestData: ArrayBuffer) {
     this.app = app;
@@ -36,16 +37,17 @@ export class HttpRequest {
 
   public parseBody(): void {
     const contentType = this.headers.get('content-type');
-    if (contentType && this.body instanceof ArrayBuffer) {
+    if (contentType && this.rawBody.byteLength > 0) {
       if (contentType.includes('application/json')) {
         try {
-          const bodyStr = Utils.arrayBufferToStr(this.body);
+          const bodyStr = Utils.arrayBufferToStr(this.rawBody);
           this.body = JSON.parse(bodyStr);
         } catch (error) {
           console.error("Failed to parse JSON body", error);
+          this.body = {};
         }
       } else if (contentType.includes('application/x-www-form-urlencoded')) {
-        const bodyStr = Utils.arrayBufferToStr(this.body);
+        const bodyStr = Utils.arrayBufferToStr(this.rawBody);
         const params: Record<string, string> = {};
         const pairs = bodyStr.split('&');
         for (const pair of pairs) {
@@ -58,9 +60,47 @@ export class HttpRequest {
         }
         this.body = params;
       } else if (contentType.includes('multipart/form-data')) {
-        this.parseMultipartFormData(contentType, this.body);
+        this.parseMultipartFormData(contentType, this.rawBody);
+      } else {
+        // 对于其他类型，保持原始数据
       }
     }
+  }
+
+  /**
+   * 获取原始请求体数据
+   */
+  public getRawBody(): ArrayBuffer {
+    return this.rawBody;
+  }
+
+  /**
+   * 获取请求头
+   */
+  public get(headerName: string): string | undefined {
+    return this.headers.get(headerName.toLowerCase());
+  }
+
+  /**
+   * 获取查询参数
+   */
+  public getQuery(key: string): string | undefined {
+    return this.query.get(key);
+  }
+
+  /**
+   * 获取路由参数
+   */
+  public getParam(key: string): string | undefined {
+    return this.params[key];
+  }
+
+  /**
+   * 检查是否为指定的Content-Type
+   */
+  public is(type: string): boolean {
+    const contentType = this.get('content-type');
+    return contentType ? contentType.includes(type) : false;
   }
 
   private parseHeadersAndPath(requestData: ArrayBuffer): void {
@@ -102,7 +142,7 @@ export class HttpRequest {
     });
 
     if (bodyData.byteLength > 0) {
-      this.body = bodyData;
+      this.rawBody = bodyData;
     }
   }
 
@@ -122,7 +162,7 @@ export class HttpRequest {
   }
 
   private parseMultipartFormData(contentType: string, body: ArrayBuffer): void {
-    this.body = {}; // Initialize
+    this.body = {}; // 初始化body为空对象
     const boundary = this.parseBoundary(contentType);
     if (!boundary) {
       return;
@@ -154,6 +194,7 @@ export class HttpRequest {
       const fileName = contentDispositionMatch[2];
 
       if (fileName) {
+        // 文件上传，存储到files中
         const contentTypeMatch = headerPart.match(/Content-Type: (.+)/);
         const contentTypeHeader = contentTypeMatch ? contentTypeMatch[1].trim() : 'application/octet-stream';
         this.files[fieldName] = {
@@ -163,7 +204,8 @@ export class HttpRequest {
           data: Utils.strToArrayBuffer(bodyPartStr)
         };
       } else {
-        (this.body as Record<string, string>)[fieldName] = bodyPartStr;
+        // 普通表单字段，存储到body中
+        this.body[fieldName] = bodyPartStr;
       }
     }
   }
