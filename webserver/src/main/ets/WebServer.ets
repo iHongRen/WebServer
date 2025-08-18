@@ -52,7 +52,7 @@ export class WebServer {
     });
   }
 
-  public setConfig(key: string, value: Object): void {
+  public setConfig(key: string, value: Object) {
     this.configs.set(key, value);
   }
 
@@ -60,17 +60,17 @@ export class WebServer {
     return this.configs.get(key);
   }
 
-  public get(key: string, handler: RequestHandler): Object | undefined | void {
-    this.addRoute('GET', key, handler, false);
+  // 注册中间件或错误处理中间件
+  public use(handler: RequestHandler | ErrorHandler) {
+    this.addRoute('ANY', '*', handler);
   }
 
-  // 注册中间件或错误处理中间件
-  public use(handler: RequestHandler | ErrorHandler): void {
-    this.addRoute('ANY', '*', handler, false);
+  public get(path: string, handler: RequestHandler) {
+    this.addRoute('GET', path, handler);
   }
 
   public post(path: string, handler: RequestHandler) {
-    this.addRoute('POST', path, handler, false);
+    this.addRoute('POST', path, handler);
   }
 
   public json() {
@@ -140,8 +140,8 @@ export class WebServer {
         next();
       }
     };
-    
-    this.addRoute('GET', '*', staticFileHandler, true);
+
+    this.addRoute('GET', '*', staticFileHandler);
   }
 
   public cors(options?: CorsOptions) {
@@ -199,7 +199,7 @@ export class WebServer {
     }
   }
 
-  private addRoute(method: string, path: string, handler: RequestHandler | ErrorHandler, isStatic: boolean = false) {
+  private addRoute(method: string, path: string, handler: RequestHandler | ErrorHandler) {
     let pathRegex: RegExp | null = null;
     const paramNames: string[] = [];
 
@@ -219,6 +219,7 @@ export class WebServer {
       paramNames
     };
     const insertIndex = this.routes.length > 0 ? this.routes.length - 1 : 0;
+    const isStatic = method === 'GET' && path === '*'
     if (isStatic) {
       const firstWildcardIndex = this.routes.findIndex(r => r.path === '*');
       this.routes.splice(firstWildcardIndex, 0, route);
