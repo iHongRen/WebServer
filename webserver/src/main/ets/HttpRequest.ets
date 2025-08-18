@@ -5,7 +5,7 @@
  * @description : HTTP 请求解析类
  */
 import { Utils } from "./Utils";
-import type { WebServer } from './WebServer';
+import { socket } from '@kit.NetworkKit';
 
 export interface File {
   fieldName: string;
@@ -15,10 +15,11 @@ export interface File {
 }
 
 export class HttpRequest {
-  public app: WebServer;
   public method: string = '';
   public path: string = '';
   public version: string = '';
+  public url: string = ''; // 完整的URL路径（包含查询字符串）
+  public ip: string = ''; // 客户端IP地址
   public headers: Map<string, string> = new Map();
   public body: Record<string, string> = {}; // 解析后的请求体数据
   public query: Map<string, string> = new Map(); // 查询字符串参数
@@ -26,13 +27,24 @@ export class HttpRequest {
   public files: Record<string, File> = {}; // 上传的文件
   private rawBody: ArrayBuffer = new ArrayBuffer(0); // 原始请求体数据
 
-  constructor(app: WebServer, requestData: ArrayBuffer) {
-    this.app = app;
-    this.parseHeadersAndPath(requestData);
+  constructor(data: socket.SocketMessageInfo) {
+    this.parseHeadersAndPath(data.message);
+    this.parseClientInfo(data.remoteInfo);
   }
 
-  public getConfig(key: string): Object | undefined {
-    return this.app.getConfig(key);
+  /**
+   * 获取请求的User-Agent
+   */
+  public get userAgent(): string {
+    return this.get('user-agent') || '';
+  }
+
+  /**
+   * 获取请求的Content-Length
+   */
+  public get contentLength(): number {
+    const length = this.get('content-length');
+    return length ? parseInt(length) : 0;
   }
 
   public parseBody(): void {
@@ -82,20 +94,6 @@ export class HttpRequest {
   }
 
   /**
-   * 获取查询参数
-   */
-  public getQuery(key: string): string | undefined {
-    return this.query.get(key);
-  }
-
-  /**
-   * 获取路由参数
-   */
-  public getParam(key: string): string | undefined {
-    return this.params[key];
-  }
-
-  /**
    * 检查是否为指定的Content-Type
    */
   public is(type: string): boolean {
@@ -123,6 +121,8 @@ export class HttpRequest {
       this.method = requestLineParts[0];
       const fullPath = requestLineParts[1];
       this.version = requestLineParts[2];
+
+      this.url = fullPath; // 保存完整URL
 
       const queryIndex = fullPath.indexOf('?');
       if (queryIndex !== -1) {
@@ -207,6 +207,30 @@ export class HttpRequest {
         // 普通表单字段，存储到body中
         this.body[fieldName] = bodyPartStr;
       }
+    }
+  }
+
+  /**
+   * 解析客户端信息
+   */
+  private parseClientInfo(info: socket.SocketRemoteInfo): void {
+    // 解析IP地址
+    if (info) {
+      this.ip = info.address;
+    }
+
+    // 检查代理头部
+    const xForwardedFor = this.get('x-forwarded-for');
+    if (xForwardedFor) {
+      const ips = xForwardedFor.split(',').map(ip => ip.trim());
+      if (ips.length > 0) {
+        this.ip = ips[0]; // 使用第一个IP作为真实IP
+      }
+    }
+
+    const xRealIp = this.get('x-real-ip');
+    if (xRealIp) {
+      this.ip = xRealIp;
     }
   }
 }

@@ -3,7 +3,6 @@ import { fileIo } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
 import { WebServer, ErrorHandler, ServerInfo } from '@cxy/webserver';
 import { http } from '@kit.NetworkKit';
-import { checkChunk, handleChunkUpload } from './chunkedUpload';
 
 @Entry
 @Component
@@ -80,10 +79,6 @@ struct Index {
     this.server.json();
     this.server.urlencoded();
     this.server.multipart();
-
-    // 注册分片上传路由
-    this.server.post('/upload', handleChunkUpload);
-    this.server.get('/upload', checkChunk);
 
     // 新增：获取文件列表路由
     this.server.get('/api/files', async (req, res, next) => {

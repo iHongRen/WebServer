@@ -117,9 +117,9 @@ export class WebServer {
       const completeRequest = this.isRequestComplete(buffer);
       if (completeRequest) {
         // 处理请求
-        const req = new HttpRequest(this, buffer);
+        const req = new HttpRequest(data);
         const res = new HttpResponse(clientSocket);
-        this.router.handle(req, res)
+        this.router.handle(req, res);
 
         // 清空缓冲区
         buffer = new ArrayBuffer(0);
