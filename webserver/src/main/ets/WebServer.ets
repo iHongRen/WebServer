@@ -229,62 +229,79 @@ export class WebServer {
   }
 
   private handleClient(clientSocket: socket.TCPSocketConnection) {
+    let buffer = new ArrayBuffer(0);
+
     clientSocket.on('message', async (data) => {
-      const req = new HttpRequest(this, data.message);
-      const res = new HttpResponse(clientSocket);
-      let routeIndex = -1;
+      // 将新数据追加到缓冲区
+      buffer = Utils.mergeArrayBuffers(buffer, data.message);
 
-      const next: NextFunction = (err?: Error) => {
-        routeIndex++;
-        if (routeIndex >= this.routes.length) {
-          if (err && !res.isHeadersSent()) {
-            res.status(500).json({ error: 'Internal Server Error' });
-          }
-          return;
+      // 检查是否有完整的HTTP请求
+      const completeRequest = this.isRequestComplete(buffer);
+      if (completeRequest) {
+        // 处理请求
+        this.processRequest(buffer, clientSocket);
+        // 清空缓冲区
+        buffer = new ArrayBuffer(0);
+      }
+    });
+
+    clientSocket.on('error', (err) => this.removeClient(clientSocket, err));
+    clientSocket.on('close', () => this.removeClient(clientSocket));
+  }
+
+  private processRequest(requestData: ArrayBuffer, clientSocket: socket.TCPSocketConnection) {
+    const req = new HttpRequest(this, requestData);
+    const res = new HttpResponse(clientSocket);
+    let routeIndex = -1;
+
+    const next: NextFunction = (err?: Error) => {
+      routeIndex++;
+      if (routeIndex >= this.routes.length) {
+        if (err && !res.isHeadersSent()) {
+          res.status(500).json({ error: 'Internal Server Error' });
         }
+        return;
+      }
 
-        const route = this.routes[routeIndex];
+      const route = this.routes[routeIndex];
 
-        try {
-          if (err) {
-            if (route.handler.length === 4) {
-              (route.handler as ErrorHandler)(err, req, res, next);
-            } else {
-              next(err);
-            }
+      try {
+        if (err) {
+          if (route.handler.length === 4) {
+            (route.handler as ErrorHandler)(err, req, res, next);
           } else {
-            if (route.handler.length !== 4) {
-              let match: RegExpExecArray | null = null;
-              const methodMath = route.method === req.method || route.method === 'ANY';
-              const simpleMatch = methodMath && (route.path === req.path || route.path === '*');
-              const regexMatch = methodMath && route.pathRegex && (match = route.pathRegex.exec(req.path));
+            next(err);
+          }
+        } else {
+          if (route.handler.length !== 4) {
+            let match: RegExpExecArray | null = null;
+            const methodMath = route.method === req.method || route.method === 'ANY';
+            const simpleMatch = methodMath && (route.path === req.path || route.path === '*');
+            const regexMatch = methodMath && route.pathRegex && (match = route.pathRegex.exec(req.path));
 
-              if (simpleMatch || regexMatch) {
-                if (regexMatch && match) {
-                  req.params = {}; // Clear old params
-                  route.paramNames.forEach((name, index) => {
-                    if (match) {
-                      req.params[name] = match[index + 1];
-                    }
-                  });
-                }
-                (route.handler as RequestHandler)(req, res, next);
-              } else {
-                next();
+            if (simpleMatch || regexMatch) {
+              if (regexMatch && match) {
+                req.params = {}; // Clear old params
+                route.paramNames.forEach((name, index) => {
+                  if (match) {
+                    req.params[name] = match[index + 1];
+                  }
+                });
               }
+              (route.handler as RequestHandler)(req, res, next);
             } else {
               next();
             }
+          } else {
+            next();
           }
-        } catch (e) {
-          next(e);
         }
-      };
+      } catch (e) {
+        next(e);
+      }
+    };
 
-      next();
-    });
-    clientSocket.on('error', (err) => this.removeClient(clientSocket, err));
-    clientSocket.on('close', () => this.removeClient(clientSocket));
+    next();
   }
 
   private removeClient(clientSocket: socket.TCPSocketConnection, error?: BusinessError) {
@@ -295,6 +312,26 @@ export class WebServer {
     if (index > -1) {
       this.clients.splice(index, 1);
     }
+  }
+
+  private isRequestComplete(buffer: ArrayBuffer): boolean {
+    const bufferStr = Utils.arrayBufferToStr(buffer);
+    const headerEndIndex = bufferStr.indexOf('\r\n\r\n');
+
+    if (headerEndIndex === -1) {
+      return false; // 头部不完整
+    }
+
+    // 解析Content-Length
+    const headerStr = bufferStr.substring(0, headerEndIndex);
+    const contentLengthMatch = headerStr.match(/Content-Length:\s*(\d+)/i);
+    const contentLength = contentLengthMatch ? parseInt(contentLengthMatch[1]) : 0;
+
+    // 计算完整请求的总长度
+    const headerLength = headerEndIndex + 4; // 包括 \r\n\r\n
+    const totalRequestLength = headerLength + contentLength;
+
+    return buffer.byteLength >= totalRequestLength;
   }
 
   private getLocalIP(): string {
