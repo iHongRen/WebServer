@@ -11,9 +11,17 @@ import { NextFunction, RequestHandler, CacheOptions } from './types';
 import { Utils } from '../Utils';
 import { fileIo } from '@kit.CoreFileKit';
 
+/**
+ * 静态文件服务类
+ * 提供静态文件访问功能，支持缓存控制
+ */
 export class StaticFiles {
   /**
-   * 静态文件服务中间件
+   * 创建静态文件服务中间件
+   * 处理静态文件请求，支持缓存和ETag
+   * @param directoryPath 静态文件目录路径
+   * @param options 缓存配置选项
+   * @returns 中间件处理函数
    */
   static serve(directoryPath: string, options?: CacheOptions): RequestHandler {
     return async (req: HttpRequest, res: HttpResponse, next: NextFunction) => {

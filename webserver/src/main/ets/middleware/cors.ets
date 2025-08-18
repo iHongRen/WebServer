@@ -9,9 +9,16 @@ import { HttpRequest } from '../HttpRequest';
 import { HttpResponse } from '../HttpResponse';
 import { NextFunction, RequestHandler, CorsOptions } from './types';
 
+/**
+ * CORS跨域资源共享中间件类
+ * 处理跨域请求的访问控制
+ */
 export class Cors {
   /**
-   * CORS中间件
+   * 创建CORS中间件
+   * 设置跨域访问控制头部
+   * @param options CORS配置选项
+   * @returns 中间件处理函数
    */
   static create(options?: CorsOptions): RequestHandler {
     return (req: HttpRequest, res: HttpResponse, next: NextFunction) => {

@@ -24,12 +24,20 @@ import {
   StaticFiles
 } from './middleware';
 
+/**
+ * Web服务器类
+ * 提供HTTP服务器功能，支持路由、中间件等特性
+ */
 export class WebServer {
-  private tcpServer: socket.TCPSocketServer | null = null;
-  private clients: socket.TCPSocketConnection[] = [];
-  private router: Router = new Router();
-  private configs: Map<string, Object> = new Map();
+  private tcpServer: socket.TCPSocketServer | null = null; // TCP服务器实例
+  private clients: socket.TCPSocketConnection[] = []; // 客户端连接列表
+  private router: Router = new Router(); // 路由管理器
+  private configs: Map<string, Object> = new Map(); // 配置存储
 
+  /**
+   * 构造函数
+   * 初始化服务器并设置默认404处理
+   */
   constructor() {
     // 默认404处理，作为最后一个中间件
     this.use((req: HttpRequest, res: HttpResponse, next: NextFunction) => {
@@ -39,47 +47,93 @@ export class WebServer {
     });
   }
 
+  /**
+   * 设置配置项
+   * @param key 配置键
+   * @param value 配置值
+   */
   public setConfig(key: string, value: Object) {
     this.configs.set(key, value);
   }
 
+  /**
+   * 获取配置项
+   * @param key 配置键
+   * @returns 配置值
+   */
   public getConfig(key: string): Object | undefined {
     return this.configs.get(key);
   }
 
-  // 注册中间件或错误处理中间件
+  /**
+   * 注册中间件或错误处理中间件
+   * @param handler 处理函数
+   */
   public use(handler: RequestHandler | ErrorHandler) {
     this.router.addRoute('ANY', '*', handler);
   }
 
+  /**
+   * 注册GET路由
+   * @param path 路由路径
+   * @param handler 处理函数
+   */
   public get(path: string, handler: RequestHandler) {
     this.router.addRoute('GET', path, handler);
   }
 
+  /**
+   * 注册POST路由
+   * @param path 路由路径
+   * @param handler 处理函数
+   */
   public post(path: string, handler: RequestHandler) {
     this.router.addRoute('POST', path, handler);
   }
 
+  /**
+   * 启用JSON请求体解析中间件
+   */
   public json() {
     this.use(BodyParser.json());
   }
 
+  /**
+   * 启用URL编码请求体解析中间件
+   */
   public urlencoded() {
     this.use(BodyParser.urlencoded());
   }
 
+  /**
+   * 启用多部分表单解析中间件
+   */
   public multipart() {
     this.use(BodyParser.multipart());
   }
 
+  /**
+   * 启用静态文件服务
+   * @param directoryPath 静态文件目录路径
+   * @param options 缓存选项
+   */
   public serveStatic(directoryPath: string, options?: CacheOptions) {
     this.router.addRoute('GET', '*', StaticFiles.serve(directoryPath, options));
   }
 
+  /**
+   * 启用CORS跨域支持
+   * @param options CORS配置选项
+   */
   public cors(options?: CorsOptions) {
     this.use(Cors.create(options));
   }
 
+  /**
+   * 启动服务器
+   * @param port 监听端口
+   * @returns 服务器信息
+   */
   public async startServer(port: number): Promise<ServerInfo> {
     try {
       this.tcpServer = socket.constructTCPSocketServerInstance();
@@ -95,6 +149,9 @@ export class WebServer {
     }
   }
 
+  /**
+   * 停止服务器
+   */
   public async stopServer(): Promise<void> {
     if (this.tcpServer) {
       for (const client of this.clients) {
@@ -106,6 +163,10 @@ export class WebServer {
     }
   }
 
+  /**
+   * 处理客户端连接
+   * @param clientSocket 客户端Socket连接
+   */
   private handleClient(clientSocket: socket.TCPSocketConnection) {
     let buffer = new ArrayBuffer(0);
 
@@ -130,6 +191,11 @@ export class WebServer {
     clientSocket.on('close', () => this.removeClient(clientSocket));
   }
 
+  /**
+   * 移除客户端连接
+   * @param clientSocket 客户端Socket连接
+   * @param error 错误信息（可选）
+   */
   private removeClient(clientSocket: socket.TCPSocketConnection, error?: BusinessError) {
     if (error) {
       console.error('客户端连接错误:', error);
@@ -140,6 +206,11 @@ export class WebServer {
     }
   }
 
+  /**
+   * 检查HTTP请求是否完整
+   * @param buffer 缓冲区数据
+   * @returns 是否为完整请求
+   */
   private isRequestComplete(buffer: ArrayBuffer): boolean {
     const bufferStr = Utils.arrayBufferToStr(buffer);
     const headerEndIndex = bufferStr.indexOf('\r\n\r\n');
@@ -160,6 +231,10 @@ export class WebServer {
     return buffer.byteLength >= totalRequestLength;
   }
 
+  /**
+   * 获取本地IP地址
+   * @returns IP地址字符串
+   */
   private getLocalIP(): string {
     try {
       const ipAddress = wifiManager.getIpInfo().ipAddress;

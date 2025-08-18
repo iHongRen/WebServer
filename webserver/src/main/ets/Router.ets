@@ -9,19 +9,29 @@ import { HttpRequest } from './HttpRequest';
 import { HttpResponse } from './HttpResponse';
 import { NextFunction, RequestHandler, ErrorHandler } from './middleware';
 
+/**
+ * 路由接口定义
+ */
 export interface Route {
-  method: string;
-  path: string;
-  handler: RequestHandler | ErrorHandler;
-  pathRegex: RegExp | null;
-  paramNames: string[];
+  method: string; // HTTP方法
+  path: string; // 路由路径
+  handler: RequestHandler | ErrorHandler; // 处理函数
+  pathRegex: RegExp | null; // 路径正则表达式
+  paramNames: string[]; // 参数名列表
 }
 
+/**
+ * 路由管理器类
+ * 负责路由的注册、匹配和执行
+ */
 export class Router {
-  private routes: Route[] = [];
+  private routes: Route[] = []; // 路由列表
 
   /**
    * 添加路由
+   * @param method HTTP方法
+   * @param path 路由路径
+   * @param handler 处理函数
    */
   addRoute(method: string, path: string, handler: RequestHandler | ErrorHandler) {
     let pathRegex: RegExp | null = null;
@@ -55,7 +65,10 @@ export class Router {
   }
 
   /**
-   * 处理请求
+   * 处理HTTP请求
+   * 遍历路由列表，找到匹配的路由并执行
+   * @param req HTTP请求对象
+   * @param res HTTP响应对象
    */
   handle(req: HttpRequest, res: HttpResponse) {
     let routeIndex = -1;
@@ -112,6 +125,7 @@ export class Router {
 
   /**
    * 获取所有路由
+   * @returns 路由列表
    */
   getRoutes(): Route[] {
     return this.routes;

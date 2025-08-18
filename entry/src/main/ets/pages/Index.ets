@@ -69,10 +69,7 @@ struct Index {
 
   initServer() {
     this.server = new WebServer();
-
-    this.server.setConfig('staticFilesRoot', this.staticFilesRoot);
-    this.server.setConfig('tempUploadsRoot', this.tempUploadsRoot);
-
+    
     // 注册中间件
     this.server.serveStatic(this.staticFilesRoot);
     this.server.cors();

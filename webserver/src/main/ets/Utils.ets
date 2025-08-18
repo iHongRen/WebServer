@@ -7,25 +7,54 @@
 
 import { util } from "@kit.ArkTS";
 
+/**
+ * 通用工具类
+ * 提供字符串转换、文件处理、路径操作等实用方法
+ */
 export class Utils {
+  /**
+   * 将ArrayBuffer转换为字符串
+   * @param arr ArrayBuffer数据
+   * @returns 转换后的字符串
+   */
   static arrayBufferToStr(arr: ArrayBuffer): string {
     const uint8Array = new Uint8Array(arr)
     return Utils.uint8ToStr(uint8Array)
   }
 
+  /**
+   * 将Uint8Array转换为字符串
+   * @param arr Uint8Array数据
+   * @returns 转换后的字符串
+   */
   static uint8ToStr(arr: Uint8Array): string {
     return util.TextDecoder.create().decodeToString(arr)
   }
 
+  /**
+   * 将字符串转换为Uint8Array
+   * @param str 输入字符串
+   * @returns 转换后的Uint8Array
+   */
   static strToUint8Array(str: string): Uint8Array {
     return util.TextEncoder.create().encodeInto(str)
   }
 
+  /**
+   * 将字符串转换为ArrayBuffer
+   * @param str 输入字符串
+   * @returns 转换后的ArrayBuffer
+   */
   static strToArrayBuffer(str: string): ArrayBuffer {
     return Utils.strToUint8Array(str).buffer
   }
 
-  // 工具方法：合并ArrayBuffer
+  /**
+   * 合并两个ArrayBuffer
+   * @param buffer1 第一个缓冲区
+   * @param buffer2 第二个缓冲区
+   * @returns 合并后的ArrayBuffer
+   */
   static mergeArrayBuffers(buffer1: ArrayBuffer, buffer2: ArrayBuffer): ArrayBuffer {
     const merged = new ArrayBuffer(buffer1.byteLength + buffer2.byteLength);
     const mergedView = new Uint8Array(merged);
@@ -34,6 +63,11 @@ export class Utils {
     return merged;
   }
 
+  /**
+   * 根据文件路径获取MIME类型
+   * @param filePath 文件路径
+   * @returns MIME类型字符串
+   */
   static getMimeType(filePath: string): string {
     const extension = filePath.split('.').pop()?.toLowerCase() || '';
     const mimeTypes: Record<string, string> = {
@@ -132,6 +166,11 @@ export class Utils {
     return isAbsolute ? `/${joined}` : joined;
   }
 
+  /**
+   * 清理文件名，移除非法字符
+   * @param filename 原始文件名
+   * @returns 清理后的安全文件名
+   */
   static sanitizeFilename(filename: string): string {
     // 移除路径遍历字符和其它非法字符
     // 只允许字母、数字、下划线、连字符、点

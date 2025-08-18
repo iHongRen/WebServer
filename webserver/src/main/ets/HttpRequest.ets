@@ -7,26 +7,37 @@
 import { Utils } from "./Utils";
 import { socket } from '@kit.NetworkKit';
 
+/**
+ * 上传文件接口定义
+ */
 export interface File {
-  fieldName: string;
-  fileName: string;
-  contentType: string;
-  data: ArrayBuffer;
+  fieldName: string; // 表单字段名
+  fileName: string; // 文件名
+  contentType: string; // 文件类型
+  data: ArrayBuffer; // 文件数据
 }
 
+/**
+ * HTTP请求类
+ * 用于解析和处理HTTP请求数据
+ */
 export class HttpRequest {
-  public method: string = '';
-  public path: string = '';
-  public version: string = '';
+  public method: string = ''; // HTTP请求方法（GET、POST等）
+  public path: string = ''; // 请求路径（不包含查询字符串）
+  public version: string = ''; // HTTP版本
   public url: string = ''; // 完整的URL路径（包含查询字符串）
   public ip: string = ''; // 客户端IP地址
-  public headers: Map<string, string> = new Map();
+  public headers: Map<string, string> = new Map(); // 请求头集合
   public body: Record<string, string> = {}; // 解析后的请求体数据
   public query: Map<string, string> = new Map(); // 查询字符串参数
   public params: Record<string, string> = {}; // 路由参数
   public files: Record<string, File> = {}; // 上传的文件
   private rawBody: ArrayBuffer = new ArrayBuffer(0); // 原始请求体数据
 
+  /**
+   * 构造函数
+   * @param data Socket消息信息
+   */
   constructor(data: socket.SocketMessageInfo) {
     this.parseHeadersAndPath(data.message);
     this.parseClientInfo(data.remoteInfo);
@@ -34,6 +45,7 @@ export class HttpRequest {
 
   /**
    * 获取请求的User-Agent
+   * @returns User-Agent字符串
    */
   public get userAgent(): string {
     return this.get('user-agent') || '';
@@ -41,12 +53,17 @@ export class HttpRequest {
 
   /**
    * 获取请求的Content-Length
+   * @returns 内容长度
    */
   public get contentLength(): number {
     const length = this.get('content-length');
     return length ? parseInt(length) : 0;
   }
 
+  /**
+   * 解析请求体数据
+   * 根据Content-Type自动选择解析方式
+   */
   public parseBody(): void {
     const contentType = this.headers.get('content-type');
     if (contentType && this.rawBody.byteLength > 0) {
@@ -81,6 +98,7 @@ export class HttpRequest {
 
   /**
    * 获取原始请求体数据
+   * @returns 原始ArrayBuffer数据
    */
   public getRawBody(): ArrayBuffer {
     return this.rawBody;
@@ -88,6 +106,8 @@ export class HttpRequest {
 
   /**
    * 获取请求头
+   * @param headerName 请求头名称
+   * @returns 请求头值
    */
   public get(headerName: string): string | undefined {
     return this.headers.get(headerName.toLowerCase());
@@ -95,12 +115,18 @@ export class HttpRequest {
 
   /**
    * 检查是否为指定的Content-Type
+   * @param type 要检查的内容类型
+   * @returns 是否匹配
    */
   public is(type: string): boolean {
     const contentType = this.get('content-type');
     return contentType ? contentType.includes(type) : false;
   }
 
+  /**
+   * 解析HTTP请求头和路径
+   * @param requestData 原始请求数据
+   */
   private parseHeadersAndPath(requestData: ArrayBuffer): void {
     const requestStr = Utils.arrayBufferToStr(requestData)
     const headerEndIndex = requestStr.indexOf('\r\n\r\n');
@@ -146,6 +172,10 @@ export class HttpRequest {
     }
   }
 
+  /**
+   * 解析查询字符串参数
+   * @param queryString 查询字符串
+   */
   private parseQuery(queryString: string): void {
     const params = queryString.split('&');
     params.forEach(param => {
@@ -156,11 +186,21 @@ export class HttpRequest {
     });
   }
 
+  /**
+   * 从Content-Type中解析boundary
+   * @param contentType Content-Type头部值
+   * @returns boundary字符串或null
+   */
   private parseBoundary(contentType: string): string | null {
     const match = contentType.match(/boundary=(.+)/);
     return match ? match[1].trim() : null;
   }
 
+  /**
+   * 解析multipart/form-data格式的请求体
+   * @param contentType Content-Type头部值
+   * @param body 请求体数据
+   */
   private parseMultipartFormData(contentType: string, body: ArrayBuffer): void {
     this.body = {}; // 初始化body为空对象
     const boundary = this.parseBoundary(contentType);
@@ -212,6 +252,8 @@ export class HttpRequest {
 
   /**
    * 解析客户端信息
+   * 包括IP地址、代理信息等
+   * @param info Socket远程信息
    */
   private parseClientInfo(info: socket.SocketRemoteInfo): void {
     // 解析IP地址
