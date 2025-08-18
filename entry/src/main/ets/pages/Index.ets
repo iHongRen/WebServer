@@ -1,8 +1,9 @@
 import { BusinessError } from '@kit.BasicServicesKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
-import { WebServer, checkChunk, handleChunkUpload, ErrorHandler, ServerInfo } from '@cxy/webserver';
+import { WebServer, ErrorHandler, ServerInfo } from '@cxy/webserver';
 import { http } from '@kit.NetworkKit';
+import { checkChunk, handleChunkUpload } from './chunkedUpload';
 
 @Entry
 @Component

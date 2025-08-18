@@ -1,6 +1,9 @@
-export { WebServer, ErrorHandler } from './src/main/ets/WebServer'
+export {
+  WebServer, NextFunction, ErrorHandler, RequestHandler
+} from './src/main/ets/WebServer'
 
 export { ServerInfo } from './src/main/ets/ServerInfo'
 
+export { HttpRequest } from './src/main/ets/HttpRequest'
 
-export { checkChunk, handleChunkUpload } from './src/main/ets/chunkedUpload'
+export { HttpResponse } from './src/main/ets/HttpResponse'

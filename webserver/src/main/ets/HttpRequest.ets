@@ -20,7 +20,7 @@ export class HttpRequest {
   public path: string = '';
   public version: string = '';
   public headers: Map<string, string> = new Map();
-  public body: ArrayBuffer | Record<string, Object> | null = null;
+  public body: ArrayBuffer | Record<string, Object> = new ArrayBuffer(0);
   public query: Map<string, string> = new Map();
   public params: Record<string, string> = {};
   public files: Record<string, File> = {};
@@ -58,13 +58,13 @@ export class HttpRequest {
         }
         this.body = params;
       } else if (contentType.includes('multipart/form-data')) {
-        this.parseMultipartFormData(this.body, contentType);
+        this.parseMultipartFormData(contentType, this.body);
       }
     }
   }
 
   private parseHeadersAndPath(requestData: ArrayBuffer): void {
-    const requestStr = Utils.arrayBufferToStr(requestData, 'binary')
+    const requestStr = Utils.arrayBufferToStr(requestData)
     const headerEndIndex = requestStr.indexOf('\r\n\r\n');
 
     if (headerEndIndex === -1) {
@@ -121,14 +121,14 @@ export class HttpRequest {
     return match ? match[1].trim() : null;
   }
 
-  private parseMultipartFormData(body: ArrayBuffer, contentType: string): void {
+  private parseMultipartFormData(contentType: string, body: ArrayBuffer): void {
     this.body = {}; // Initialize
     const boundary = this.parseBoundary(contentType);
     if (!boundary) {
       return;
     }
 
-    const bodyStr = Utils.arrayBufferToStr(body, 'binary');
+    const bodyStr = Utils.arrayBufferToStr(body);
     const parts = bodyStr.split('--' + boundary);
 
     for (const part of parts) {
@@ -160,7 +160,7 @@ export class HttpRequest {
           fieldName: fieldName,
           fileName: fileName,
           contentType: contentTypeHeader,
-          data: Utils.strToArrayBuffer(bodyPartStr, 'binary')
+          data: Utils.strToArrayBuffer(bodyPartStr)
         };
       } else {
         (this.body as Record<string, string>)[fieldName] = bodyPartStr;

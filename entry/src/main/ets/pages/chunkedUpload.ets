@@ -1,8 +1,7 @@
+import { HttpRequest, NextFunction } from '@cxy/webserver';
+import { HttpResponse } from '@cxy/webserver';
 import { fileIo } from '@kit.CoreFileKit';
-import { HttpRequest } from './HttpRequest';
-import { HttpResponse } from './HttpResponse';
-import { NextFunction } from './WebServer';
-import { Utils } from './Utils';
+
 
 export async function checkChunk(req: HttpRequest, res: HttpResponse, next: NextFunction) {
   const query = req.query
@@ -19,10 +18,10 @@ export async function checkChunk(req: HttpRequest, res: HttpResponse, next: Next
   const chunkDir = `${tempUploadsRoot}/${flowIdentifier}`;
   const chunkPath = `${chunkDir}/chunk_${flowChunkNumber}`;
 
-  try {
-    await fileIo.access(chunkPath);
+  const isExist = await fileIo.access(chunkPath);
+  if (isExist) {
     res.status(200).send('Chunk exists.');
-  } catch (e) {
+  } else {
     res.status(404).send('Chunk not found.');
   }
 }
@@ -67,8 +66,7 @@ export async function handleChunkUpload(req: HttpRequest, res: HttpResponse, nex
 async function combineChunks(req: HttpRequest, identifier: string, filename: string, totalChunks: number) {
   const staticFilesRoot = req.getConfig('staticFilesRoot');
   const tempUploadsRoot = req.getConfig('tempUploadsRoot');
-  const sanitizedFilename = Utils.sanitizeFilename(filename);
-  const finalFilePath = `${staticFilesRoot}/${sanitizedFilename}`;
+  const finalFilePath = `${staticFilesRoot}/${filename}`;
   const chunkDir = `${tempUploadsRoot}/${identifier}`;
 
   try {
