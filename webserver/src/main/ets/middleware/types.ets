@@ -5,6 +5,7 @@
  * @description : 中间件类型定义
  */
 
+import { Logger } from '.';
 import { HttpRequest } from '../HttpRequest';
 import { HttpResponse } from '../HttpResponse';
 
@@ -39,3 +40,4 @@ export interface CorsOptions {
 export interface CacheOptions {
   maxAge?: number // 缓存最大时间（秒）
 }
+

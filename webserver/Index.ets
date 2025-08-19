@@ -6,4 +6,5 @@ export { HttpRequest } from './src/main/ets/HttpRequest'
 
 export { HttpResponse } from './src/main/ets/HttpResponse'
 
-export { NextFunction, ErrorHandler, RequestHandler } from './src/main/ets/middleware/types'
+
+export * from './src/main/ets/middleware/index'

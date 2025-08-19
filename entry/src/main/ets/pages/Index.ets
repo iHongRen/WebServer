@@ -2,7 +2,11 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
 import { WebServer, ErrorHandler, ServerInfo } from '@cxy/webserver';
-import { http } from '@kit.NetworkKit';
+
+interface User {
+  id: number,
+  name: string
+}
 
 @Entry
 @Component
@@ -12,30 +16,51 @@ struct Index {
   @State isRunning: boolean = false;
   @State port: number = 8080;
   @State staticFilesRoot: string = '';
-  @State tempUploadsRoot: string = '';
-  @State fileList: string[] = [];
 
   aboutToAppear() {
     this.initContext();
   }
 
+  aboutToDisappear() {
+    this.stop();
+  }
+
   async initContext() {
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
     this.staticFilesRoot = context.filesDir + '/webserver';
-    this.tempUploadsRoot = context.filesDir + '/temp_uploads';
     await this.createSampleFile();
-    // 创建临时上传目录
-    if (!fileIo.accessSync(this.tempUploadsRoot)) {
-      await fileIo.mkdir(this.tempUploadsRoot);
-    }
-    await this.createUploadTestPage();
     await this.createUploadTestPage();
     this.initServer();
   }
 
   async createUploadTestPage() {
     const uploadTestPagePath = `${this.staticFilesRoot}/upload_test.html`;
-    const uploadTestPageContent = '';
+    const uploadTestPageContent = `<!DOCTYPE html>
+<html>
+<head>
+    <title>File Upload Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f0f0f0; color: #333; }
+        h1 { color: #007aff; }
+        .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        form { display: flex; flex-direction: column; gap: 15px; }
+        input[type="file"] { border: 1px solid #ccc; padding: 10px; border-radius: 4px; }
+        button { padding: 12px; background-color: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Upload a File</h1>
+        <p>Select a file to upload to the device's temporary directory.</p>
+        <form action="/api/upload" method="post" enctype="multipart/form-data">
+            <input type="file" name="uploadFile" required>
+            <button type="submit">Upload</button>
+        </form>
+    </div>
+</body>
+</html>`;
     try {
       const file = await fileIo.open(uploadTestPagePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);
       await fileIo.write(file.fd, uploadTestPageContent);
@@ -63,75 +88,120 @@ struct Index {
     }
   }
 
-  aboutToDisappear() {
-    this.stop();
-  }
-
   initServer() {
     this.server = new WebServer();
 
-    // 注册中间件
-    this.server.serveStatic(this.staticFilesRoot);
-    this.server.cors();
-    this.server.json();
-    this.server.urlencoded();
-    this.server.multipart();
-    this.server.logger()
+    // --- 1. 中间件注册 ---
+    // 顺序很重要，通常日志和CORS最先，然后是请求体解析，再是静态文件和路由
+    this.server.logger({
+      stream: (log: string) => {
+        console.log(log)
+      }
+    }) //日志记录
+    this.server.cors(); //支持跨域
+    this.server.json(); // 解析 application/json
+    this.server.urlencoded(); // 解析 application/x-www-form-urlencoded
+    this.server.multipart(); // 解析 multipart/form-data (用于文件上传)
+    this.server.serveStatic(this.staticFilesRoot); // 提供静态文件服务
 
-    // 新增：获取文件列表路由
-    this.server.get('/api/files', async (req, res, next) => {
+    // --- 2. 模拟数据 ---
+    const users: User[] = [
+      { id: 1, name: 'cxy' },
+      { id: 2, name: 'ihongren' }
+    ];
+    let nextUserId = 3;
+
+
+    // --- 3. API 示例 ---
+    // GET /api/users - 获取所有用户
+    this.server.get('/api/users', (req, res) => {
+      res.json(users);
+    });
+
+    // GET /api/users/:id - 使用路由参数，获取单个用户
+    this.server.get('/api/users/:id', (req, res) => {
+      const user = users.find(u => u.id === parseInt(req.params.id));
+      if (user) {
+        res.json(user);
+      } else {
+        res.status(404).json({ error: 'User not found' });
+      }
+    });
+
+    // POST /api/users - 创建新用户
+    this.server.post('/api/users', (req, res) => {
+      const newUser: User = {
+        id: nextUserId++,
+        name: (req.body as Record<string, string>).name || 'Unnamed'
+      };
+      users.push(newUser);
+      console.log('Created new user:', JSON.stringify(newUser));
+      res.status(201).json(newUser);
+    });
+
+    // post /api/users/:id - 更新用户
+    this.server.post('/api/users/:id', (req, res) => {
+      const userId = parseInt(req.params.id);
+      const userIndex = users.findIndex(u => u.id === userId);
+      if (userIndex !== -1) {
+        users[userIndex].name = (req.body as Record<string, string>).name || users[userIndex].name;
+        res.json(users[userIndex]);
+      } else {
+        res.status(404).json({ error: 'User not found' });
+      }
+    });
+
+    // --- 4. 文件上传路由 ---
+    this.server.post('/api/upload', async (req, res, next) => {
       try {
-        const fileNames = await fileIo.listFile(this.staticFilesRoot);
-        res.json(fileNames);
+        const uploadedFile = req.files?.uploadFile; // 'uploadFile' 对应 HTML form 中的 input name
+        if (!uploadedFile) {
+          return res.status(400).json({ error: 'No file uploaded.' });
+        }
+
+        const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+        const tempPath = `${context.filesDir}/${uploadedFile.fileName}`;
+        const f = await fileIo.open(tempPath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE)
+        await fileIo.write(f.fd, uploadedFile.data);
+
+        console.log(`File uploaded successfully: ${uploadedFile.fileName}`);
+        res.json({
+          message: 'File uploaded successfully!',
+          filename: uploadedFile.fileName,
+          size: uploadedFile.data.byteLength,
+          contentType: uploadedFile.contentType,
+          savedTo: tempPath
+        });
       } catch (error) {
         next(error);
       }
     });
 
-
-    this.server.get('/api/device', (req, res, next) => {
+    // --- 5. 其他高级示例 ---
+    // 路由参数示例
+    this.server.get('/users/:userId/books/:bookId', (req, res) => {
       res.json({
-        model: 'My HarmonyOS Device',
-        timestamp: new Date().getTime(),
-        filesDir: this.staticFilesRoot
+        message: `You requested book ${req.params.bookId} for user ${req.params.userId}.`
       });
     });
 
-    this.server.post('/api/users', (req, res, next) => {
-      console.log('Received user data (JSON): ', req.body);
-      res.status(201).json(req.body);
+    // 自定义响应头示例
+    this.server.get('/api/custom-header', (req, res) => {
+      res.setHeader('X-Custom-Header', 'Hello from ArkTS!');
+      res.json({ message: 'Check the response headers!' });
     });
 
-    // 新增：处理 application/x-www-form-urlencoded 请求的路由
-    this.server.post('/login', (req, res, next) => {
-      console.log('Received login data (urlencoded): ', req.body);
-      const body = req.body as Record<string, Object>
-      const username = body.username || 'guest';
-      res.json({ message: `Welcome, ${username}!` });
-    });
-
-
-    this.server.get('/users/:userId/books/:bookId', (req, res, next) => {
-      const userId = req.params.userId;
-      const bookId = req.params.bookId;
-
-      res.json({
-        message: `You requested book ${bookId} for user ${userId}.`,
-        user: userId,
-        book: bookId
-      });
-    });
-
-    // 注册错误触发示例路由
+    // 错误触发示例
     this.server.get('/crash', (req, res, next) => {
-      throw new Error('This route crashed!');
+      // 故意抛出一个错误来测试错误处理中间件
+      throw new Error('This is a simulated crash!');
     });
 
-    // 注册统一错误处理中间件 (必须在最后)
+    // --- 6. 统一错误处理中间件 (必须在路由之后注册) ---
     const customErrorHandler: ErrorHandler = (error, req, res, next) => {
-      console.error('An error occurred:', error.message);
+      console.error(`[WebServer Error] Path: ${req.path}, Message: ${error.message}`);
       if (res.isHeadersSent()) {
-        return next(error);
+        return next(error); // 如果头已发送，则委托给默认错误处理器
       }
       res.status(500).json({
         error: 'Internal Server Error',
@@ -153,7 +223,6 @@ struct Index {
       if (info.address) {
         this.serverInfo = info;
         this.isRunning = true;
-        this.fetchFileList();
       } else {
         console.error("启动失败，未获取到地址");
       }
@@ -170,29 +239,6 @@ struct Index {
     await this.server.stopServer();
     this.isRunning = false;
     this.serverInfo = null;
-    this.fileList = [];
-  }
-
-  async fetchFileList() {
-    if (!this.serverInfo) {
-      return;
-    }
-
-    const request = http.createHttp();
-    try {
-      const url = `http://${this.serverInfo?.address}:${this.serverInfo?.port}/api/files`;
-
-      const response = await request.request(url, { method: http.RequestMethod.GET });
-      if (response.responseCode === 200) {
-        this.fileList = JSON.parse(response.result as string);
-      } else {
-        console.error('Failed to fetch file list:', response.responseCode);
-      }
-      request.destroy()
-    } catch (e) {
-      console.error('Error fetching file list:', e);
-    } finally {
-    }
   }
 
   build() {

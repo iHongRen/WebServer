@@ -23,8 +23,8 @@ import {
   Cors,
   StaticFiles,
   Logger,
-  LogFormat
 } from './middleware';
+import { LoggerOptions } from './middleware/logger';
 
 /**
  * Web服务器类
@@ -134,16 +134,8 @@ export class WebServer {
   /**
    * 启用日志中间件（开发环境格式）
    */
-  public logger() {
-    this.use(Logger.dev());
-  }
-
-  /**
-   * 启用自定义格式的日志中间件
-   * @param format 日志格式
-   */
-  public loggerWithFormat(format: LogFormat) {
-    this.use(Logger.create({ format }));
+  public logger(options?: LoggerOptions) {
+    this.use(Logger.create(options));
   }
 
   /**

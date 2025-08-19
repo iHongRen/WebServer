@@ -20,12 +20,6 @@ export enum LogFormat {
   TINY = 'tiny' // 最简格式
 }
 
-/**
- * 日志输出流
- */
-interface LoggerStream {
-  write: (message: string) => void; // 输出流
-};
 
 /**
  * 日志配置选项接口
@@ -33,7 +27,7 @@ interface LoggerStream {
 export interface LoggerOptions {
   format?: LogFormat | string; // 日志格式
   skip?: (req: HttpRequest, res: HttpResponse) => boolean; // 跳过条件
-  stream?: LoggerStream;
+  stream?: (message: string) => void; // 输出流
 }
 
 /**
@@ -49,7 +43,7 @@ export class Logger {
   static create(options?: LoggerOptions): RequestHandler {
     const format = options?.format || LogFormat.DEV;
     const skip = options?.skip;
-    const stream = options?.stream || { write: (msg: string) => console.log(msg.trim()) };
+    const stream = options?.stream || ((msg: string) => console.log(msg.trim()));
 
     return (req: HttpRequest, res: HttpResponse, next: NextFunction) => {
       // 如果设置了跳过条件且满足条件，则跳过日志记录
@@ -65,7 +59,7 @@ export class Logger {
         const endTime = Date.now();
         const responseTime = endTime - startTime;
         const logMessage = Logger.formatLog(format, req, statusCode, responseSize, responseTime, startDate);
-        stream.write(logMessage);
+        stream(logMessage);
       });
 
       next();
@@ -152,9 +146,7 @@ export class Logger {
         return `${remoteAddr} - - [${timestamp}] "${method} ${url} ${httpVersion}" ${statusCode} ${responseSize}\n`;
 
       case LogFormat.DEV:
-        // Development format with colors
-        const statusColor = Logger.getStatusColor(statusCode);
-        return `${method} ${url} ${statusColor}${statusCode}${Logger.resetColor()} ${responseTime}ms - ${responseSize}\n`;
+        return `${method} ${url}} ${responseTime}ms - ${responseSize}\n`;
 
       case LogFormat.SHORT:
         // Short format
@@ -170,13 +162,13 @@ export class Logger {
           'method': method,
           'url': url,
           'status': statusCode.toString(),
-          'res[content-length]': responseSize.toString(),
+          'content-length': responseSize.toString(),
           'response-time': responseTime.toString(),
           'remote-addr': remoteAddr,
           'user-agent': userAgent,
           'referrer': referer,
           'date': timestamp,
-          'http-version': httpVersion
+          'version': httpVersion
         }) + '\n';
     }
   }
@@ -204,35 +196,6 @@ export class Logger {
     const offsetSign = offset >= 0 ? '+' : '-';
 
     return `${day}/${month}/${year}:${hour}:${minute}:${second} ${offsetSign}${offsetHours}${offsetMinutes}`;
-  }
-
-  /**
-   * 根据状态码获取颜色代码
-   * @param statusCode 状态码
-   * @returns 颜色代码
-   */
-  private static getStatusColor(statusCode: number): string {
-    if (statusCode >= 500) {
-      return '\x1b[31m';
-    } // 红色
-    if (statusCode >= 400) {
-      return '\x1b[33m';
-    } // 黄色
-    if (statusCode >= 300) {
-      return '\x1b[36m';
-    } // 青色
-    if (statusCode >= 200) {
-      return '\x1b[32m';
-    } // 绿色
-    return '\x1b[0m'; // 默认
-  }
-
-  /**
-   * 重置颜色代码
-   * @returns 重置颜色的ANSI代码
-   */
-  private static resetColor(): string {
-    return '\x1b[0m';
   }
 
   /**
