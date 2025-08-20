@@ -79,18 +79,21 @@ struct Index {
     // --- 2. 模拟数据 ---
     const users: User[] = [
       { id: 1, name: 'cxy' },
-      { id: 2, name: 'ihongren' }
+      { id: 2, name: 'ihongren' },
+      { id: 3, name: '仙银' }
     ];
-    let nextUserId = 3;
+    let nextUserId = 4;
 
 
     // --- 3. API 示例 ---
     // GET /api/users - 获取所有用户
+    // curl http://192.168.2.38:8080/api/users
     this.server.get('/api/users', (req, res) => {
       res.json(users);
     });
 
     // GET /api/users/:id - 使用路由参数，获取单个用户
+    // curl http://192.168.2.38:8080/api/users/1
     this.server.get('/api/users/:id', (req, res) => {
       const user = users.find(u => u.id === parseInt(req.params.id));
       if (user) {
@@ -101,6 +104,7 @@ struct Index {
     });
 
     // POST /api/users - 创建新用户
+    // curl -X POST -H "Content-Type: application/json" -d '{"name":"NewUser"}' http://192.168.2.38:8080/api/users
     this.server.post('/api/users', (req, res) => {
       const newUser: User = {
         id: nextUserId++,
@@ -112,6 +116,7 @@ struct Index {
     });
 
     // post /api/users/:id - 更新用户
+    // curl -X POST -H "Content-Type: application/json" -d '{"name":"UpdatedUser"}' http://192.168.2.38:8080/api/users/1
     this.server.post('/api/users/:id', (req, res) => {
       const userId = parseInt(req.params.id);
       const userIndex = users.findIndex(u => u.id === userId);
@@ -124,6 +129,7 @@ struct Index {
     });
 
     // --- 4. 文件上传路由 ---
+    // curl -X POST -F "uploadFile=@/path/to/your/file.txt" http://192.168.2.38:8080/api/upload
     this.server.post('/api/upload', async (req, res, next) => {
       try {
         const uploadedFile = req.files?.uploadFile; // 'uploadFile' 对应 HTML form 中的 input name
@@ -151,23 +157,37 @@ struct Index {
 
     // --- 5. 其他高级示例 ---
     // 路由参数示例
-    this.server.get('/users/:userId/books/:bookId', (req, res) => {
+    // curl http://192.168.2.38:8080/api/users/123/books/456
+    this.server.get('/api/users/:userId/books/:bookId', (req, res) => {
       res.json({
         message: `You requested book ${req.params.bookId} for user ${req.params.userId}.`
       });
     });
 
+    // 获取自定义请求头示例
+    // curl -H "X-Custom-Request-Header: MyValue" http://192.168.2.38:8080/api/custom-request-header
+    this.server.get('/api/custom-request-header', (req, res) => {
+      const customHeader = req.get('x-custom-request-header');
+      res.json({
+        message: 'Received custom request header',
+        headerValue: customHeader || 'Not found'
+      });
+    });
+
     // 自定义响应头示例
+    // curl -i http://192.168.2.38:8080/api/custom-header
     this.server.get('/api/custom-header', (req, res) => {
-      res.setHeader('X-Custom-Header', 'Hello from ArkTS!');
+      res.setHeader('X-Custom-Header', 'Hello from WebServer!');
       res.json({ message: 'Check the response headers!' });
     });
 
     // 错误触发示例
+    // curl http://192.168.2.38:8080/crash
     this.server.get('/crash', (req, res, next) => {
       // 故意抛出一个错误来测试错误处理中间件
       throw new Error('This is a simulated crash!');
     });
+
 
     // --- 6. 统一错误处理中间件 (必须在路由之后注册) ---
     const customErrorHandler: ErrorHandler = (error, req, res, next) => {
