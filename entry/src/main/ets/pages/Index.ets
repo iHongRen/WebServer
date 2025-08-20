@@ -17,24 +17,13 @@ struct Index {
   @State port: number = 8080;
   @State staticFilesRoot: string = '';
 
-  aboutToAppear() {
-    this.initContext();
+  async aboutToAppear() {
+    this.setupStatic();
+    this.initServer();
   }
 
   aboutToDisappear() {
     this.stop();
-  }
-
-  async initContext() {
-    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    this.staticFilesRoot = context.filesDir + '/static';
-    const access = await fileIo.access(this.staticFilesRoot)
-    if (!access) {
-      await fileIo.mkdir(this.staticFilesRoot)
-    }
-    await this.copyToStaticRoot('index.html');
-    await this.copyToStaticRoot('upload.html');
-    this.initServer();
   }
 
   // 拷贝到沙箱服务器目录
@@ -47,6 +36,19 @@ struct Index {
     await fileIo.close(outFile.fd)
   }
 
+  // 创建静态资源文件
+  async setupStatic() {
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    this.staticFilesRoot = context.filesDir + '/static';
+    const access = await fileIo.access(this.staticFilesRoot)
+    if (!access) {
+      await fileIo.mkdir(this.staticFilesRoot)
+    }
+    await this.copyToStaticRoot('index.html');
+    await this.copyToStaticRoot('upload.html');
+  }
+
+  // 初始化服务器
   initServer() {
     this.server = new WebServer();
 
@@ -170,6 +172,7 @@ struct Index {
     this.server.use(customErrorHandler);
   }
 
+  // 启动服务
   async start() {
     if (!this.server) {
       this.initServer();
@@ -191,6 +194,7 @@ struct Index {
     }
   }
 
+  // 停止服务
   async stop() {
     if (!this.server) {
       return;
