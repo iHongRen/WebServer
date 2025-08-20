@@ -117,6 +117,12 @@ export class HttpResponse {
 
     const bodyBytes = this.getBodyBytes(body);
     const responseSize = bodyBytes.byteLength;
+
+    // 如果是字符串且未设置Content-Type，则默认为text/html
+    if (typeof body === 'string' && !this.headers.has('Content-Type')) {
+      this.setHeader('Content-Type', 'text/html; charset=utf-8');
+    }
+
     this.setHeader('Content-Length', responseSize.toString());
 
     const statusText = STATUS_CODES[this.statusCode] || 'OK';

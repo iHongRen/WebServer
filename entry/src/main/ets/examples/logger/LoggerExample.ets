@@ -24,6 +24,8 @@ export class LoggerExample {
     server.get('/dev-log', (req, res) => {
       res.json({ message: '开发环境日志示例', timestamp: Date.now() });
     });
+
+    server.startServer(8080)
   }
 
 
@@ -37,6 +39,8 @@ export class LoggerExample {
     server.get('/combined-log', (req, res) => {
       res.json({ message: 'Combined格式日志示例' });
     });
+
+    server.startServer(8080)
   }
 
   // 示例3: 自定义日志格式
@@ -50,6 +54,8 @@ export class LoggerExample {
     server.get('/custom-log', (req, res) => {
       res.json({ message: '自定义格式日志示例' });
     });
+
+    server.startServer(8080)
   }
 
   // 示例4: 条件性日志记录
@@ -71,6 +77,8 @@ export class LoggerExample {
     server.get('/static/style.css', (req, res) => {
       res.send('/* CSS content */');
     });
+
+    server.startServer(8080)
   }
 
   // 示例5: 自定义输出流
@@ -92,6 +100,7 @@ export class LoggerExample {
       res.json({ message: '自定义输出流示例' });
     });
 
+    server.startServer(8080)
   }
 
   // 示例6: 多种格式组合使用
@@ -113,6 +122,8 @@ export class LoggerExample {
         env: isDev ? 'dev' : 'prod'
       });
     });
+
+    server.startServer(8080)
   }
 
   // 示例7: 错误请求日志
@@ -130,6 +141,8 @@ export class LoggerExample {
     server.get('/not-found-test', (req, res) => {
       res.status(404).json({ error: '页面未找到' });
     });
+
+    server.startServer(8080)
   }
 
   /**
@@ -145,7 +158,7 @@ export class LoggerExample {
       { name: 'COMBINED', format: LogFormat.COMBINED }
     ];
 
-    formats.forEach((item) => {
+    formats.forEach((item, index) => {
       const name = item.name
       console.log(`\n${name} 格式示例:`);
       const server = new WebServer();
@@ -154,6 +167,8 @@ export class LoggerExample {
       server.get(`/${name.toLowerCase()}-format`, (req, res) => {
         res.json({ format: name, message: `${name}格式日志示例` });
       });
+
+      server.startServer(8080 + index)
     });
   }
 
@@ -176,6 +191,8 @@ export class LoggerExample {
         });
       }, Math.random() * 100);
     });
+
+    server.startServer(8080)
   }
 }
 

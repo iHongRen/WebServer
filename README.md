@@ -78,7 +78,7 @@ if (info.address) {
 
 
 
-## 更多示例
+## 示例
 
 ```typescript
 import { WebServer } from '@cxy/webserver';
@@ -212,13 +212,39 @@ await this.server.stopServer();
 
 
 
+## 更多示例
+
+[examples/](https://github.com/iHongRen/WebServer/tree/main/entry/src/main/ets/examples)
+
+```shell
+.
+├── body-parser
+│   ├── BodyParserExample.ets
+│   └── BodyParser中间件说明.md
+├── cors
+│   ├── CorsExample.ets
+│   └── 跨域中间件说明.md
+├── logger
+│   ├── LoggerExample.ets
+│   └── 日志中间件说明.md
+├── router
+│   ├── RouterExample.ets
+│   └── 路由说明.md
+└── static
+    ├── StaticExample.ets
+    └── 静态文件服务中间件说明.md
+```
+
+
+
 ## 运行 [demo](https://github.com/iHongRen/WebServer)
 
 | 未开启服务 | 已开启服务 |
 | :-: | :-: |
 |<img src="https://7up.pics/images/2025/08/20/Screenshot_20250820150234282.jpeg" /> | <img src="https://7up.pics/images/2025/08/20/app.jpeg" /> |
 
-浏览器访问：http://192.168.xx.xx:8080
+**浏览器访问：http://192.168.xx.xx:8080**
+
 <img src="https://7up.pics/images/2025/08/20/E4DAB553-8134-44F9-8C00-B97C1C2FEFC4.png" alt="E4DAB553 8134 44F9 8C00 B97C1C2FEFC4" border="0" style="display: inline-block;">
 
 
@@ -302,6 +328,7 @@ HTTP响应构建类，用于构建和发送响应。
 
 - `static json(): RequestHandler` - JSON解析中间件
 - `static urlencoded(): RequestHandler` - URL编码解析中间件
+- `static plain(): RequestHandler` - 普通文本解析中间件
 - `static multipart(): RequestHandler` - 多部分表单解析中间件
 - `static auto(): RequestHandler` - 通用解析中间件
 

@@ -94,6 +94,31 @@ export class WebServer {
   }
 
   /**
+   * 注册PUT路由
+   * @param path 路由路径
+   * @param handler 处理函数
+   */
+  public put(path: string, handler: RequestHandler) {
+    this.router.addRoute('PUT', path, handler);
+  }
+
+  /**
+   * 注册DELETE路由
+   * @param path 路由路径
+   * @param handler 处理函数
+   */
+  public delete(path: string, handler: RequestHandler) {
+    this.router.addRoute('DELETE', path, handler);
+  }
+
+  /**
+   * 启用自动请求体解析中间件
+   */
+  public auto() {
+    this.use(BodyParser.auto());
+  }
+
+  /**
    * 启用JSON请求体解析中间件
    */
   public json() {
@@ -112,6 +137,13 @@ export class WebServer {
    */
   public multipart() {
     this.use(BodyParser.multipart());
+  }
+
+  /**
+   * 启用文本请求体解析中间件
+   */
+  public plain() {
+    this.use(BodyParser.plain());
   }
 
   /**

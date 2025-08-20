@@ -26,10 +26,10 @@ export class Cors {
       if (!requestOrigin) {
         return next();
       }
-      
+
       const configuredOrigin = options?.origin || '*';
       let allowedOrigin: string | null = null;
-      
+
       if (typeof configuredOrigin === 'string') {
         allowedOrigin = configuredOrigin;
       } else if (Array.isArray(configuredOrigin)) {
@@ -37,20 +37,23 @@ export class Cors {
           allowedOrigin = requestOrigin;
         }
       }
-      
+
       if (allowedOrigin) {
         res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
         res.setHeader('Vary', 'Origin');
       }
-      
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      
+
+      const methods = options?.methods?.join(', ') || 'GET, POST, PUT, DELETE, PATCH, OPTIONS'
+      res.setHeader('Access-Control-Allow-Methods', methods);
+
+      const headers = options?.allowedHeaders?.join(', ') || 'Content-Type, Authorization'
+      res.setHeader('Access-Control-Allow-Headers', headers);
+
       if (req.method === 'OPTIONS') {
         res.status(204).send();
         return;
       }
-      
+
       next();
     };
   }

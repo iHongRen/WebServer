@@ -57,6 +57,20 @@ export class BodyParser {
   }
 
   /**
+   * 文本解析中间件
+   * 解析text/plain格式的请求体
+   * @returns 中间件处理函数
+   */
+  static plain(): RequestHandler {
+    return (req: HttpRequest, res: HttpResponse, next: NextFunction) => {
+      if (req.is('text/plain')) {
+        req.parseBody();
+      }
+      next();
+    };
+  }
+
+  /**
    * 通用解析中间件
    * 自动检测Content-Type并选择合适的解析方式
    * @returns 中间件处理函数

@@ -2,6 +2,11 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
 import { WebServer, ErrorHandler, ServerInfo } from '@cxy/webserver';
+import { LoggerExample } from '../examples/logger/LoggerExample';
+import { CorsExample } from '../examples/cors/CorsExample';
+import { BodyParserExample } from '../examples/body-parser/BodyParserExample';
+import { StaticExample } from '../examples/static/StaticExample';
+import { RouterExample } from '../examples/router/RouterExample';
 
 interface User {
   id: number,
@@ -20,6 +25,8 @@ struct Index {
   async aboutToAppear() {
     this.setupStatic();
     this.initServer();
+
+    // this.runExamples()
   }
 
   aboutToDisappear() {
@@ -60,9 +67,13 @@ struct Index {
       }
     }) //日志记录
     this.server.cors(); //支持跨域
-    this.server.json(); // 解析 application/json
-    this.server.urlencoded(); // 解析 application/x-www-form-urlencoded
-    this.server.multipart(); // 解析 multipart/form-data (用于文件上传)
+
+    this.server.auto(); //自动解析
+    // this.server.json(); // 解析 application/json
+    // this.server.urlencoded(); // 解析 application/x-www-form-urlencoded
+    // this.server.multipart(); // 解析 multipart/form-data (用于文件上传)
+    // this.server.plain(); // 解析文本
+
     this.server.serveStatic(this.staticFilesRoot); // 提供静态文件服务
 
     // --- 2. 模拟数据 ---
@@ -170,6 +181,35 @@ struct Index {
       });
     };
     this.server.use(customErrorHandler);
+  }
+
+  // 运行更多示例
+  runExamples() {
+    // BodyParserExample.example1();
+    // BodyParserExample.example2();
+    // BodyParserExample.example3();
+    // BodyParserExample.example4();
+    // BodyParserExample.example5();
+    //
+    // StaticExample.example1();
+
+    // RouterExample.example1();
+    //
+    // LoggerExample.example1();
+    // LoggerExample.example2();
+    // LoggerExample.example3();
+    // LoggerExample.example4();
+    // LoggerExample.example5();
+    // LoggerExample.example6();
+    // LoggerExample.example7();
+    // LoggerExample.logFormatComparison();
+    // LoggerExample.performanceTest();
+    //
+    // CorsExample.example1();
+    // CorsExample.example2();
+    // CorsExample.example3();
+    // CorsExample.example4();
+    // CorsExample.example5();
   }
 
   // 启动服务

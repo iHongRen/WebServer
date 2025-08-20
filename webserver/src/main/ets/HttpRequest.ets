@@ -28,7 +28,7 @@ export class HttpRequest {
   public url: string = ''; // 完整的URL路径（包含查询字符串）
   public ip: string = ''; // 客户端IP地址
   public headers: Map<string, string> = new Map(); // 请求头集合
-  public body: Record<string, string> = {}; // 解析后的请求体数据
+  public body: ESObject = {}; // 解析后的请求体数据
   public query: Map<string, string> = new Map(); // 查询字符串参数
   public params: Record<string, string> = {}; // 路由参数
   public files: Record<string, File> = {}; // 上传的文件
@@ -98,8 +98,11 @@ export class HttpRequest {
         this.body = params;
       } else if (contentType.includes('multipart/form-data')) {
         this.parseMultipartFormData(contentType, this.rawBody);
+      } else if (contentType.includes('text/plain')) {
+        this.body = Utils.arrayBufferToStr(this.rawBody);
       } else {
         // 对于其他类型，保持原始数据
+        this.body = this.rawBody
       }
     }
   }

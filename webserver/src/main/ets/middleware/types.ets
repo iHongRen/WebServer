@@ -5,7 +5,6 @@
  * @description : 中间件类型定义
  */
 
-import { Logger } from '.';
 import { HttpRequest } from '../HttpRequest';
 import { HttpResponse } from '../HttpResponse';
 
@@ -31,7 +30,9 @@ export type ErrorHandler = (error: Error, req: HttpRequest, res: HttpResponse, n
  * CORS配置选项接口
  */
 export interface CorsOptions {
+  methods?: string[] // 允许的方法
   origin?: string | string[] // 允许的源地址
+  allowedHeaders?: string[] // 允许的header
 }
 
 /**
