@@ -1,7 +1,7 @@
 {
   "name": "@cxy/webserver",
   "version": "1.0.0",
-  "description": "鸿蒙web服务器，提供类Express.js API，支持中间件、路由、静态服务",
+  "description": "鸿蒙Web服务器，提供类Express.js API，支持中间件、路由、静态服务",
   "main": "Index.ets",
   "author": "@仙银",
   "homepage": "https://github.com/iHongRen",

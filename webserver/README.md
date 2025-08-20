@@ -298,13 +298,15 @@ Web服务器主类，提供HTTP服务器功能。
 - `use(handler: RequestHandler | ErrorHandler)` - 注册中间件
 - `get(path: string, handler: RequestHandler)` - 注册GET路由
 - `post(path: string, handler: RequestHandler)` - 注册POST路由
+- `put(path: string, handler: RequestHandler)` - 注册PUT路由
+- `delete(path: string, handler: RequestHandler)` - 注册DELETE路由
 - `json()` - 启用JSON请求体解析
 - `urlencoded()` - 启用URL编码请求体解析
 - `multipart()` - 启用多部分表单解析
+- `plain()` - 启用文本请求体解析
 - `serveStatic(directoryPath: string, options?: CacheOptions)` - 启用静态文件服务
 - `cors(options?: CorsOptions)` - 启用CORS跨域支持
-- `logger()` - 启用日志中间件（开发环境格式）
-- `loggerWithFormat(format: LogFormat)` - 启用自定义格式的日志中间件
+- `logger(options?: LoggerOptions)` - 启用日志中间件
 - `startServer(port: number): Promise<ServerInfo>` - 启动服务器
 - `stopServer(): Promise<void>` - 停止服务器
 
@@ -331,6 +333,7 @@ HTTP请求解析类，包含请求的所有信息。
 - `get(headerName: string): string | undefined` - 获取请求头
 - `is(type: string): boolean` - 检查Content-Type
 - `get userAgent(): string` - 获取User-Agent
+- `get referer(): string` - 获取Referer
 - `get contentLength(): number` - 获取Content-Length
 
 ### HttpResponse 类
@@ -342,8 +345,10 @@ HTTP响应构建类，用于构建和发送响应。
 - `isHeadersSent(): boolean` - 检查响应头是否已发送
 - `setHeader(name: string, value: string): HttpResponse` - 设置响应头
 - `status(code: number): HttpResponse` - 设置HTTP状态码
+- `getStatusCode(): number` - 获取HTTP状态码
 - `send(body?: string | ArrayBuffer): Promise<void>` - 发送响应数据
 - `json(data: ESObject): Promise<void>` - 发送JSON响应
+- `onFinish(callback: ResponseFinishCallback): void` - 添加响应完成回调
 
 ### Router 类
 
