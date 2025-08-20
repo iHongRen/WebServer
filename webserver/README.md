@@ -1,10 +1,6 @@
-<div align="center">  
 
-<img src="https://7up.pics/images/2025/08/20/foreground.png" width=150 style="margin-bottom: 20px;" />
+![Version](https://img.shields.io/badge/version-1.0.0-blue)  ![License](https://img.shields.io/badge/License-Apache%202.0-green.svg) ![GitHub Stars](https://img.shields.io/github/stars/iHongRen/WebServer.svg?style=social)
 
-  ![Version](https://img.shields.io/badge/version-1.0.0-blue)  ![License](https://img.shields.io/badge/License-Apache%202.0-green.svg) ![GitHub Stars](https://img.shields.io/github/stars/iHongRen/WebServer.svg?style=social)
-
-</div>
 
 
 # WebServer - 鸿蒙Web服务器框架
@@ -218,8 +214,12 @@ await this.server.stopServer();
 
 ## 运行 [demo](https://github.com/iHongRen/WebServer)
 
-<img src="https://7up.pics/images/2025/08/20/app.jpeg" width=320   style="border: 1px solid #dddddd; display: inline-block;"/>  
+| 未开启服务 | 已开启服务 |
+| :-: | :-: |
+|<img src="https://7up.pics/images/2025/08/20/Screenshot_20250820150234282.jpeg" /> | <img src="https://7up.pics/images/2025/08/20/app.jpeg" /> |
 
+浏览器访问：http://192.168.xx.xx:8080
+<img src="https://7up.pics/images/2025/08/20/E4DAB553-8134-44F9-8C00-B97C1C2FEFC4.png" alt="E4DAB553 8134 44F9 8C00 B97C1C2FEFC4" border="0" style="display: inline-block;">
 
 
 # WebServer API [文档](https://github.com/iHongRen/WebServer)
