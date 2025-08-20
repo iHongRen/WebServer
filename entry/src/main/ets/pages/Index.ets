@@ -27,65 +27,24 @@ struct Index {
 
   async initContext() {
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    this.staticFilesRoot = context.filesDir + '/webserver';
-    await this.createSampleFile();
-    await this.createUploadTestPage();
+    this.staticFilesRoot = context.filesDir + '/static';
+    const access = await fileIo.access(this.staticFilesRoot)
+    if (!access) {
+      await fileIo.mkdir(this.staticFilesRoot)
+    }
+    await this.copyToStaticRoot('index.html');
+    await this.copyToStaticRoot('upload.html');
     this.initServer();
   }
 
-  async createUploadTestPage() {
-    const uploadTestPagePath = `${this.staticFilesRoot}/upload_test.html`;
-    const uploadTestPageContent = `<!DOCTYPE html>
-<html>
-<head>
-    <title>File Upload Test</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body { font-family: sans-serif; padding: 20px; background-color: #f0f0f0; color: #333; }
-        h1 { color: #007aff; }
-        .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        form { display: flex; flex-direction: column; gap: 15px; }
-        input[type="file"] { border: 1px solid #ccc; padding: 10px; border-radius: 4px; }
-        button { padding: 12px; background-color: #007aff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-        button:hover { background-color: #0056b3; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Upload a File</h1>
-        <p>Select a file to upload to the device's temporary directory.</p>
-        <form action="/api/upload" method="post" enctype="multipart/form-data">
-            <input type="file" name="uploadFile" required>
-            <button type="submit">Upload</button>
-        </form>
-    </div>
-</body>
-</html>`;
-    try {
-      const file = await fileIo.open(uploadTestPagePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);
-      await fileIo.write(file.fd, uploadTestPageContent);
-      await fileIo.close(file);
-      console.log('Upload test page created at:', uploadTestPagePath);
-    } catch (e) {
-      console.error('Failed to create upload test page:', e)
-    }
-  }
-
-  async createSampleFile() {
-    if (!fileIo.accessSync(this.staticFilesRoot)) {
-      await fileIo.mkdir(this.staticFilesRoot)
-    }
-    const filePath = this.staticFilesRoot + '/index.html';
-    const fileContent =
-      '<!DOCTYPE html><html><head><title>Welcome</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f0f0; color: #333; } div { text-align: center; } h1 { color: #007aff; } p { font-size: 1.2em; }</style></head><body><div><h1>Hello from ArkTS Web Server!</h1><p>This file is served from the device.</p></div></body></html>';
-    try {
-      const file = await fileIo.open(filePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);
-      await fileIo.write(file.fd, fileContent);
-      await fileIo.close(file);
-      console.log('Sample file created at:', filePath);
-    } catch (e) {
-      console.error('Failed to create sample file:', e)
-    }
+  // 拷贝到沙箱服务器目录
+  async copyToStaticRoot(fileName: string) {
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    const buf = await context.resourceManager.getRawFileContent(fileName)
+    const path = this.staticFilesRoot + '/' + fileName
+    const outFile = await fileIo.open(path, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC)
+    await fileIo.write(outFile.fd, buf.buffer)
+    await fileIo.close(outFile.fd)
   }
 
   initServer() {
@@ -95,7 +54,7 @@ struct Index {
     // 顺序很重要，通常日志和CORS最先，然后是请求体解析，再是静态文件和路由
     this.server.logger({
       stream: (log: string) => {
-        console.log(log)
+        console.log(log) //自定义写入日志文件
       }
     }) //日志记录
     this.server.cors(); //支持跨域

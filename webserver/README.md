@@ -2,74 +2,169 @@
 
 ## 概述
 
-这是一个基于HarmonyOS的轻量级Web服务器框架，提供了类似Express.js的API设计，支持路由、中间件、静态文件服务等功能。
+这是一个基于 HarmonyOS 的轻量级Web服务器框架，提供了类似 Express.js 的 API 设计，支持路由、中间件、静态文件服务等功能。
 
 ## 特性
 
-- ✅ 类Express.js的API设计
+- 类 Express.js 的 API 设计
 
-- ✅ 支持路由参数和查询字符串
+- 支持路由参数和查询字符串
 
-- ✅ 内置多种请求体解析器
+- 内置多种请求体解析器
 
-- ✅ CORS跨域支持
+- CORS 跨域支持
 
-- ✅ 静态文件服务
+- 静态文件服务
 
-- ✅ 文件上传支持
+- 文件上传支持
 
-- ✅ 缓存控制
+- 缓存控制
 
-- ✅ 错误处理
+- 错误处理
 
-- ✅ 中间件系统
+- 中间件系统
 
-- ✅ 多种日志格式支持
+- 多种日志格式支持
 
 
 
 ## 使用示例
 
 ```typescript
-import { WebServer } from './WebServer';
+import { WebServer } from '@cxy/webserver';
 
-const app = new WebServer();
+this.server = new WebServer();
 
-// 启用中间件
-app.logger(); // 启用日志记录
-app.json();
-app.cors();
-app.serveStatic('/static');
+// --- 1. 中间件注册 ---
+// 顺序很重要，通常日志和CORS最先，然后是请求体解析，再是静态文件和路由
+this.server.logger({
+  stream: (log: string) => {
+    console.log(log)
+  }
+}) //日志记录
+this.server.cors(); //支持跨域
+this.server.json(); // 解析 application/json
+this.server.urlencoded(); // 解析 application/x-www-form-urlencoded
+this.server.multipart(); // 解析 multipart/form-data (用于文件上传)
+this.server.serveStatic(this.staticFilesRoot); // 提供静态文件服务
 
-// 注册路由
-app.get('/', (req, res) => {
-  res.json({ message: 'Hello World!' });
+// --- 2. 模拟数据 ---
+const users: User[] = [
+  { id: 1, name: 'cxy' },
+  { id: 2, name: 'ihongren' }
+];
+let nextUserId = 3;
+
+
+// --- 3. API 示例 ---
+// GET /api/users - 获取所有用户
+this.server.get('/api/users', (req, res) => {
+  res.json(users);
 });
 
-app.post('/api/data', (req, res) => {
-  console.log('收到数据:', req.body);
-  res.json({ success: true });
+// GET /api/users/:id - 使用路由参数，获取单个用户
+this.server.get('/api/users/:id', (req, res) => {
+  const user = users.find(u => u.id === parseInt(req.params.id));
+  if (user) {
+    res.json(user);
+  } else {
+    res.status(404).json({ error: 'User not found' });
+  }
 });
 
-// 启动服务器
-app.startServer(3000).then(info => {
-  console.log(`服务器启动成功: http://${info.address}:${info.port}`);
+// POST /api/users - 创建新用户
+this.server.post('/api/users', (req, res) => {
+  const newUser: User = {
+    id: nextUserId++,
+    name: (req.body as Record<string, string>).name || 'Unnamed'
+  };
+  users.push(newUser);
+  console.log('Created new user:', JSON.stringify(newUser));
+  res.status(201).json(newUser);
 });
+
+// post /api/users/:id - 更新用户
+this.server.post('/api/users/:id', (req, res) => {
+  const userId = parseInt(req.params.id);
+  const userIndex = users.findIndex(u => u.id === userId);
+  if (userIndex !== -1) {
+    users[userIndex].name = (req.body as Record<string, string>).name || users[userIndex].name;
+    res.json(users[userIndex]);
+  } else {
+    res.status(404).json({ error: 'User not found' });
+  }
+});
+
+// --- 4. 文件上传路由 ---
+this.server.post('/api/upload', async (req, res, next) => {
+  try {
+    const uploadedFile = req.files?.uploadFile; // 'uploadFile' 对应 HTML form 中的 input name
+    if (!uploadedFile) {
+      return res.status(400).json({ error: 'No file uploaded.' });
+    }
+
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    const tempPath = `${context.filesDir}/${uploadedFile.fileName}`;
+    const f = await fileIo.open(tempPath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE)
+    await fileIo.write(f.fd, uploadedFile.data);
+
+    console.log(`File uploaded successfully: ${uploadedFile.fileName}`);
+    res.json({
+      message: 'File uploaded successfully!',
+      filename: uploadedFile.fileName,
+      size: uploadedFile.data.byteLength,
+      contentType: uploadedFile.contentType,
+      savedTo: tempPath
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// --- 5. 其他高级示例 ---
+// 路由参数示例
+this.server.get('/users/:userId/books/:bookId', (req, res) => {
+  res.json({
+    message: `You requested book ${req.params.bookId} for user ${req.params.userId}.`
+  });
+});
+
+// 自定义响应头示例
+this.server.get('/api/custom-header', (req, res) => {
+  res.setHeader('X-Custom-Header', 'Hello from WebServer!');
+  res.json({ message: 'Check the response headers!' });
+});
+
+// 错误触发示例
+this.server.get('/crash', (req, res, next) => {
+  // 故意抛出一个错误来测试错误处理中间件
+  throw new Error('This is a simulated crash!');
+});
+
+// --- 6. 统一错误处理中间件 (必须在路由之后注册) ---
+const customErrorHandler: ErrorHandler = (error, req, res, next) => {
+  console.error(`[WebServer Error] Path: ${req.path}, Message: ${error.message}`);
+  if (res.isHeadersSent()) {
+    return next(error); // 如果头已发送，则委托给默认错误处理器
+  }
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: error.message || 'An unknown error occurred.'
+  });
+};
+
+this.server.use(customErrorHandler);
 ```
 
 
 
-## 核心类
+# WebServer API 文档
+
 
 ### WebServer 类
 
 Web服务器主类，提供HTTP服务器功能。
 
-#### 构造函数
-```typescript
-constructor()
-```
-初始化服务器并设置默认404处理。
 
 #### 主要方法
 

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>文件上传测试</title>
+        <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+        <meta charset="utf-8" />
+        <style>
+            body {
+                font-family: sans-serif;
+                padding: 20px;
+                background-color: #f0f0f0;
+                color: #333;
+            }
+            h1 {
+                color: #007aff;
+            }
+            .container {
+                max-width: 600px;
+                margin: auto;
+                background: #fff;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            form {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+            }
+            input[type='file'] {
+                border: 1px solid #ccc;
+                padding: 10px;
+                border-radius: 4px;
+            }
+            button {
+                padding: 12px;
+                background-color: #007aff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 16px;
+            }
+            button:hover {
+                background-color: #0056b3;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>上传文件</h1>
+            <p>选择一个文件上传到设备：</p>
+            <form action="/api/upload" enctype="multipart/form-data" method="post">
+                <input name="uploadFile" required type="file" />
+                <button type="submit">上传</button>
+            </form>
+        </div>
+    </body>
+</html>
