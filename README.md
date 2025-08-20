@@ -1,6 +1,6 @@
 <img src="https://7up.pics/images/2025/08/20/foreground.png" width=150 />
 
-<br >
+
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)  ![License](https://img.shields.io/badge/License-Apache%202.0-green.svg) ![GitHub Stars](https://img.shields.io/github/stars/iHongRen/WebServer.svg?style=social)
 
 
@@ -41,10 +41,9 @@
 ohpm install @cxy/webserver
 ```
 
-或 **添加依赖**，然后同步项目
+或`oh-package.json5` 添加依赖，然后同步项目
 
 ```json
-// oh-package.json5
 {
   "dependencies": {
     "@cxy/webserver": "^1.0.0"
@@ -215,7 +214,7 @@ await this.server.stopServer();
 
 
 
-## 运行 demo
+## 运行 [demo](https://github.com/iHongRen/WebServer)
 
 <img src="https://7up.pics/images/2025/08/20/app.jpeg" width=320   style="border: 1px solid #dddddd; display: inline-block;"/>  
 

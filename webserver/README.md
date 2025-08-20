@@ -14,28 +14,36 @@
 ## 特性
 
 - 类 Express.js 的 API 设计
+
 - 支持路由参数和查询字符串
+
 - 内置多种请求体解析器
+
 - CORS 跨域支持
+
 - 静态文件服务
+
 - 文件上传支持
+
 - 缓存控制
+
 - 错误处理
+
 - 中间件系统
+
 - 多种日志格式支持
 
 
 
-## 安装
+##  安装
 
 ```sh
 ohpm install @cxy/webserver
 ```
 
-或 **添加依赖**，然后同步项目
+或`oh-package.json5` 添加依赖，然后同步项目
 
 ```json
-// oh-package.json5
 {
   "dependencies": {
     "@cxy/webserver": "^1.0.0"
@@ -214,9 +222,11 @@ await this.server.stopServer();
 
 # WebServer API [文档](https://github.com/iHongRen/WebServer)
 
+
 ### WebServer 类
 
 Web服务器主类，提供HTTP服务器功能。
+
 
 #### 主要方法
 
@@ -354,6 +364,8 @@ CORS跨域资源共享中间件。
 
 
 ❓如果是使用过程中有什么问题，欢迎提 [issues](https://github.com/iHongRen/WebServer/issues)
+
+
 
 # 作者
 
