@@ -1,8 +1,9 @@
-<div align="center">
-  <img src="https://7up.pics/images/2025/08/20/foreground.png" width=150 /style="margin-bottom: 20px;">
-  
+<div align="center">  
+
+<img src="https://7up.pics/images/2025/08/20/foreground.png" width=150 style="margin-bottom: 20px;" />
+
   ![Version](https://img.shields.io/badge/version-1.0.0-blue)  ![License](https://img.shields.io/badge/License-Apache%202.0-green.svg) ![GitHub Stars](https://img.shields.io/github/stars/iHongRen/WebServer.svg?style=social)
-  
+
 </div>
 
 
