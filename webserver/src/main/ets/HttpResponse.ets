@@ -30,7 +30,7 @@ export type ResponseFinishCallback = (statusCode: number, responseSize: number) 
  * 用于构建和发送HTTP响应
  */
 export class HttpResponse {
-  private socket: socket.TCPSocketConnection; // TCP连接
+  private socket: socket.TCPSocketConnection | socket.TLSSocketConnection
   private statusCode: number = 200; // HTTP状态码
   private headers: Map<string, string> = new Map(); // 响应头集合
   private _headersSent: boolean = false; // 响应头是否已发送
@@ -38,9 +38,9 @@ export class HttpResponse {
 
   /**
    * 构造函数
-   * @param socket TCP连接对象
+   * @param socket TCP或TLS连接对象
    */
-  constructor(socket: socket.TCPSocketConnection) {
+  constructor(socket: socket.TCPSocketConnection | socket.TLSSocketConnection) {
     this.socket = socket;
     // 设置默认响应头
     this.setHeader('Connection', 'keep-alive');
@@ -92,20 +92,6 @@ export class HttpResponse {
   }
 
   /**
-   * 触发响应完成回调
-   * @param responseSize 响应大小
-   */
-  private triggerFinishCallbacks(responseSize: number): void {
-    this.finishCallbacks.forEach(callback => {
-      try {
-        callback(this.statusCode, responseSize);
-      } catch (error) {
-        console.error('响应完成回调执行错误:', error);
-      }
-    });
-  }
-
-  /**
    * 发送响应数据
    * @param body 响应体数据
    */
@@ -135,7 +121,12 @@ export class HttpResponse {
     const headerBytes = Utils.strToArrayBuffer(headerString);
     const responseData = Utils.mergeArrayBuffers(headerBytes, bodyBytes);
 
-    await this.socket.send({ data: responseData });
+    // 通过判断属性是否为 undefined 来确定 socket 类型
+    if ((this.socket as socket.TLSSocketConnection).getRemoteCertificate !== undefined) {
+      await (this.socket as socket.TLSSocketConnection).send(responseData);
+    } else {
+      await (this.socket as socket.TCPSocketConnection).send({ data: responseData });
+    }
     this._headersSent = true;
 
     // 触发响应完成回调
@@ -150,6 +141,20 @@ export class HttpResponse {
     this.setHeader('Content-Type', 'application/json; charset=utf-8');
     const jsonString = JSON.stringify(data);
     await this.send(jsonString);
+  }
+
+  /**
+   * 触发响应完成回调
+   * @param responseSize 响应大小
+   */
+  private triggerFinishCallbacks(responseSize: number): void {
+    this.finishCallbacks.forEach(callback => {
+      try {
+        callback(this.statusCode, responseSize);
+      } catch (error) {
+        console.error('响应完成回调执行错误:', error);
+      }
+    });
   }
 
   /**

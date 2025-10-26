@@ -7,6 +7,8 @@ import { CorsExample } from '../examples/cors/CorsExample';
 import { BodyParserExample } from '../examples/body-parser/BodyParserExample';
 import { StaticExample } from '../examples/static/StaticExample';
 import { RouterExample } from '../examples/router/RouterExample';
+import { HttpsExample } from '../examples/https/HttpsExample';
+import { rcp } from '@kit.RemoteCommunicationKit';
 
 interface User {
   id: number,
@@ -23,10 +25,23 @@ struct Index {
   @State staticFilesRoot: string = '';
 
   async aboutToAppear() {
-    this.setupStatic();
-    this.initServer();
+    HttpsExample.startCompleteExample()
+    setTimeout(() => {
+      this.requestHttps()
+    }, 5000)
+    // this.setupStatic();
+    // this.initServer();
 
     // this.runExamples()
+  }
+
+  requestHttps() {
+    const session = rcp.createSession();
+    session.get("https://192.168.2.38:8443/").then((response) => {
+      console.info(`Succeeded in getting the response ${response}`);
+    }).catch((err: BusinessError) => {
+      console.error(`err: err code is ${err.code}, err message is ${JSON.stringify(err)}`);
+    });
   }
 
   aboutToDisappear() {
