@@ -57,20 +57,8 @@ export class HttpsServer extends WebServer {
       this.tlsServer.on('error', (error) => console.error('HTTPS服务器错误:', error));
 
       // 启动监听
-      await this.tlsServer.listen(tlsConnectOptions);
-
-      this.tlsServer.getState(data => {
-
-      })
-
-      this.tlsServer.getCertificate(data => {
-
-      })
-
-      this.tlsServer.getProtocol(data => {
-
-      })
-
+      await this.tlsServer.listen(tlsConnectOptions)
+      
       const ip = this.getLocalIP();
       console.log(`HTTPS Server running at https://${ip}:${port}/`);
       return { address: ip, port: port };
@@ -115,8 +103,8 @@ export class HttpsServer extends WebServer {
    * @param clientSocket TLS客户端连接
    */
   private handleTLSClient(clientSocket: socket.TLSSocketConnection) {
+    this.tlsClients.push(clientSocket)
     let buffer = new ArrayBuffer(0);
-
     clientSocket.on('message', async (data) => {
       // 将新数据追加到缓冲区
       buffer = Utils.mergeArrayBuffers(buffer, data.message);

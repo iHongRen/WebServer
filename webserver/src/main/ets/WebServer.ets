@@ -31,9 +31,9 @@ import { LoggerOptions } from './middleware/logger';
  * 提供HTTP服务器功能，支持路由、中间件等特性
  */
 export class WebServer {
-  private clients: socket.TCPSocketConnection[] = []; // 客户端连接列表
   protected router: Router = new Router(); // 路由管理器
   protected configs: Map<string, Object> = new Map(); // 配置存储
+  private clients: socket.TCPSocketConnection[] = []; // 客户端连接列表
   private tcpServer: socket.TCPSocketServer | null = null; // TCP服务器实例
 
   /**
@@ -264,8 +264,8 @@ export class WebServer {
    * @param clientSocket 客户端Socket连接
    */
   private handleClient(clientSocket: socket.TCPSocketConnection) {
+    this.clients.push(clientSocket)
     let buffer = new ArrayBuffer(0);
-
     clientSocket.on('message', async (data) => {
       // 将新数据追加到缓冲区
       buffer = Utils.mergeArrayBuffers(buffer, data.message);
