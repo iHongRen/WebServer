@@ -31,13 +31,19 @@ struct Index {
     }, 5000)
     // this.setupStatic();
     // this.initServer();
-
+    //
     // this.runExamples()
   }
 
   requestHttps() {
-    const session = rcp.createSession();
-    session.get("https://192.168.2.38:8443/").then((response) => {
+    // Configure security settings
+    const securityConfig: rcp.SecurityConfiguration = {
+      remoteValidation: "skip",
+    };
+
+    const session = rcp.createSession({ requestConfiguration: { security: securityConfig } });
+
+    session.get("https://192.168.2.38:8443/api/status").then((response) => {
       console.info(`Succeeded in getting the response ${response}`);
     }).catch((err: BusinessError) => {
       console.error(`err: err code is ${err.code}, err message is ${JSON.stringify(err)}`);

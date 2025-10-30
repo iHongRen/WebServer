@@ -199,8 +199,11 @@ export class WebServer {
         await client.close();
       }
       this.clients = [];
+      const state = await this.tcpServer.getState()
+      if (state.isConnected) {
+        this.tcpServer.off('connect')
+      }
       this.tcpServer = null;
-      console.log('服务器已停止');
     }
   }
 

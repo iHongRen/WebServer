@@ -52,13 +52,14 @@ export class HttpsServer extends WebServer {
         secureOptions: this.tlsOptions
       };
 
-      // 设置事件监听
-      this.tlsServer.on('connect', (clientSocket) => this.handleTLSClient(clientSocket));
-      this.tlsServer.on('error', (error) => console.error('HTTPS服务器错误:', error));
-
       // 启动监听
       await this.tlsServer.listen(tlsConnectOptions)
-      
+      // 设置事件监听
+      this.tlsServer.on('connect', (clientSocket) => this.handleTLSClient(clientSocket));
+      this.tlsServer.on('error', (error) => {
+        console.error('HTTPS服务器错误:', error)
+      });
+
       const ip = this.getLocalIP();
       console.log(`HTTPS Server running at https://${ip}:${port}/`);
       return { address: ip, port: port };
@@ -78,6 +79,10 @@ export class HttpsServer extends WebServer {
         await client.close();
       }
       this.tlsClients = [];
+      const state = await this.tlsServer.getState()
+      if (state.isConnected) {
+        this.tlsServer.off('connect')
+      }
       this.tlsServer = null;
       console.log('HTTPS服务器已停止');
     }
