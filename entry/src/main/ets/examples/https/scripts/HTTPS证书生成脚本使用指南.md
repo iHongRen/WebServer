@@ -131,7 +131,7 @@ openssl rsa -noout -modulus -in server-key.pem | openssl md5
 ### 测试HTTPS连接
 ```bash
 # 使用curl测试（忽略证书验证）
-curl -k https://192.168.2.38:8443/
+curl -k -v https://192.168.2.38:8443/
 
 # 使用curl测试（指定CA证书）
 curl --cacert ca-cert.pem https://192.168.2.38:8443/
@@ -142,21 +142,6 @@ curl --cacert ca-cert.pem https://192.168.2.38:8443/
 ### 浏览器访问
 1. **自签名证书**：浏览器会显示安全警告，需要手动信任
 2. **CA签名证书**：需要将CA证书添加到系统受信任根证书存储
-
-### 程序访问
-```typescript
-// 忽略证书验证（仅开发环境）
-const tlsOptions = {
-  checkServerIdentity: false,
-  rejectUnauthorized: false
-};
-
-// 指定CA证书
-const tlsOptions = {
-  ca: await fs.readFile('ca-cert.pem'),
-  checkServerIdentity: true
-};
-```
 
 ## 安全注意事项
 
