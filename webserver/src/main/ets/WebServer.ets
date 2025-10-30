@@ -178,9 +178,11 @@ export class WebServer {
   public async startServer(port: number): Promise<ServerInfo> {
     try {
       this.tcpServer = socket.constructTCPSocketServerInstance();
-      this.tcpServer.on('connect', (clientSocket) => this.handleClient(clientSocket));
-      this.tcpServer.on('error', (error) => console.error('服务器错误:', error));
       await this.tcpServer.listen({ address: '0.0.0.0', port: port });
+      this.tcpServer.on('connect', (clientSocket) => this.handleClient(clientSocket));
+      this.tcpServer.on('error', (error) => {
+        console.error('HTTP服务器错误:', JSON.stringify(error))
+      });
       const ip = this.getLocalIP();
       console.log(`Server running at http://${ip}:${port}/`);
       return { address: ip, port: port };

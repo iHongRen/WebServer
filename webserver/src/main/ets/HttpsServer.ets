@@ -57,7 +57,7 @@ export class HttpsServer extends WebServer {
       // 设置事件监听
       this.tlsServer.on('connect', (clientSocket) => this.handleTLSClient(clientSocket));
       this.tlsServer.on('error', (error) => {
-        console.error('HTTPS服务器错误:', error)
+        console.error('HTTPS服务器错误:', JSON.stringify(error))
       });
 
       const ip = this.getLocalIP();
