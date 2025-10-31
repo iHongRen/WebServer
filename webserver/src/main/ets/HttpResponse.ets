@@ -6,19 +6,9 @@
  */
 
 import { socket } from '@kit.NetworkKit';
+import { StatusCode } from './StatusCode';
 import { Utils } from './Utils';
 
-/**
- * HTTP状态码映射表
- */
-const STATUS_CODES: Record<number, string> = {
-  200: 'OK',
-  201: 'Created',
-  204: 'No Content',
-  400: 'Bad Request',
-  404: 'Not Found',
-  500: 'Internal Server Error'
-};
 
 /**
  * 响应完成回调函数类型
@@ -111,7 +101,7 @@ export class HttpResponse {
 
     this.setHeader('Content-Length', responseSize.toString());
 
-    const statusText = STATUS_CODES[this.statusCode] || 'OK';
+    const statusText = StatusCode[this.statusCode] || 'OK';
     let headerString = `HTTP/1.1 ${this.statusCode} ${statusText}\r\n`;
     this.headers.forEach((value, name) => {
       headerString += `${name}: ${value}\r\n`;
