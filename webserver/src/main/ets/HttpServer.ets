@@ -2,7 +2,7 @@
  * @fileName : HttpServer.ets
  * @author : @cxy
  * @date : 2025/8/15
- * @description : web 服务器
+ * @description : Http服务器
  */
 
 import { wifiManager } from '@kit.ConnectivityKit';
@@ -13,6 +13,7 @@ import { Utils } from './Utils';
 import { HttpRequest } from './HttpRequest';
 import { HttpResponse } from './HttpResponse';
 import { Router } from './Router';
+import { LoggerOptions } from './middleware/logger';
 import {
   NextFunction,
   RequestHandler,
@@ -24,7 +25,15 @@ import {
   StaticFiles,
   Logger,
 } from './middleware';
-import { LoggerOptions } from './middleware/logger';
+import {
+  ServerEventEmitter,
+  ServerEvent,
+  ServerErrorType,
+  ServerEventType,
+  ErrorEventListener,
+  ServerEventListener,
+  ClientEventListener
+} from './ServerEvents';
 
 /**
  * Http 服务器类
@@ -33,8 +42,10 @@ import { LoggerOptions } from './middleware/logger';
 export class HttpServer {
   protected router: Router = new Router(); // 路由管理器
   protected configs: Map<string, Object> = new Map(); // 配置存储
-  private clients: socket.TCPSocketConnection[] = []; // 客户端连接列表
-  private tcpServer: socket.TCPSocketServer | null = null; // TCP服务器实例
+  protected clients: Map<number, socket.TCPSocketConnection | socket.TLSSocketConnection> = new Map(); // 客户端连接映射
+  protected tcpServer: socket.TCPSocketServer | null = null; // TCP服务器实例
+  protected eventEmitter: ServerEventEmitter = new ServerEventEmitter(); // 事件发射器
+  protected isRunning: boolean = false; // 服务器运行状态
 
   /**
    * 构造函数
@@ -42,7 +53,7 @@ export class HttpServer {
    */
   constructor() {
     // 默认404处理，作为最后一个中间件
-    this.use((req: HttpRequest, res: HttpResponse, next: NextFunction) => {
+    this.use((req: HttpRequest, res: HttpResponse, _: NextFunction) => {
       if (!res.isHeadersSent()) {
         res.status(404).json({ error: 'Not Found', path: req.path });
       }
@@ -170,6 +181,118 @@ export class HttpServer {
     this.use(Logger.create(options));
   }
 
+  // ==================== 事件监听方法 ====================
+
+  /**
+   * 监听服务器错误事件
+   * @param listener 错误事件监听器
+   */
+  public onError(listener: ErrorEventListener): void {
+    this.eventEmitter.onError(listener);
+  }
+
+  /**
+   * 监听服务器事件
+   * @param eventType 事件类型
+   * @param listener 事件监听器
+   */
+  public on(eventType: ServerEventType, listener: ServerEventListener): void {
+    this.eventEmitter.on(eventType, listener);
+  }
+
+  /**
+   * 监听客户端连接事件
+   * @param listener 客户端连接监听器
+   */
+  public onClientConnect(listener: ClientEventListener): void {
+    this.eventEmitter.onClientConnect(listener);
+  }
+
+  /**
+   * 监听客户端断开连接事件
+   * @param listener 客户端断开连接监听器
+   */
+  public onClientDisconnect(listener: ClientEventListener): void {
+    this.eventEmitter.onClientDisconnect(listener);
+  }
+
+  /**
+   * 移除错误监听器
+   * @param listener 要移除的监听器
+   */
+  public removeErrorListener(listener: ErrorEventListener): void {
+    this.eventEmitter.removeErrorListener(listener);
+  }
+
+  /**
+   * 移除事件监听器
+   * @param eventType 事件类型
+   * @param listener 要移除的监听器
+   */
+  public removeListener(eventType: ServerEventType, listener: ServerEventListener): void {
+    this.eventEmitter.removeListener(eventType, listener);
+  }
+
+  /**
+   * 清除所有事件监听器
+   */
+  public removeAllListeners(): void {
+    this.eventEmitter.removeAllListeners();
+  }
+
+  // ==================== 服务器状态查询方法 ====================
+
+  /**
+   * 获取服务器运行状态
+   * @returns 是否正在运行
+   */
+  public isServerRunning(): boolean {
+    return this.isRunning;
+  }
+
+  /**
+   * 获取当前连接的客户端数量
+   * @returns 客户端数量
+   */
+  public getClientCount(): number {
+    return this.clients.size;
+  }
+
+  /**
+   * 获取所有客户端信息
+   * @returns 客户端信息数组
+   */
+  public getClients(): (socket.TCPSocketConnection | socket.TLSSocketConnection)[] {
+    return Array.from(this.clients.values());
+  }
+
+  /**
+   * 根据ID获取客户端信息
+   * @param clientId 客户端ID
+   * @returns 客户端信息或undefined
+   */
+  public getClient(clientId: number): socket.TCPSocketConnection | socket.TLSSocketConnection | undefined {
+    return this.clients.get(clientId);
+  }
+
+  /**
+   * 断开指定客户端连接
+   * @param clientId 客户端ID
+   */
+  public async disconnectClient(clientId: number): Promise<boolean> {
+    const clientInfo = this.clients.get(clientId);
+    if (clientInfo) {
+      try {
+        await clientInfo.close();
+        return true;
+      } catch (error) {
+        this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
+        return false;
+      }
+    }
+    return false;
+  }
+
   /**
    * 启动服务器
    * @param port 监听端口
@@ -177,17 +300,41 @@ export class HttpServer {
    */
   public async startServer(port: number): Promise<ServerInfo> {
     try {
+      if (this.isRunning) {
+        this.eventEmitter.emitError(new Error('服务器已在运行中'), ServerErrorType.STARTUP_FAILED);
+        return { address: '', port: 0 };
+      }
+
       this.tcpServer = socket.constructTCPSocketServerInstance();
-      await this.tcpServer.listen({ address: '0.0.0.0', port: port });
-      this.tcpServer.on('connect', (clientSocket) => this.handleClient(clientSocket));
+
+      // 设置服务器错误监听
       this.tcpServer.on('error', (error) => {
-        console.error('HTTP服务器错误:', JSON.stringify(error))
+        this.eventEmitter.emitError(error, ServerErrorType.SOCKET_ERROR);
       });
+
+      // 尝试监听端口
+      try {
+        await this.tcpServer.listen({ address: '0.0.0.0', port: port });
+      } catch (listenError) {
+        this.eventEmitter.emitError(listenError, ServerErrorType.LISTEN_ERROR);
+        return { address: '', port: 0 };
+      }
+
+      // 设置客户端连接监听
+      this.tcpServer.on('connect', (clientSocket) => this.handleClient(clientSocket));
+
       const ip = this.getLocalIP();
-      console.log(`Server running at http://${ip}:${port}/`);
+      this.isRunning = true;
+
+      // 发射服务器启动事件
+      const startEvent: ServerEvent = {
+        type: ServerEventType.SERVER_STARTED,
+        data: { address: ip, port }
+      };
+      this.eventEmitter.emit(startEvent);
       return { address: ip, port: port };
     } catch (error) {
-      console.error('服务器启动失败:', error);
+      this.eventEmitter.emitError(new Error('服务器启动失败'), ServerErrorType.STARTUP_FAILED);
       return { address: '', port: 0 };
     }
   }
@@ -196,14 +343,31 @@ export class HttpServer {
    * 停止服务器
    */
   public async stopServer(): Promise<void> {
-    if (this.tcpServer) {
-      for (const client of this.clients) {
-        await client.close();
+    if (this.tcpServer && this.isRunning) {
+      try {
+        this.clients.forEach(async (client, _) => {
+          try {
+            await client.close();
+            this.eventEmitter.emitClientDisconnect(client);
+          } catch (error) {
+            this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
+          }
+        })
+
+        this.clients.clear();
+        this.tcpServer.off('connect');
+        this.tcpServer.off('error');
+        this.tcpServer = null;
+        this.isRunning = false;
+
+        // 发射服务器停止事件
+        const stopEvent: ServerEvent = {
+          type: ServerEventType.SERVER_STOPPED,
+        };
+        this.eventEmitter.emit(stopEvent);
+      } catch (error) {
+        this.eventEmitter.emitError(error, ServerErrorType.UNKNOWN_ERROR);
       }
-      this.clients = [];
-      this.tcpServer.off('connect')
-      this.tcpServer.off('error')
-      this.tcpServer = null;
     }
   }
 
@@ -252,13 +416,16 @@ export class HttpServer {
    * @param clientSocket 客户端Socket连接
    * @param error 错误信息（可选）
    */
-  protected removeClient(clientSocket: socket.TCPSocketConnection, error?: BusinessError) {
-    if (error) {
-      console.error('客户端连接错误:', error);
-    }
-    const index = this.clients.indexOf(clientSocket);
-    if (index > -1) {
-      this.clients.splice(index, 1);
+  protected removeClient(clientSocket: socket.TCPSocketConnection | socket.TLSSocketConnection, error?: BusinessError) {
+    if (this.clients.has(clientSocket.clientId)) {
+      this.clients.delete(clientSocket.clientId);
+
+      if (error) {
+        this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
+      }
+
+      // 发射客户端断开连接事件
+      this.eventEmitter.emitClientDisconnect(clientSocket);
     }
   }
 
@@ -266,23 +433,50 @@ export class HttpServer {
    * 处理客户端连接
    * @param clientSocket 客户端Socket连接
    */
-  private handleClient(clientSocket: socket.TCPSocketConnection) {
-    this.clients.push(clientSocket)
+  protected handleClient(clientSocket: socket.TCPSocketConnection | socket.TLSSocketConnection) {
+
+    this.clients.set(clientSocket.clientId, clientSocket);
+
+    // 发射客户端连接事件
+    this.eventEmitter.emitClientConnect(clientSocket);
+
     let buffer = new ArrayBuffer(0);
+
     clientSocket.on('message', async (data) => {
-      // 将新数据追加到缓冲区
-      buffer = Utils.mergeArrayBuffers(buffer, data.message);
+      try {
+        // 发射请求接收事件
+        const requestEvent: ServerEvent = {
+          type: ServerEventType.REQUEST_RECEIVED,
+          data: { clientSocket, data }
+        };
+        this.eventEmitter.emit(requestEvent);
 
-      // 检查是否有完整的HTTP请求
-      const completeRequest = this.isRequestComplete(buffer);
-      if (completeRequest) {
-        // 处理请求
-        const req = new HttpRequest(data);
-        const res = new HttpResponse(clientSocket);
-        this.router.handle(req, res);
+        // 将新数据追加到缓冲区
+        buffer = Utils.mergeArrayBuffers(buffer, data.message);
 
-        // 清空缓冲区
-        buffer = new ArrayBuffer(0);
+        // 检查是否有完整的HTTP请求
+        const completeRequest = this.isRequestComplete(buffer);
+        if (completeRequest) {
+          // 处理请求
+          const req = new HttpRequest(data);
+          const res = new HttpResponse(clientSocket);
+
+          // 添加响应完成回调
+          res.onFinish((statusCode, responseSize) => {
+            const responseEvent: ServerEvent = {
+              type: ServerEventType.RESPONSE_SENT,
+              data: { clientSocket, statusCode, responseSize }
+            };
+            this.eventEmitter.emit(responseEvent);
+          });
+
+          this.router.handle(req, res);
+
+          // 清空缓冲区
+          buffer = new ArrayBuffer(0);
+        }
+      } catch (error) {
+        this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
       }
     });
 

@@ -14,3 +14,7 @@ export { Router } from './src/main/ets/Router'
 
 export * from './src/main/ets/middleware/index'
 
+export * from './src/main/ets/ServerEvents'
+
+export { ErrorHandlingExample } from './src/main/ets/examples/ErrorHandlingExample'
+
