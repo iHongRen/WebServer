@@ -27,10 +27,10 @@ import {
 import { LoggerOptions } from './middleware/logger';
 
 /**
- * Web服务器类
+ * Http 服务器类
  * 提供HTTP服务器功能，支持路由、中间件等特性
  */
-export class WebServer {
+export class HttpServer {
   protected router: Router = new Router(); // 路由管理器
   protected configs: Map<string, Object> = new Map(); // 配置存储
   private clients: socket.TCPSocketConnection[] = []; // 客户端连接列表
@@ -201,10 +201,8 @@ export class WebServer {
         await client.close();
       }
       this.clients = [];
-      const state = await this.tcpServer.getState()
-      if (state.isConnected) {
-        this.tcpServer.off('connect')
-      }
+      this.tcpServer.off('connect')
+      this.tcpServer.off('error')
       this.tcpServer = null;
     }
   }

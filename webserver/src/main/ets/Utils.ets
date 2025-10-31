@@ -8,6 +8,27 @@
 import { util } from "@kit.ArkTS";
 
 /**
+ * 常见文件扩展名与MIME类型映射表
+ */
+const MimeTypes: Record<string, string> = {
+  'html': 'text/html',
+  'htm': 'text/html',
+  'css': 'text/css',
+  'js': 'application/javascript',
+  'json': 'application/json',
+  'png': 'image/png',
+  'jpg': 'image/jpeg',
+  'jpeg': 'image/jpeg',
+  'gif': 'image/gif',
+  'svg': 'image/svg+xml',
+  'webp': 'image/webp',
+  'mp4': 'video/mp4',
+  'txt': 'text/plain',
+  'pdf': 'application/pdf',
+  'zip': 'application/zip',
+};
+
+/**
  * 通用工具类
  * 提供字符串转换、文件处理、路径操作等实用方法
  */
@@ -70,24 +91,7 @@ export class Utils {
    */
   static getMimeType(filePath: string): string {
     const extension = filePath.split('.').pop()?.toLowerCase() || '';
-    const mimeTypes: Record<string, string> = {
-      'html': 'text/html',
-      'htm': 'text/html',
-      'css': 'text/css',
-      'js': 'application/javascript',
-      'json': 'application/json',
-      'png': 'image/png',
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'gif': 'image/gif',
-      'svg': 'image/svg+xml',
-      'webp': 'image/webp',
-      'mp4': 'video/mp4',
-      'txt': 'text/plain',
-      'pdf': 'application/pdf',
-      'zip': 'application/zip',
-    };
-    return mimeTypes[extension] || 'application/octet-stream';
+    return MimeTypes[extension] || 'application/octet-stream';
   }
 
   /**

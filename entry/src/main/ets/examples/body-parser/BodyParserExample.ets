@@ -4,7 +4,7 @@
  * @date : 2025/8/20
  * @description : Body-Parser中间件使用示例
  */
-import { WebServer, BodyParser } from "@cxy/webserver";
+import { HttpServer, BodyParser } from "@cxy/webserver";
 
 /**
  * Body-Parser中间件使用示例
@@ -13,7 +13,7 @@ export class BodyParserExample {
   // 示例1: 解析JSON格式的请求体
   static example1() {
     console.log('=== 示例1: 解析JSON请求体 ===');
-    const server = new WebServer();
+    const server = new HttpServer();
     server.use(BodyParser.json());
 
     server.post('/json-test', (req, res) => {
@@ -29,7 +29,7 @@ export class BodyParserExample {
   // 示例2: 解析URL编码的请求体
   static example2() {
     console.log('=== 示例2: 解析URL编码请求体 ===');
-    const server = new WebServer();
+    const server = new HttpServer();
     server.use(BodyParser.urlencoded());
 
     server.post('/urlencoded-test', (req, res) => {
@@ -45,7 +45,7 @@ export class BodyParserExample {
   // 示例3: 解析文本格式的请求体
   static example3() {
     console.log('=== 示例3: 解析文本请求体 ===');
-    const server = new WebServer();
+    const server = new HttpServer();
     server.use(BodyParser.plain());
 
     server.post('/text-test', (req, res) => {
@@ -58,7 +58,7 @@ export class BodyParserExample {
   // 示例4: 解析文本格式的请求体
   static example4() {
     console.log('=== 示例3: 解析多部分表单请求体 ===');
-    const server = new WebServer();
+    const server = new HttpServer();
     server.use(BodyParser.multipart());
 
     server.post('/upload', (req, res) => {
@@ -72,7 +72,7 @@ export class BodyParserExample {
   // 示例5: 自动解析
   static example5() {
     console.log('=== 示例3: 解析文本请求体 ===');
-    const server = new WebServer();
+    const server = new HttpServer();
     server.use(BodyParser.auto());
 
     server.post('/auto-test', (req, res) => {

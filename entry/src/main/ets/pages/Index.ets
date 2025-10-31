@@ -1,7 +1,7 @@
 import { BusinessError } from '@kit.BasicServicesKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
-import { WebServer, ErrorHandler, ServerInfo } from '@cxy/webserver';
+import { HttpServer, ErrorHandler, ServerInfo } from '@cxy/webserver';
 import { LoggerExample } from '../examples/logger/LoggerExample';
 import { CorsExample } from '../examples/cors/CorsExample';
 import { BodyParserExample } from '../examples/body-parser/BodyParserExample';
@@ -18,7 +18,7 @@ interface User {
 @Entry
 @Component
 struct Index {
-  @State server: WebServer | null = null;
+  @State server: HttpServer | null = null;
   @State serverInfo: ServerInfo | null = null;
   @State isRunning: boolean = false;
   @State port: number = 8080;
@@ -78,7 +78,7 @@ struct Index {
 
   // 初始化服务器
   initServer() {
-    this.server = new WebServer();
+    this.server = new HttpServer();
 
     // --- 1. 中间件注册 ---
     // 顺序很重要，通常日志和CORS最先，然后是请求体解析，再是静态文件和路由
@@ -198,7 +198,7 @@ struct Index {
     // 自定义响应头示例
     // curl -i http://192.168.2.38:8080/api/custom-header
     this.server.get('/api/custom-header', (req, res) => {
-      res.setHeader('X-Custom-Header', 'Hello from WebServer!');
+      res.setHeader('X-Custom-Header', 'Hello from HttpServer!');
       res.json({ message: 'Check the response headers!' });
     });
 
@@ -212,7 +212,7 @@ struct Index {
 
     // --- 6. 统一错误处理中间件 (必须在路由之后注册) ---
     const customErrorHandler: ErrorHandler = (error, req, res, next) => {
-      console.error(`[WebServer Error] Path: ${req.path}, Message: ${error.message}`);
+      console.error(`[HttpServer Error] Path: ${req.path}, Message: ${error.message}`);
       if (res.isHeadersSent()) {
         return next(error); // 如果头已发送，则委托给默认错误处理器
       }

@@ -4,7 +4,7 @@
  * @date : 2025/8/20
  * @description : 静态文件服务中间件使用示例
  */
-import { WebServer } from "@cxy/webserver";
+import { HttpServer } from "@cxy/webserver";
 import { fileIo } from "@kit.CoreFileKit";
 import { common } from "@kit.AbilityKit";
 
@@ -15,7 +15,7 @@ export class StaticExample {
   // 示例1: 静态文件
   static async example1() {
     console.log('=== 示例1: 静态文件 ===');
-    const server = new WebServer();
+    const server = new HttpServer();
 
     const root = getContext().filesDir + '/www'
     if (!fileIo.accessSync(root)) {

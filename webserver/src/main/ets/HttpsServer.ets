@@ -7,7 +7,7 @@
 
 import { socket } from '@kit.NetworkKit';
 import { BusinessError } from '@kit.BasicServicesKit';
-import { WebServer } from './WebServer';
+import { HttpServer } from './HttpServer';
 import { ServerInfo } from './ServerInfo';
 import { HttpRequest } from './HttpRequest';
 import { HttpResponse } from './HttpResponse';
@@ -18,7 +18,7 @@ import { Utils } from './Utils';
  * HTTPS服务器类
  * 继承WebServer，提供TLS加密的HTTP服务
  */
-export class HttpsServer extends WebServer {
+export class HttpsServer extends HttpServer {
   private tlsClients: socket.TLSSocketConnection[] = []; // 客户端连接列表
   private tlsServer: socket.TLSSocketServer | null = null;
   private tlsOptions: socket.TLSSecureOptions;
@@ -79,10 +79,8 @@ export class HttpsServer extends WebServer {
         await client.close();
       }
       this.tlsClients = [];
-      const state = await this.tlsServer.getState()
-      if (state.isConnected) {
-        this.tlsServer.off('connect')
-      }
+      this.tlsServer.off('connect')
+      this.tlsServer.off('error')
       this.tlsServer = null;
       console.log('HTTPS服务器已停止');
     }

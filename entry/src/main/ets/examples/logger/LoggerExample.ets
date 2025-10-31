@@ -4,7 +4,7 @@
  * @date : 2025/8/18
  * @description : 日志中间件使用示例
  */
-import { LogFormat, Logger, WebServer } from "@cxy/webserver";
+import { LogFormat, Logger, HttpServer } from "@cxy/webserver";
 
 interface LogFormatItem {
   name: string,
@@ -18,7 +18,7 @@ export class LoggerExample {
   // 示例1: 使用默认开发环境日志格式
   static example1() {
     console.log('=== 示例1: 默认开发环境日志 ===');
-    const server = new WebServer();
+    const server = new HttpServer();
     server.logger(); // 等同于 app1.use(Logger.dev())
 
     server.get('/dev-log', (req, res) => {
@@ -33,7 +33,7 @@ export class LoggerExample {
   static example2() {
     console.log('=== 示例2: 不同的日志格式 ===');
     // Combined格式（生产环境推荐）
-    const server = new WebServer();
+    const server = new HttpServer();
     server.use(Logger.combined());
 
     server.get('/combined-log', (req, res) => {
@@ -46,7 +46,7 @@ export class LoggerExample {
   // 示例3: 自定义日志格式
   static example3() {
     console.log('=== 示例3: 自定义日志格式 ===');
-    const server = new WebServer();
+    const server = new HttpServer();
     server.use(Logger.create({
       format: ':method :url :status :response-time ms - :content-length'
     }));
@@ -61,7 +61,7 @@ export class LoggerExample {
   // 示例4: 条件性日志记录
   static example4() {
     console.log('=== 示例4: 条件性日志记录 ===');
-    const server = new WebServer();
+    const server = new HttpServer();
     server.use(Logger.create({
       format: LogFormat.DEV,
       skip: (req, res) => {
@@ -84,7 +84,7 @@ export class LoggerExample {
   // 示例5: 自定义输出流
   static example5() {
     console.log('=== 示例5: 自定义输出流 ===');
-    const server = new WebServer();
+    const server = new HttpServer();
     // 创建自定义日志输出
     const customStream = (message: string) => {
       // 可以写入文件、发送到远程日志服务等
@@ -106,7 +106,7 @@ export class LoggerExample {
   // 示例6: 多种格式组合使用
   static example6() {
     console.log('=== 示例6: 多种格式组合 ===');
-    const server = new WebServer();
+    const server = new HttpServer();
     // 开发环境：详细日志
     const isDev = true
     if (isDev) {
@@ -129,7 +129,7 @@ export class LoggerExample {
   // 示例7: 错误请求日志
   static example7() {
     console.log('=== 示例7: 错误请求日志 ===');
-    const server = new WebServer();
+    const server = new HttpServer();
     server.use(Logger.create({
       format: ':method :url :status :response-time ms - :content-length'
     }));
@@ -161,7 +161,7 @@ export class LoggerExample {
     formats.forEach((item, index) => {
       const name = item.name
       console.log(`\n${name} 格式示例:`);
-      const server = new WebServer();
+      const server = new HttpServer();
       server.use(Logger.create({ format: item.format }));
 
       server.get(`/${name.toLowerCase()}-format`, (req, res) => {
@@ -177,7 +177,7 @@ export class LoggerExample {
    */
   static performanceTest() {
     console.log('=== 性能测试 ===');
-    const server = new WebServer();
+    const server = new HttpServer();
     // 使用最简格式以减少日志开销
     server.use(Logger.tiny());
 

@@ -1,4 +1,4 @@
-export { WebServer } from './src/main/ets/WebServer'
+export { HttpServer } from './src/main/ets/HttpServer'
 
 export { HttpsServer } from './src/main/ets/HttpsServer'
 
