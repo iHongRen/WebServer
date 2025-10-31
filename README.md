@@ -54,9 +54,9 @@ ohpm install @cxy/webserver
 ## 快速开始
 
 ```typescript
-import { WebServer } from '@cxy/webserver';
+import { HttpServer } from '@cxy/webserver';
 
-this.server = new WebServer();
+this.server = new HttpServer();
 
 // 注册 GET / 接口
 this.server.get('/', (req, res, next) => {
@@ -82,11 +82,11 @@ if (info.address) {
 完整的代码示例请查看 [demo](https://github.com/iHongRen/WebServer/blob/main/entry/src/main/ets/pages/Index.ets)
 
 ```typescript
-import { WebServer } from '@cxy/webserver';
+import { HttpServer } from '@cxy/webserver';
 
 // 初始化服务器
 initServer() {
-  this.server = new WebServer();
+  this.server = new HttpServer();
 
   // --- 1. 中间件注册 ---
   // 顺序很重要，通常日志和CORS最先，然后是请求体解析，再是静态文件和路由
@@ -286,7 +286,7 @@ await this.server.stopServer();
 # WebServer API [文档](https://github.com/iHongRen/WebServer)
 
 
-### WebServer 类
+### HttpServer 类
 
 Web服务器主类，提供HTTP服务器功能。
 

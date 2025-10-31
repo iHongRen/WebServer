@@ -83,7 +83,7 @@
 
 ### 基本用法
 ```typescript
-import { CertificateManager, HttpsServer } from '@your-package/webserver';
+import { CertificateManager, TLSServer } from '@your-package/webserver';
 
 // 加载证书
 const tlsOptions = await CertificateManager.loadFromFiles(
@@ -93,7 +93,7 @@ const tlsOptions = await CertificateManager.loadFromFiles(
 );
 
 // 创建HTTPS服务器
-const httpsServer = new HttpsServer(tlsOptions);
+const httpsServer = new TLSServer(tlsOptions);
 await httpsServer.startServer(8443);
 ```
 
@@ -105,7 +105,7 @@ const tlsOptions = await CertificateManager.loadFromFiles(
   'dev-cert.pem'
 );
 
-const httpsServer = new HttpsServer(tlsOptions);
+const httpsServer = new TLSServer(tlsOptions);
 httpsServer.get('/', (req, res) => {
   res.json({ message: 'Hello HTTPS!', secure: true });
 });

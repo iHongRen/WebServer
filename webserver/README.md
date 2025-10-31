@@ -1,13 +1,8 @@
-
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)  ![License](https://img.shields.io/badge/License-Apache%202.0-green.svg) ![GitHub Stars](https://img.shields.io/github/stars/iHongRen/WebServer.svg?style=social)
 
-
-
-# WebServer - 鸿蒙Web服务器框架
+# HttpServer - 鸿蒙Web服务器框架
 
 这是一个基于 HarmonyOS 的轻量级Web服务器框架，提供了类似 Express.js 的 API 设计，支持路由、中间件、静态文件服务等功能。
-
-
 
 ## 特性
 
@@ -31,9 +26,7 @@
 
 - 多种日志格式支持
 
-
-
-##  安装
+## 安装
 
 ```sh
 ohpm install @cxy/webserver
@@ -49,14 +42,12 @@ ohpm install @cxy/webserver
 }
 ```
 
-
-
 ## 快速开始
 
 ```typescript
-import { WebServer } from '@cxy/webserver';
+import { HttpServer } from '@cxy/webserver';
 
-this.server = new WebServer();
+this.server = new HttpServer();
 
 // 注册 GET / 接口
 this.server.get('/', (req, res, next) => {
@@ -68,7 +59,7 @@ this.server.get('/', (req, res, next) => {
 // 在8080端口 启动服务器
 const info = await this.server.startServer(8080);
 if (info.address) {
-   console.log(`http://${info.address}:${info.port}`)   
+  console.log(`http://${info.address}:${info.port}`)
 } else {
   console.error("启动失败，未获取到地址");
 }
@@ -76,17 +67,17 @@ if (info.address) {
 // 访问：http://设备的ip:8080/   
 ```
 
-
-
 ## 示例
+
 完整的代码示例请查看 [demo](https://github.com/iHongRen/WebServer/blob/main/entry/src/main/ets/pages/Index.ets)
 
 ```typescript
-import { WebServer } from '@cxy/webserver';
+import { HttpServer } from '@cxy/webserver';
 
 // 初始化服务器
-initServer() {
-  this.server = new WebServer();
+initServer()
+{
+  this.server = new HttpServer();
 
   // --- 1. 中间件注册 ---
   // 顺序很重要，通常日志和CORS最先，然后是请求体解析，再是静态文件和路由
@@ -236,7 +227,7 @@ initServer() {
 //启动服务器
 const info = await this.server.startServer(8080);
 if (info.address) {
-  console.log(`http://${info.address}:${info.port}`)   
+  console.log(`http://${info.address}:${info.port}`)
 } else {
   console.error("启动失败，未获取到地址");
 }
@@ -244,8 +235,6 @@ if (info.address) {
 // 停止服务器
 await this.server.stopServer();
 ```
-
-
 
 ## 更多示例
 
@@ -270,26 +259,21 @@ await this.server.stopServer();
     └── 静态文件服务中间件说明.md
 ```
 
-
-
 ## 运行 [demo](https://github.com/iHongRen/WebServer)
 
-| 未开启服务 | 已开启服务 |
-| :-: | :-: |
-|<img src="https://7up.pics/images/2025/08/20/Screenshot_20250820150234282.jpeg" /> | <img src="https://7up.pics/images/2025/08/20/app.jpeg" /> |
+|                                       未开启服务                                        |                           已开启服务                           |
+|:----------------------------------------------------------------------------------:|:---------------------------------------------------------:|
+| <img src="https://7up.pics/images/2025/08/20/Screenshot_20250820150234282.jpeg" /> | <img src="https://7up.pics/images/2025/08/20/app.jpeg" /> |
 
 **浏览器访问：http://192.168.xx.xx:8080**
 
 <img src="https://7up.pics/images/2025/08/20/E4DAB553-8134-44F9-8C00-B97C1C2FEFC4.png" alt="E4DAB553 8134 44F9 8C00 B97C1C2FEFC4" border="0" style="display: inline-block;">
 
-
 # WebServer API [文档](https://github.com/iHongRen/WebServer)
 
-
-### WebServer 类
+### HttpServer 类
 
 Web服务器主类，提供HTTP服务器功能。
-
 
 #### 主要方法
 
@@ -430,11 +414,7 @@ CORS跨域资源共享中间件。
 
 - `LogFormat` - 日志格式枚举（DEV, TINY, SHORT, COMMON, COMBINED）
 
-
-
 ❓如果是使用过程中有什么问题，欢迎提 [issues](https://github.com/iHongRen/WebServer/issues)
-
-
 
 # 作者
 
@@ -447,12 +427,10 @@ DevEco-Studio 打开鸿蒙工程。
 
 3、[cxy-theme](https://github.com/iHongRen/cxy-theme) - DevEco-Studio 绿色背景主题
 
-4、[harmony-udid-tool](https://github.com/iHongRen/harmony-udid-tool) -  简单易用的 HarmonyOS 设备 UDID 获取工具，适用于非开发人员。
+4、[harmony-udid-tool](https://github.com/iHongRen/harmony-udid-tool) - 简单易用的 HarmonyOS 设备 UDID 获取工具，适用于非开发人员。
 
 5、[SandboxFinder](https://github.com/iHongRen/SandboxFinder) - 鸿蒙沙箱文件浏览器
 
 6、[WebServer](https://github.com/iHongRen/WebServer) - 鸿蒙轻量级Web服务器框架
-
-
 
 🌟 如果项目对你有帮助，欢迎持续关注和 Star ，[赞助](https://ihongren.github.io/donate.html)

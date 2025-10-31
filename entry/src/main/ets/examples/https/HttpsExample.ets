@@ -5,7 +5,7 @@
  * @description : HTTPS服务器使用示例
  */
 
-import { HttpsServer, CertificateManager, HttpRequest, HttpResponse } from '@cxy/webserver';
+import { TLSServer, CertManager, HttpRequest, HttpResponse } from '@cxy/webserver';
 import { socket } from '@kit.NetworkKit'
 
 
@@ -16,7 +16,7 @@ export class HttpsExample {
   /**
    * 创建基本的HTTPS服务器
    */
-  public static async createBasicHttpsServer(): Promise<HttpsServer> {
+  public static async createBasicHttpsServer(): Promise<TLSServer> {
     // 方式1: 使用自签名证书（开发环境）
     const tlsOptions = HttpsExample.createSelfSignedConfig();
 
@@ -28,12 +28,12 @@ export class HttpsExample {
     // );
 
     // 验证证书配置
-    if (!CertificateManager.validateConfig(tlsOptions)) {
+    if (!CertManager.validateConfig(tlsOptions)) {
       throw new Error('证书配置无效');
     }
 
     // 创建HTTPS服务器
-    const httpsServer = new HttpsServer(tlsOptions);
+    const httpsServer = new TLSServer(tlsOptions);
 
     // 配置中间件
     httpsServer.logger(); // 启用日志
@@ -46,7 +46,7 @@ export class HttpsExample {
   /**
    * 配置路由示例
    */
-  public static configureRoutes(server: HttpsServer): void {
+  public static configureRoutes(server: TLSServer): void {
     // 根路径
     server.get('/', (req: HttpRequest, res: HttpResponse) => {
       res.json({
@@ -127,16 +127,16 @@ export class HttpsExample {
     keyPath: string,
     certPath: string,
     caPath?: string
-  ): Promise<HttpsServer> {
+  ): Promise<TLSServer> {
     // 从文件加载证书
-    const tlsOptions = await CertificateManager.loadFromFiles(keyPath, certPath, caPath);
+    const tlsOptions = await CertManager.loadFromFiles(keyPath, certPath, caPath);
 
     // 验证配置
-    if (!CertificateManager.validateConfig(tlsOptions)) {
+    if (!CertManager.validateConfig(tlsOptions)) {
       throw new Error('证书配置验证无效');
     }
 
-    const httpsServer = new HttpsServer(tlsOptions);
+    const httpsServer = new TLSServer(tlsOptions);
     return httpsServer;
   }
 

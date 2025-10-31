@@ -7,14 +7,14 @@
 ### 1. 基本HTTPS服务器
 
 ```typescript
-import { HttpsServer, CertificateManager, HttpsExample } from '@cxy/webserver';
+import { TLSServer, CertificateManager, HttpsExample } from '@cxy/webserver';
 
 // 方式1: 使用示例快速启动
 await HttpsExample.startCompleteExample();
 
 // 方式2: 手动配置
 const tlsOptions = CertificateManager.createSelfSignedConfig();
-const httpsServer = new HttpsServer(tlsOptions);
+const httpsServer = new TLSServer(tlsOptions);
 
 httpsServer.get('/', (req, res) => {
   res.json({ message: 'Hello HTTPS!' });
@@ -84,7 +84,7 @@ const secureOptions: socket.TLSSecureOptions = {
 HTTPS服务器完全支持所有现有中间件：
 
 ```typescript
-const httpsServer = new HttpsServer(tlsOptions);
+const httpsServer = new TLSServer(tlsOptions);
 
 // 日志中间件
 httpsServer.logger({

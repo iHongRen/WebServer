@@ -1,8 +1,8 @@
 export { HttpServer } from './src/main/ets/HttpServer'
 
-export { HttpsServer } from './src/main/ets/HttpsServer'
+export { TLSServer } from './src/main/ets/TLSServer'
 
-export { CertificateManager } from './src/main/ets/CertificateManager'
+export { CertManager } from './src/main/ets/CertManager'
 
 export { ServerInfo } from './src/main/ets/ServerInfo'
 

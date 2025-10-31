@@ -1,5 +1,5 @@
 /**
- * @fileName : HttpsServer.ets
+ * @fileName : TLSServer.ets
  * @author : @cxy
  * @date : 2025/10/24
  * @description : HTTPS 服务器实现
@@ -16,9 +16,9 @@ import { Utils } from './Utils';
 
 /**
  * HTTPS服务器类
- * 继承WebServer，提供TLS加密的HTTP服务
+ * HttpServer，提供TLS加密的HTTP服务
  */
-export class HttpsServer extends HttpServer {
+export class TLSServer extends HttpServer {
   private tlsClients: socket.TLSSocketConnection[] = []; // 客户端连接列表
   private tlsServer: socket.TLSSocketServer | null = null;
   private tlsOptions: socket.TLSSecureOptions;

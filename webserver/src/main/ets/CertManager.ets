@@ -1,5 +1,5 @@
 /**
- * @fileName : CertificateManager.ets
+ * @fileName : CertManager.ets
  * @author : @cxy
  * @date : 2025/10/24
  * @description : SSL证书管理工具
@@ -12,7 +12,7 @@ import { socket } from '@kit.NetworkKit';
  * 证书管理器类
  * 提供证书加载、验证等功能
  */
-export class CertificateManager {
+export class CertManager {
   /**
    * 从文件加载证书配置
    * @param keyPath 私钥文件路径

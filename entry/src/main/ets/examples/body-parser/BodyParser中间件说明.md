@@ -7,9 +7,9 @@
 ## 基本使用
 
 ```typescript
-import { WebServer, BodyParser } from "@cxy/webserver";
+import { HttpServer, BodyParser } from "@cxy/webserver";
 
-const server = new WebServer();
+const server = new HttpServer();
 
 // 使用bodyParser中间件
 server.use(bodyParser());
