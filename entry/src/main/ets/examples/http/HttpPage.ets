@@ -1,13 +1,7 @@
 import { BusinessError } from '@kit.BasicServicesKit';
-import { fileIo } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
-import { HttpServer, ErrorHandler, ServerInfo } from '@cxy/webserver';
-
-
-interface User {
-  id: number,
-  name: string
-}
+import { ServerInfo } from '@cxy/webserver';
+import { HttpExample } from './HttpExample';
 
 @Builder
 function httpBuilder() {
@@ -16,286 +10,386 @@ function httpBuilder() {
 
 @Component
 struct HttpPage {
-  @State title: string = ''
-  @State server: HttpServer | null = null;
+  @State title: string = 'HTTP服务器示例'
+  @State httpExample: HttpExample | null = null;
   @State serverInfo: ServerInfo | null = null;
   @State isRunning: boolean = false;
   @State port: number = 8080;
-  @State staticFilesRoot: string = '';
+  @State isLoading: boolean = false;
+  @State errorMessage: string = '';
+  @State successMessage: string = '';
 
   async aboutToAppear() {
-    this.setupStatic();
-    this.initServer();
+    await this.initializeExample();
   }
 
   aboutToDisappear() {
-    this.stop();
+    this.stopServer();
   }
 
-  // 拷贝到沙箱服务器目录
-  async copyToStaticRoot(fileName: string) {
-    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    const buf = await context.resourceManager.getRawFileContent(fileName)
-    const path = this.staticFilesRoot + '/' + fileName
-    const outFile = await fileIo.open(path, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC)
-    await fileIo.write(outFile.fd, buf.buffer)
-    await fileIo.close(outFile.fd)
-  }
+  /**
+   * 初始化HTTP示例
+   */
+  async initializeExample() {
+    try {
+      this.isLoading = true;
+      this.errorMessage = '';
 
-  // 创建静态资源文件
-  async setupStatic() {
-    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    this.staticFilesRoot = context.filesDir + '/static';
-    const access = await fileIo.access(this.staticFilesRoot)
-    if (!access) {
-      await fileIo.mkdir(this.staticFilesRoot)
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+
+      // 创建HTTP示例实例
+      this.httpExample = new HttpExample(context, {
+        port: this.port,
+        enableLogging: true,
+        enableCors: true
+      });
+
+      // 设置静态文件
+      await this.httpExample.setupStaticFiles();
+
+      // 初始化服务器
+      this.httpExample.initializeServer();
+
+      this.successMessage = '✅ HTTP示例初始化完成';
+      console.log('HTTP示例初始化完成');
+
+    } catch (error) {
+      this.errorMessage = `初始化失败: ${error}`;
+      console.error('初始化HTTP示例失败:', error);
+    } finally {
+      this.isLoading = false;
     }
-    await this.copyToStaticRoot('index.html');
-    await this.copyToStaticRoot('upload.html');
   }
 
-  // 初始化服务器
-  initServer() {
-    this.server = new HttpServer();
-
-    // --- 1. 中间件注册 ---
-    // 顺序很重要，通常日志和CORS最先，然后是请求体解析，再是静态文件和路由
-    this.server.logger({
-      stream: (log: string) => {
-        console.log(log) //自定义写入日志文件
-      }
-    }) //日志记录
-    this.server.cors(); //支持跨域
-
-    this.server.auto(); //自动解析
-    // this.server.json(); // 解析 application/json
-    // this.server.urlencoded(); // 解析 application/x-www-form-urlencoded
-    // this.server.multipart(); // 解析 multipart/form-data (用于文件上传)
-    // this.server.plain(); // 解析文本
-
-    this.server.serveStatic(this.staticFilesRoot); // 提供静态文件服务
-
-    // --- 2. 模拟数据 ---
-    const users: User[] = [
-      { id: 1, name: 'cxy' },
-      { id: 2, name: 'ihongren' },
-      { id: 3, name: '仙银' }
-    ];
-    let nextUserId = 4;
-
-
-    // --- 3. API 示例 ---
-    // GET /api/users - 获取所有用户
-    // curl http://192.168.2.38:8080/api/users
-    this.server.get('/api/users', (req, res) => {
-      res.json(users);
-    });
-
-    // GET /api/users/:id - 使用路由参数，获取单个用户
-    // curl http://192.168.2.38:8080/api/users/1
-    this.server.get('/api/users/:id', (req, res) => {
-      const user = users.find(u => u.id === parseInt(req.params.id));
-      if (user) {
-        res.json(user);
-      } else {
-        res.status(404).json({ error: 'User not found' });
-      }
-    });
-
-    // POST /api/users - 创建新用户
-    // curl -X POST -H "Content-Type: application/json" -d '{"name":"NewUser"}' http://192.168.2.38:8080/api/users
-    this.server.post('/api/users', (req, res) => {
-      const newUser: User = {
-        id: nextUserId++,
-        name: (req.body as Record<string, string>).name || 'Unnamed'
-      };
-      users.push(newUser);
-      console.log('Created new user:', JSON.stringify(newUser));
-      res.status(201).json(newUser);
-    });
-
-    // post /api/users/:id - 更新用户
-    // curl -X POST -H "Content-Type: application/json" -d '{"name":"UpdatedUser"}' http://192.168.2.38:8080/api/users/1
-    this.server.post('/api/users/:id', (req, res) => {
-      const userId = parseInt(req.params.id);
-      const userIndex = users.findIndex(u => u.id === userId);
-      if (userIndex !== -1) {
-        users[userIndex].name = (req.body as Record<string, string>).name || users[userIndex].name;
-        res.json(users[userIndex]);
-      } else {
-        res.status(404).json({ error: 'User not found' });
-      }
-    });
-
-    // --- 4. 文件上传路由 ---
-    // curl -X POST -F "uploadFile=@/path/to/your/file.txt" http://192.168.2.38:8080/api/upload
-    this.server.post('/api/upload', async (req, res, next) => {
-      try {
-        const uploadedFile = req.files?.uploadFile; // 'uploadFile' 对应 HTML form 中的 input name
-        if (!uploadedFile) {
-          return res.status(400).json({ error: 'No file uploaded.' });
-        }
-
-        const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-        const tempPath = `${context.filesDir}/${uploadedFile.fileName}`;
-        const f = await fileIo.open(tempPath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE)
-        await fileIo.write(f.fd, uploadedFile.data);
-
-        console.log(`File uploaded successfully: ${uploadedFile.fileName}`);
-        res.json({
-          message: 'File uploaded successfully!',
-          filename: uploadedFile.fileName,
-          size: uploadedFile.data.byteLength,
-          contentType: uploadedFile.contentType,
-          savedTo: tempPath
-        });
-      } catch (error) {
-        next(error);
-      }
-    });
-
-    // --- 5. 其他高级示例 ---
-    // 路由参数示例
-    // curl http://192.168.2.38:8080/api/users/123/books/456
-    this.server.get('/api/users/:userId/books/:bookId', (req, res) => {
-      res.json({
-        message: `You requested book ${req.params.bookId} for user ${req.params.userId}.`
-      });
-    });
-
-    // 获取自定义请求头示例
-    // curl -H "X-Custom-Request-Header: MyValue" http://192.168.2.38:8080/api/custom-request-header
-    this.server.get('/api/custom-request-header', (req, res) => {
-      const customHeader = req.get('x-custom-request-header');
-      res.json({
-        message: 'Received custom request header',
-        headerValue: customHeader || 'Not found'
-      });
-    });
-
-    // 自定义响应头示例
-    // curl -i http://192.168.2.38:8080/api/custom-header
-    this.server.get('/api/custom-header', (req, res) => {
-      res.setHeader('X-Custom-Header', 'Hello from HttpServer!');
-      res.json({ message: 'Check the response headers!' });
-    });
-
-    // 错误触发示例
-    // curl http://192.168.2.38:8080/crash
-    this.server.get('/crash', (req, res, next) => {
-      // 故意抛出一个错误来测试错误处理中间件
-      throw new Error('This is a simulated crash!');
-    });
-
-
-    // --- 6. 统一错误处理中间件 (必须在路由之后注册) ---
-    const customErrorHandler: ErrorHandler = (error, req, res, next) => {
-      console.error(`[HttpServer Error] Path: ${req.path}, Message: ${error.message}`);
-      if (res.isHeadersSent()) {
-        return next(error); // 如果头已发送，则委托给默认错误处理器
-      }
-      res.status(500).json({
-        error: 'Internal Server Error',
-        message: error.message || 'An unknown error occurred.'
-      });
-    };
-    this.server.use(customErrorHandler);
-  }
-
-  // 启动服务
-  async start() {
-    if (!this.server) {
-      this.initServer();
+  /**
+   * 启动服务器
+   */
+  async startServer() {
+    if (!this.httpExample) {
+      await this.initializeExample();
     }
-    if (!this.server) {
+
+    if (!this.httpExample) {
+      this.errorMessage = '服务器初始化失败';
       return;
     }
+
     try {
-      const info = await this.server.startServer(this.port);
-      if (info.address) {
+      this.isLoading = true;
+      this.errorMessage = '';
+
+      const info = await this.httpExample.start();
+
+      if (info) {
         this.serverInfo = info;
         this.isRunning = true;
+        this.successMessage = `🟢服务器启动成功！访问\n http://${info.address}:${info.port}`;
       } else {
-        console.error("启动失败，未获取到地址");
+        this.errorMessage = '服务器启动失败，未获取到地址';
       }
-    } catch (e) {
-      const error = e as BusinessError;
-      console.error(`启动失败: ${error.message}, code: ${error.code}`);
+    } catch (error) {
+      const businessError = error as BusinessError;
+      this.errorMessage = `启动失败: ${businessError.message}`;
+      console.error('启动服务器失败:', error);
+    } finally {
+      this.isLoading = false;
     }
   }
 
-  // 停止服务
-  async stop() {
-    if (!this.server) {
+  /**
+   * 停止服务器
+   */
+  async stopServer() {
+    if (!this.httpExample) {
       return;
     }
-    await this.server.stopServer();
-    this.isRunning = false;
-    this.serverInfo = null;
+
+    try {
+      this.isLoading = true;
+      await this.httpExample.stop();
+
+      this.isRunning = false;
+      this.serverInfo = null;
+      this.successMessage = '🛑 服务器已停止';
+
+    } catch (error) {
+      this.errorMessage = `停止服务器失败: ${error}`;
+      console.error('停止服务器失败:', error);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  /**
+   * 更新端口号
+   */
+  updatePort(newPort: string) {
+    const portNum = parseInt(newPort);
+    if (portNum > 0 && portNum <= 65535) {
+      this.port = portNum;
+      this.errorMessage = '';
+
+      // 如果服务器正在运行，需要重新初始化
+      if (this.httpExample) {
+        this.httpExample = null;
+      }
+    } else {
+      this.errorMessage = '端口号必须在1-65535之间';
+    }
+  }
+
+  /**
+   * 清除消息
+   */
+  clearMessages() {
+    this.errorMessage = '';
+    this.successMessage = '';
   }
 
   build() {
     NavDestination() {
       Column() {
+        // 标题区域
+        Text(this.title)
+          .fontSize(24)
+          .fontWeight(FontWeight.Bold)
+          .margin({ bottom: 20 })
+
+        // 消息显示区域
+        if (this.errorMessage) {
+          Text(this.errorMessage)
+            .fontColor(Color.Red)
+            .fontSize(14)
+            .margin({ bottom: 10 })
+            .padding(10)
+            .backgroundColor('#ffebee')
+            .borderRadius(8)
+            .width('90%')
+        }
+
+        if (this.successMessage) {
+          Text(this.successMessage)
+            .fontColor(Color.Green)
+            .fontSize(14)
+            .margin({ bottom: 10 })
+            .padding(10)
+            .backgroundColor('#e8f5e8')
+            .borderRadius(8)
+            .width('90%')
+        }
+
+        // 服务器状态区域
         if (this.isRunning && this.serverInfo) {
-          Column({
-            space: 10
-          }) {
-            Text('服务器运行中...').fontColor(Color.Green).fontWeight(FontWeight.Bold)
-            Text(`访问地址: http://${this.serverInfo.address}:${this.serverInfo.port}`)
-            Text('服务目录:').margin({ top: 10 })
-            Text(this.staticFilesRoot)
-              .fontSize(12)
-              .fontColor(Color.Gray)
-              .width('90%')
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .maxLines(2)
+          Column({ space: 15 }) {
+            // 运行状态
+            Row() {
+              Text('🟢')
+                .fontSize(20)
+              Text('服务器运行中')
+                .fontColor(Color.Green)
+                .fontWeight(FontWeight.Bold)
+                .fontSize(18)
+            }
+            .justifyContent(FlexAlign.Center)
 
-          }.margin({ bottom: 20 })
+            // 服务器信息卡片
+            Column({ space: 10 }) {
+              Row() {
+                Text('访问地址:')
+                  .fontWeight(FontWeight.Medium)
+                  .width(80)
+                Text(`http://${this.serverInfo.address}:${this.serverInfo.port}`)
+                  .fontColor(Color.Blue)
+                  .fontSize(16)
+              }
+              .width('100%')
+              .justifyContent(FlexAlign.Start)
 
-          Button('停止服务器')
-            .width('80%')
-            .height(50)
-            .backgroundColor(Color.Red)
-            .onClick(() => {
-              this.stop();
-            })
+              Row() {
+                Text('端口:')
+                  .fontWeight(FontWeight.Medium)
+                  .width(80)
+                Text(this.serverInfo.port.toString())
+                  .fontSize(16)
+              }
+              .width('100%')
+              .justifyContent(FlexAlign.Start)
 
-        } else {
-          Column({
-            space: 10
-          }) {
-            Text('服务器已停止').fontColor(Color.Red).fontWeight(FontWeight.Bold).margin({ bottom: 10 })
-            TextInput({
-              text: this.port.toString(),
-              placeholder: '请输入端口号'
-            })
-              .type(InputType.Number)
-              .onChange((val) => {
-                this.port = parseInt(val);
-              })
+              Row() {
+                Text('静态目录:')
+                  .fontWeight(FontWeight.Medium)
+                  .width(80)
+                Text(this.httpExample?.getConfig().staticRoot || '')
+                  .layoutWeight(1)
+                  .fontSize(12)
+                  .fontColor(Color.Gray)
+                  .maxLines(2)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+              }
+              .width('100%')
+              .justifyContent(FlexAlign.Start)
+              .alignItems(VerticalAlign.Top)
+            }
+            .padding(15)
+            .backgroundColor('#f5f5f5')
+            .borderRadius(10)
+            .width('90%')
+
+            // API端点信息
+            Column({ space: 8 }) {
+              Text('📋 主要API端点')
+                .fontWeight(FontWeight.Bold)
+                .fontSize(16)
+                .margin({ bottom: 5 })
+
+              Text('• GET /api/users - 获取用户列表')
+                .fontSize(12)
+                .fontColor('#666')
+              Text('• POST /api/users - 创建用户')
+                .fontSize(12)
+                .fontColor('#666')
+              Text('• POST /api/upload - 文件上传')
+                .fontSize(12)
+                .fontColor('#666')
+            }
+            .alignItems(HorizontalAlign.Start)
+            .padding(15)
+            .backgroundColor('#fff3e0')
+            .borderRadius(10)
+            .width('90%')
+
+            // 停止按钮
+            Button('停止服务器')
               .width('80%')
               .height(50)
+              .backgroundColor(Color.Red)
+              .enabled(!this.isLoading)
+              .onClick(() => {
+                this.clearMessages();
+                this.stopServer();
+              })
 
-          }.margin({ bottom: 20 })
+          }
+          .width('100%')
+          .margin({ bottom: 20 })
 
-          Button('启动服务器')
-            .width('80%')
-            .height(50)
-            .onClick(() => {
-              this.start();
-            })
+        } else {
+          // 服务器未运行状态
+          Column({ space: 20 }) {
+            // 停止状态
+            Row() {
+              Text('🔴')
+                .fontSize(20)
+              Text('服务器已停止')
+                .fontColor(Color.Red)
+                .fontWeight(FontWeight.Bold)
+                .fontSize(18)
+            }
+            .justifyContent(FlexAlign.Center)
+
+            // 端口配置
+            Column({ space: 10 }) {
+              Text('服务器配置')
+                .fontWeight(FontWeight.Bold)
+                .fontSize(16)
+
+              Row() {
+                Text('端口号:')
+                  .fontWeight(FontWeight.Medium)
+                  .width(80)
+                TextInput({
+                  text: this.port.toString(),
+                  placeholder: '请输入端口号 (1-65535)'
+                })
+                  .type(InputType.Number)
+                  .layoutWeight(1)
+                  .height(40)
+                  .onChange((value) => {
+                    this.updatePort(value);
+                  })
+              }
+              .width('100%')
+            }
+            .padding(15)
+            .backgroundColor('#f5f5f5')
+            .borderRadius(10)
+            .width('90%')
+
+            // 功能说明
+            Column({ space: 8 }) {
+              Text('🚀 功能特性')
+                .fontWeight(FontWeight.Bold)
+                .fontSize(16)
+                .margin({ bottom: 5 })
+
+              Text('✅ RESTful API (用户管理)')
+                .fontSize(14)
+                .fontColor('#666')
+              Text('✅ 文件上传下载')
+                .fontSize(14)
+                .fontColor('#666')
+              Text('✅ 静态文件服务')
+                .fontSize(14)
+                .fontColor('#666')
+              Text('✅ 错误处理和日志')
+                .fontSize(14)
+                .fontColor('#666')
+              Text('✅ CORS跨域支持')
+                .fontSize(14)
+                .fontColor('#666')
+            }
+            .alignItems(HorizontalAlign.Start)
+            .padding(15)
+            .backgroundColor('#e3f2fd')
+            .borderRadius(10)
+            .width('90%')
+
+            // 启动按钮
+            Button(this.isLoading ? '启动中...' : '启动服务器')
+              .width('80%')
+              .height(50)
+              .backgroundColor(this.isLoading ? Color.Gray : Color.Blue)
+              .enabled(!this.isLoading)
+              .onClick(() => {
+                this.clearMessages();
+                this.startServer();
+              })
+          }
+          .width('100%')
+        }
+
+        // 加载指示器
+        if (this.isLoading) {
+          Row() {
+            LoadingProgress()
+              .width(30)
+              .height(30)
+              .margin({ right: 10 })
+            Text('处理中...')
+              .fontSize(14)
+              .fontColor('#666')
+          }
+          .margin({ top: 20 })
         }
 
       }
       .width('100%')
-      .padding({ top: 20, left: 20, right: 20 })
-      .justifyContent(FlexAlign.Center)
+      .height('100%')
+      .padding({
+        top: 20,
+        left: 20,
+        right: 20,
+        bottom: 20
+      })
+      .justifyContent(FlexAlign.Start)
     }
     .title(this.title)
     .onReady((ctx) => {
-      this.title = ctx.pathInfo.param as string
+      if (ctx.pathInfo.param) {
+        this.title = ctx.pathInfo.param as string;
+      }
     })
   }
 }
 
+export { httpBuilder }
