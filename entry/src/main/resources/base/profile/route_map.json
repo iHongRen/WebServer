@@ -1,0 +1,68 @@
+{
+  "routerMap": [
+    {
+      "name": "HttpPage",
+      "pageSourceFile": "src/main/ets/examples/http/HttpPage.ets",
+      "buildFunction": "httpBuilder",
+      "data": {
+        "description": "page"
+      }
+    },
+    {
+      "name": "HttpsPage",
+      "pageSourceFile": "src/main/ets/examples/https/HttpsPage.ets",
+      "buildFunction": "httpsBuilder",
+      "data": {
+        "description": "page"
+      }
+    },
+    {
+      "name": "RouterPage",
+      "pageSourceFile": "src/main/ets/examples/router/RouterPage.ets",
+      "buildFunction": "routerBuilder",
+      "data": {
+        "description": "page"
+      }
+    },
+    {
+      "name": "BodyPage",
+      "pageSourceFile": "src/main/ets/examples/body-parser/BodyPage.ets",
+      "buildFunction": "bodyBuilder",
+      "data": {
+        "description": "page"
+      }
+    },
+    {
+      "name": "CorsPage",
+      "pageSourceFile": "src/main/ets/examples/cors/CorsPage.ets",
+      "buildFunction": "corsBuilder",
+      "data": {
+        "description": "page"
+      }
+    },
+    {
+      "name": "LoggerPage",
+      "pageSourceFile": "src/main/ets/examples/logger/LoggerPage.ets",
+      "buildFunction": "loggerBuilder",
+      "data": {
+        "description": "page"
+      }
+    },
+    {
+      "name": "StaticPage",
+      "pageSourceFile": "src/main/ets/examples/static/StaticPage.ets",
+      "buildFunction": "staticBuilder",
+      "data": {
+        "description": "page"
+      }
+    },
+    {
+      "name": "ErrorPage",
+      "pageSourceFile": "src/main/ets/examples/error/ErrorPage.ets",
+      "buildFunction": "errorBuilder",
+      "data": {
+        "description": "page"
+      }
+    }
+  ]
+}
