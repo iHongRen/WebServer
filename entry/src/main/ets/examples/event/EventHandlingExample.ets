@@ -1,5 +1,5 @@
 /**
- * @fileName : ErrorHandlingExample.ets
+ * @fileName : EventHandlingExample.ets
  * @author : @cxy
  * @date : 2025/10/29
  * @description : 服务器错误处理示例
@@ -15,12 +15,11 @@ import {
   HttpRequest,
   HttpResponse
 } from '@cxy/webserver';
-import { socket } from '@kit.NetworkKit';
 
 /**
  * 错误处理示例类
  */
-export class ErrorHandlingExample {
+export class EventHandlingExample {
   /**
    * 创建带有完整错误处理的HTTP服务器
    */
@@ -95,7 +94,7 @@ export class ErrorHandlingExample {
     });
 
     // ==================== 配置路由 ====================
-    ErrorHandlingExample.setupRoutes(server);
+    EventHandlingExample.setupRoutes(server);
 
     return server;
   }
@@ -105,7 +104,7 @@ export class ErrorHandlingExample {
    */
   public static async startExample(): Promise<void> {
     try {
-      const server = await ErrorHandlingExample.createServerWithErrorHandling();
+      const server = await EventHandlingExample.createServerWithErrorHandling();
 
       // 启动服务器
       const serverInfo = await server.startServer(8080);

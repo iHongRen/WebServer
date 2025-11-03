@@ -16,7 +16,7 @@ struct Index {
     ['跨域示例', 'CorsPage'],
     ['日志示例', 'LoggerPage'],
     ['静态文件服务示例', 'StaticPage'],
-    ['错误处理示例', 'ErrorPage'],
+    ['事件处理示例', 'EventPage'],
   ]
 
   build() {

@@ -11,10 +11,9 @@ import {
   HttpServer,
   ErrorHandler,
   ServerInfo,
-  ServerErrorType,
   ServerEventType,
   HttpRequest,
-  HttpResponse
+  HttpResponse,
 } from '@cxy/webserver';
 
 
@@ -75,8 +74,6 @@ export class HttpExample {
     // 复制静态文件到沙箱目录
     await this.copyStaticFile('index.html');
     await this.copyStaticFile('upload.html');
-
-    console.log(`✅ 静态文件设置完成: ${this.config.staticRoot}`);
   }
 
   /**
@@ -84,9 +81,8 @@ export class HttpExample {
    */
   public initializeServer(): void {
     this.server = new HttpServer();
-
-    // 设置错误处理
-    this.setupErrorHandling();
+    // 设置服务器事件处理
+    this.setupEventHandling();
 
     // 配置中间件
     this.setupMiddleware();
@@ -96,9 +92,8 @@ export class HttpExample {
 
     // 设置全局错误处理
     this.setupGlobalErrorHandler();
-
-    console.log('🚀 HTTP服务器初始化完成');
   }
+
 
   /**
    * 启动服务器
@@ -112,8 +107,6 @@ export class HttpExample {
       if (!this.server) {
         throw new Error('服务器初始化失败');
       }
-
-      console.log(`🚀 启动HTTP服务器，端口: ${this.config.port}`);
 
       const info = await this.server.startServer(this.config.port);
 
@@ -144,7 +137,6 @@ export class HttpExample {
       await this.server.stopServer();
       this.isRunning = false;
       this.serverInfo = null;
-      console.log('🛑 HTTP服务器已停止');
     }
   }
 
@@ -194,7 +186,7 @@ export class HttpExample {
   /**
    * 设置错误处理和事件监听
    */
-  private setupErrorHandling(): void {
+  private setupEventHandling(): void {
     if (!this.server) {
       return;
     }
@@ -202,17 +194,6 @@ export class HttpExample {
     // 监听服务器错误
     this.server.onError((error) => {
       console.error(`🚨 服务器错误 [${error.type}]: ${JSON.stringify(error.error)}`);
-
-      switch (error.type) {
-        case ServerErrorType.STARTUP_FAILED:
-          console.error('💥 服务器启动失败，请检查端口是否被占用');
-          break;
-        case ServerErrorType.CLIENT_ERROR:
-          console.error('👤 客户端连接错误');
-          break;
-        default:
-          console.error('❓ 其他错误:', JSON.stringify(error.error));
-      }
     });
 
     // 监听服务器事件
@@ -246,9 +227,7 @@ export class HttpExample {
     // 2. CORS中间件
     if (this.config.enableCors) {
       this.server.cors({
-        origin: '*',
-        methods: ['GET', 'POST', 'PUT', 'DELETE'],
-        allowedHeaders: ['Content-Type', 'Authorization']
+        origin: '*'
       });
     }
 
@@ -364,12 +343,9 @@ export class HttpExample {
       }
 
       const data = req.body as Record<string, string>;
-
       if (data.name) {
         this.users[userIndex].name = data.name;
       }
-
-
       res.json({
         message: 'User updated successfully',
         user: this.users[userIndex]
@@ -475,7 +451,7 @@ export class HttpExample {
 
 
   /**
-   * 设置全局错误处理中间件
+   * 设置全局错误处理中间件, 需放到所有路由之后注册
    */
   private setupGlobalErrorHandler(): void {
     if (!this.server) {

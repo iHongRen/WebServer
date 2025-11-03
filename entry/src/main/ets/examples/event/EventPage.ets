@@ -1,17 +1,17 @@
 /**
- * @fileName : ErrorPage.ets
+ * @fileName : EventPage.ets
  * @author : @cxy
  * @date : 2025/11/2
  * @description : 文件描述
  */
 
 @Builder
-function errorBuilder() {
-  ErrorPage()
+function eventBuilder() {
+  EventPage()
 }
 
 @Component
-struct ErrorPage {
+struct EventPage {
   @State title: string = ''
 
   build() {

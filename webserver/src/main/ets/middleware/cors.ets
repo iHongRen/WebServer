@@ -43,8 +43,8 @@ export class Cors {
         res.setHeader('Vary', 'Origin');
       }
 
-      const methods = options?.methods?.join(', ') || 'GET, POST, PUT, DELETE, PATCH, OPTIONS'
-      res.setHeader('Access-Control-Allow-Methods', methods);
+      const methods = options?.methods?.join(', ')?.trimEnd()
+      res.setHeader('Access-Control-Allow-Methods', methods || '*');
 
       const headers = options?.allowedHeaders?.join(', ') || 'Content-Type, Authorization'
       res.setHeader('Access-Control-Allow-Headers', headers);

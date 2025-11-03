@@ -51,12 +51,7 @@ export class HttpServer {
    * 初始化服务器并设置默认404处理
    */
   constructor() {
-    // 默认404处理，作为最后一个中间件
-    this.use((req: HttpRequest, res: HttpResponse, _: NextFunction) => {
-      if (!res.isHeadersSent()) {
-        res.status(404).json({ error: 'Not Found', path: req.path });
-      }
-    });
+    this.use404()
   }
 
   /**
@@ -75,6 +70,17 @@ export class HttpServer {
    */
   public getConfig(key: string): Object | undefined {
     return this.configs.get(key);
+  }
+
+  /**
+   *  默认404处理，需作为最后一个中间件
+   */
+  public use404() {
+    this.use((req: HttpRequest, res: HttpResponse, _: NextFunction) => {
+      if (!res.isHeadersSent()) {
+        res.status(404).json({ error: 'Not Found', path: req.path });
+      }
+    });
   }
 
   /**

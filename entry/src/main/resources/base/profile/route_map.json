@@ -57,9 +57,9 @@
       }
     },
     {
-      "name": "ErrorPage",
-      "pageSourceFile": "src/main/ets/examples/error/ErrorPage.ets",
-      "buildFunction": "errorBuilder",
+      "name": "EventPage",
+      "pageSourceFile": "src/main/ets/examples/event/EventPage.ets",
+      "buildFunction": "eventBuilder",
       "data": {
         "description": "page"
       }
