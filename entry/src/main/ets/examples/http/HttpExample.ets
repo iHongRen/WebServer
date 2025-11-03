@@ -160,13 +160,6 @@ export class HttpExample {
     return this.config;
   }
 
-  public getUsers(): User[] {
-    return [...this.users];
-  }
-
-  public getUserCount(): number {
-    return this.users.length;
-  }
 
   /**
    * 初始化模拟数据
@@ -224,15 +217,11 @@ export class HttpExample {
 
     // 监听服务器事件
     this.server.on(ServerEventType.SERVER_STARTED, (event) => {
-      console.log('✅ 服务器启动成功:', event.data);
+      console.log('✅ 服务器启动成功:', JSON.stringify(event.data));
     });
 
     this.server.on(ServerEventType.SERVER_STOPPED, () => {
       console.log('🛑 服务器已停止');
-    });
-
-    this.server.onClientConnect((client) => {
-      console.log(`👤 新客户端连接: ${JSON.stringify(client)}`);
     });
   }
 
@@ -278,7 +267,6 @@ export class HttpExample {
     this.setupFileRoutes();
   }
 
-  // ==================== Getter方法 ====================
 
   /**
    * 配置API路由
@@ -551,13 +539,6 @@ export class HttpExample {
     console.log('\n📁 文件管理API:');
     console.log(`   POST   ${baseUrl}/api/upload        - 上传文件`);
     console.log(`   GET    ${baseUrl}/api/files         - 获取文件列表`);
-
-    // 工具API
-    console.log('\n🔧 工具API:');
-    console.log(`   GET    ${baseUrl}/api/status        - 服务器状态`);
-    console.log(`   GET    ${baseUrl}/api/headers       - 请求头信息`);
-    console.log(`   POST   ${baseUrl}/api/echo          - 回显请求`);
-    console.log(`   GET    ${baseUrl}/api/error         - 测试错误处理`);
 
     console.log('='.repeat(50));
   }

@@ -31,8 +31,7 @@ import {
   ServerErrorType,
   ServerEventType,
   ErrorEventListener,
-  ServerEventListener,
-  ClientEventListener
+  ServerEventListener
 } from './ServerEvents';
 
 /**
@@ -201,22 +200,6 @@ export class HttpServer {
   }
 
   /**
-   * 监听客户端连接事件
-   * @param listener 客户端连接监听器
-   */
-  public onClientConnect(listener: ClientEventListener): void {
-    this.eventEmitter.onClientConnect(listener);
-  }
-
-  /**
-   * 监听客户端断开连接事件
-   * @param listener 客户端断开连接监听器
-   */
-  public onClientDisconnect(listener: ClientEventListener): void {
-    this.eventEmitter.onClientDisconnect(listener);
-  }
-
-  /**
    * 移除错误监听器
    * @param listener 要移除的监听器
    */
@@ -348,7 +331,6 @@ export class HttpServer {
         this.clients.forEach(async (client, _) => {
           try {
             await client.close();
-            this.eventEmitter.emitClientDisconnect(client);
           } catch (error) {
             this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
           }
@@ -423,9 +405,6 @@ export class HttpServer {
       if (error) {
         this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
       }
-
-      // 发射客户端断开连接事件
-      this.eventEmitter.emitClientDisconnect(clientSocket);
     }
   }
 
@@ -436,9 +415,6 @@ export class HttpServer {
   protected handleClient(clientSocket: socket.TCPSocketConnection | socket.TLSSocketConnection) {
 
     this.clients.set(clientSocket.clientId, clientSocket);
-
-    // 发射客户端连接事件
-    this.eventEmitter.emitClientConnect(clientSocket);
 
     let buffer = new ArrayBuffer(0);
 

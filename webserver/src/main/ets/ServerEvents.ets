@@ -5,9 +5,6 @@
  * @description : 服务器事件系统
  */
 
-import { BusinessError } from '@kit.BasicServicesKit';
-import { socket } from '@kit.NetworkKit';
-
 /**
  * 服务器错误类型枚举
  */
@@ -29,8 +26,6 @@ export enum ServerErrorType {
 export enum ServerEventType {
   SERVER_STARTED = 'server_started',
   SERVER_STOPPED = 'server_stopped',
-  CLIENT_CONNECTED = 'client_connected',
-  CLIENT_DISCONNECTED = 'client_disconnected',
   ERROR = 'error',
   WARNING = 'warning',
   REQUEST_RECEIVED = 'request_received',
@@ -61,7 +56,6 @@ export type ErrorEventListener = (error: ServerError) => void;
 
 export type ServerEventListener = (event: ServerEvent) => void;
 
-export type ClientEventListener = (client: socket.TCPSocketConnection | socket.TLSSocketConnection) => void;
 
 /**
  * 服务器事件发射器类
@@ -69,8 +63,6 @@ export type ClientEventListener = (client: socket.TCPSocketConnection | socket.T
 export class ServerEventEmitter {
   private errorListeners: ErrorEventListener[] = [];
   private eventListeners: Map<ServerEventType, ServerEventListener[]> = new Map();
-  private clientConnectListeners: ClientEventListener[] = [];
-  private clientDisconnectListeners: ClientEventListener[] = [];
 
   /**
    * 监听错误事件
@@ -90,22 +82,6 @@ export class ServerEventEmitter {
       this.eventListeners.set(eventType, []);
     }
     this.eventListeners.get(eventType)!.push(listener);
-  }
-
-  /**
-   * 监听客户端连接事件
-   * @param listener 客户端连接监听器
-   */
-  public onClientConnect(listener: ClientEventListener): void {
-    this.clientConnectListeners.push(listener);
-  }
-
-  /**
-   * 监听客户端断开连接事件
-   * @param listener 客户端断开连接监听器
-   */
-  public onClientDisconnect(listener: ClientEventListener): void {
-    this.clientDisconnectListeners.push(listener);
   }
 
   /**
@@ -140,34 +116,6 @@ export class ServerEventEmitter {
   }
 
   /**
-   * 发射客户端连接事件
-   * @param client 客户端信息
-   */
-  public emitClientConnect(client: socket.TCPSocketConnection | socket.TLSSocketConnection): void {
-    this.clientConnectListeners.forEach(listener => {
-      try {
-        listener(client);
-      } catch (e) {
-        console.error('Error in client connect listener:', e);
-      }
-    });
-  }
-
-  /**
-   * 发射客户端断开连接事件
-   * @param client 客户端信息
-   */
-  public emitClientDisconnect(client: socket.TCPSocketConnection | socket.TLSSocketConnection): void {
-    this.clientDisconnectListeners.forEach(listener => {
-      try {
-        listener(client);
-      } catch (e) {
-        console.error('Error in client disconnect listener:', e);
-      }
-    });
-  }
-
-  /**
    * 移除错误监听器
    * @param listener 要移除的监听器
    */
@@ -199,7 +147,5 @@ export class ServerEventEmitter {
   public removeAllListeners(): void {
     this.errorListeners = [];
     this.eventListeners.clear();
-    this.clientConnectListeners = [];
-    this.clientDisconnectListeners = [];
   }
 }

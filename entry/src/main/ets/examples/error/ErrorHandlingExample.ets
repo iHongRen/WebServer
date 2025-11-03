@@ -94,27 +94,6 @@ export class ErrorHandlingExample {
       // 可以在这里进行响应统计、性能监控等
     });
 
-    // ==================== 客户端连接事件监听 ====================
-
-    // 监听客户端连接
-    server.onClientConnect(async (client: socket.TCPSocketConnection | socket.TLSSocketConnection) => {
-      const address = await client.getRemoteAddress()
-      console.log(`👤 新客户端连接: ${client.clientId} ${address}`);
-      console.log(`当前连接数: ${server.getClientCount()}`);
-
-      // 可以在这里进行连接限制、IP白名单检查等
-      if (server.getClientCount() > 100) {
-        console.warn('⚠️  连接数过多，考虑限制新连接');
-      }
-    });
-
-    // 监听客户端断开连接
-    server.onClientDisconnect(async (client: socket.TCPSocketConnection | socket.TLSSocketConnection) => {
-      const address = await client.getRemoteAddress()
-      console.log(`👋 客户端断开连接: ${client.clientId} ${address}`);
-      console.log(`当前连接数: ${server.getClientCount()}`);
-    });
-
     // ==================== 配置路由 ====================
     ErrorHandlingExample.setupRoutes(server);
 
