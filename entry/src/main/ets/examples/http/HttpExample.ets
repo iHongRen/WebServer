@@ -25,39 +25,22 @@ interface User {
   name: string;
 }
 
-/**
- * 服务器配置接口
- */
-interface ServerConfig {
-  port: number;
-  staticRoot: string;
-  enableLogging: boolean;
-  enableCors: boolean;
-}
 
 /**
  * HTTP服务器示例类
  * 提供完整的RESTful API和文件上传功能演示
  */
 export class HttpExample {
+  public staticRoot: string = ''
   private server: HttpServer | null = null;
-  private serverInfo: ServerInfo | null = null;
-  private isRunning: boolean = false;
-  private config: ServerConfig;
   private context: common.UIAbilityContext;
   // 模拟数据存储
   private users: User[] = [];
   private nextUserId: number = 1;
 
-  constructor(context: common.UIAbilityContext, config?: Partial<ServerConfig>) {
+  constructor(context: common.UIAbilityContext) {
     this.context = context;
-    this.config = {
-      port: config?.port || 8080,
-      staticRoot: config?.staticRoot || context.filesDir + '/static',
-      enableLogging: config?.enableLogging || true,
-      enableCors: config?.enableCors || true,
-    };
-
+    this.staticRoot = context.filesDir + '/static'
     this.initializeData();
   }
 
@@ -66,11 +49,10 @@ export class HttpExample {
    */
   public async setupStaticFiles(): Promise<void> {
     // 检查并创建静态文件目录
-    const access = await fileIo.access(this.config.staticRoot);
+    const access = await fileIo.access(this.staticRoot);
     if (!access) {
-      await fileIo.mkdir(this.config.staticRoot);
+      await fileIo.mkdir(this.staticRoot);
     }
-
     // 复制静态文件到沙箱目录
     await this.copyStaticFile('index.html');
     await this.copyStaticFile('upload.html');
@@ -79,7 +61,7 @@ export class HttpExample {
   /**
    * 初始化服务器
    */
-  public initializeServer(): void {
+  public async initializeServer(): Promise<void> {
     this.server = new HttpServer();
     // 设置服务器事件处理
     this.setupEventHandling();
@@ -90,41 +72,28 @@ export class HttpExample {
     // 配置路由
     this.setupRoutes();
 
-    // 设置全局错误处理
+    // 设置全局错误处理中间件
     this.setupGlobalErrorHandler();
-  }
 
+    await this.setupStaticFiles();
+  }
 
   /**
    * 启动服务器
    */
-  public async start(): Promise<ServerInfo | null> {
-    try {
-      if (!this.server) {
-        this.initializeServer();
-      }
+  public async start(port: number): Promise<ServerInfo | null> {
+    if (!this.server) {
+      await this.initializeServer();
+    }
 
-      if (!this.server) {
-        throw new Error('服务器初始化失败');
-      }
-
-      const info = await this.server.startServer(this.config.port);
-
-      if (info.address) {
-        this.serverInfo = info;
-        this.isRunning = true;
-
-        console.log('✅ HTTP服务器启动成功!');
-        console.log(`🌐 访问地址: http://${info.address}:${info.port}`);
-        this.printApiEndpoints(info);
-
-        return info;
-      } else {
-        throw new Error('未能获取服务器地址');
-      }
-    } catch (error) {
-      console.error('❌ 启动服务器失败:', error);
-      this.isRunning = false;
+    const info = await this.server?.startServer(port);
+    if (info) {
+      console.log('✅ HTTP服务器启动成功!');
+      console.log(`🌐 访问地址: http://${info.address}:${info.port}`);
+      this.printApiEndpoints(info);
+      return info;
+    } else {
+      console.error('❌ 启动服务器失败:');
       return null;
     }
   }
@@ -133,25 +102,23 @@ export class HttpExample {
    * 停止服务器
    */
   public async stop(): Promise<void> {
-    if (this.server && this.isRunning) {
+    if (this.server) {
       await this.server.stopServer();
-      this.isRunning = false;
-      this.serverInfo = null;
     }
   }
 
-  public getServerInfo(): ServerInfo | null {
-    return this.serverInfo;
-  }
+  /**
+   * 复制静态文件到沙箱目录
+   */
+  private async copyStaticFile(fileName: string): Promise<void> {
+    const buffer = await this.context.resourceManager.getRawFileContent(fileName);
+    const filePath = `${this.staticRoot}/${fileName}`;
 
-  public getIsRunning(): boolean {
-    return this.isRunning;
+    const file = await fileIo.open(filePath,
+      fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
+    await fileIo.write(file.fd, buffer.buffer);
+    await fileIo.close(file.fd);
   }
-
-  public getConfig(): ServerConfig {
-    return this.config;
-  }
-
 
   /**
    * 初始化模拟数据
@@ -170,18 +137,6 @@ export class HttpExample {
     this.nextUserId = 3;
   }
 
-  /**
-   * 复制静态文件到沙箱目录
-   */
-  private async copyStaticFile(fileName: string): Promise<void> {
-    const buffer = await this.context.resourceManager.getRawFileContent(fileName);
-    const filePath = `${this.config.staticRoot}/${fileName}`;
-
-    const file = await fileIo.open(filePath,
-      fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
-    await fileIo.write(file.fd, buffer.buffer);
-    await fileIo.close(file.fd);
-  }
 
   /**
    * 设置错误处理和事件监听
@@ -215,27 +170,23 @@ export class HttpExample {
     }
 
     // 1. 日志中间件（最先执行）
-    if (this.config.enableLogging) {
-      this.server.logger({
-        format: 'dev',
-        stream: (log: string) => {
-          console.log(`📝 ${log}`);
-        }
-      });
-    }
+    this.server.logger({
+      format: 'dev',
+      stream: (log: string) => {
+        console.log(`📝 ${log}`);
+      }
+    });
 
     // 2. CORS中间件
-    if (this.config.enableCors) {
-      this.server.cors({
-        origin: '*'
-      });
-    }
+    this.server.cors({
+      origin: '*'
+    });
 
     // 3. 请求体解析中间件
-    this.server.auto(); // 自动解析各种格式
+    this.server.auto();
 
     // 4. 静态文件服务（在API路由之前）
-    this.server.serveStatic(this.config.staticRoot);
+    this.server.serveStatic(this.staticRoot);
   }
 
   /**

@@ -1,4 +1,10 @@
-import { BusinessError } from '@kit.BasicServicesKit';
+/**
+ * @fileName : HttpPage.ets
+ * @author : @cxy
+ * @date : 2025/10/29
+ * @description : HTTP服务器示例
+ */
+
 import { common } from '@kit.AbilityKit';
 import { ServerInfo } from '@cxy/webserver';
 import { HttpExample } from './HttpExample';
@@ -28,46 +34,21 @@ struct HttpPage {
   }
 
   /**
-   * 初始化HTTP示例
-   */
-  async initializeExample() {
-    this.errorMessage = '';
-    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    this.httpExample = new HttpExample(context, {
-      port: this.port,
-      enableLogging: true,
-      enableCors: true
-    });
-    await this.httpExample.setupStaticFiles();
-  }
-
-  /**
    * 启动服务器
    */
   async startServer() {
-    if (!this.httpExample) {
-      await this.initializeExample();
-    }
+    this.errorMessage = '';
+    this.successMessage = '';
 
-    if (!this.httpExample) {
-      this.errorMessage = '服务器初始化失败';
-      return;
-    }
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    this.httpExample = new HttpExample(context);
 
-    try {
-      this.errorMessage = '';
-
-      const info = await this.httpExample.start();
-
-      if (info) {
-        this.serverInfo = info;
-        this.successMessage = `🟢服务器运行中`;
-      } else {
-        this.errorMessage = '服务器启动失败，未获取到地址';
-      }
-    } catch (error) {
-      const businessError = error as BusinessError;
-      this.errorMessage = `启动失败: ${businessError.message}`;
+    const info = await this.httpExample.start(this.port);
+    if (info) {
+      this.serverInfo = info;
+      this.successMessage = `🟢服务器运行中`;
+    } else {
+      this.errorMessage = '🛑 服务器启动失败';
     }
   }
 
@@ -75,41 +56,16 @@ struct HttpPage {
    * 停止服务器
    */
   async stopServer() {
+    this.errorMessage = '';
+    this.successMessage = '';
+
     if (!this.httpExample) {
       return;
     }
-
-    try {
-      await this.httpExample.stop();
-
-      this.httpExample = null;
-      this.serverInfo = null;
-      this.successMessage = '🛑 服务器已停止';
-
-    } catch (error) {
-      this.errorMessage = `停止服务器失败: ${error}`;
-    }
-  }
-
-  /**
-   * 更新端口号
-   */
-  updatePort(newPort: string) {
-    const portNum = parseInt(newPort);
-    if (portNum > 0 && portNum <= 65535) {
-      this.port = portNum;
-      this.errorMessage = '';
-    } else {
-      this.errorMessage = '端口号必须在1-65535之间';
-    }
-  }
-
-  /**
-   * 清除消息
-   */
-  clearMessages() {
-    this.errorMessage = '';
-    this.successMessage = '';
+    await this.httpExample.stop();
+    this.httpExample = null;
+    this.serverInfo = null;
+    this.successMessage = '服务器已停止';
   }
 
   build() {
@@ -141,7 +97,6 @@ struct HttpPage {
         // 服务器状态区域
         if (this.serverInfo) {
           Column({ space: 15 }) {
-
             // 服务器信息卡片
             Column({ space: 10 }) {
               Row() {
@@ -159,7 +114,7 @@ struct HttpPage {
                 Text('静态目录:')
                   .fontWeight(FontWeight.Medium)
                   .width(80)
-                Text(this.httpExample?.getConfig().staticRoot || '')
+                Text(this.httpExample?.staticRoot || '')
                   .layoutWeight(1)
                   .fontSize(12)
                   .fontColor(Color.Gray)
@@ -181,10 +136,8 @@ struct HttpPage {
               .height(50)
               .backgroundColor(Color.Red)
               .onClick(() => {
-                this.clearMessages();
                 this.stopServer();
               })
-
           }
           .width('100%')
 
@@ -203,7 +156,7 @@ struct HttpPage {
                 .layoutWeight(1)
                 .height(40)
                 .onChange((value) => {
-                  this.updatePort(value);
+                  this.port = parseInt(value);
                 })
             }
             .padding(15)
@@ -216,9 +169,8 @@ struct HttpPage {
             Button('启动服务器')
               .width('80%')
               .height(50)
-              .backgroundColor( Color.Blue)
+              .backgroundColor(Color.Blue)
               .onClick(() => {
-                this.clearMessages();
                 this.startServer();
               })
           }

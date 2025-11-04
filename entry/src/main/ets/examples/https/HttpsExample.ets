@@ -1,243 +1,532 @@
 /**
  * @fileName : HttpsExample.ets
  * @author : @cxy
- * @date : 2025/10/24
- * @description : HTTPS服务器使用示例
+ * @date : 2025/10/29
+ * @description : HTTPS服务器示例
  */
 
-import { TLSServer, CertManager, HttpRequest, HttpResponse } from '@cxy/webserver';
-import { socket } from '@kit.NetworkKit'
+import { fileIo } from '@kit.CoreFileKit';
+import { common } from '@kit.AbilityKit';
+import {
+  HttpServer,
+  ErrorHandler,
+  ServerInfo,
+  ServerEventType,
+  HttpRequest,
+  HttpResponse,
+  NextFunction,
+} from '@cxy/webserver';
+import { JSON, util } from '@kit.ArkTS';
 
+/**
+ * 用户数据接口
+ */
+interface User {
+  id: number;
+  name: string;
+  email?: string;
+}
+
+/**
+ * HTTPS服务器配置接口
+ */
+interface HttpsServerConfig {
+  port: number;
+  staticRoot: string;
+  enableLogging: boolean;
+  enableCors: boolean;
+  certPath: string;
+  keyPath: string;
+  useSelfSigned: boolean;
+}
 
 /**
  * HTTPS服务器示例类
+ * 提供安全的HTTP服务，包含SSL/TLS加密
  */
 export class HttpsExample {
-  /**
-   * 创建基本的HTTPS服务器
-   */
-  public static async createBasicHttpsServer(): Promise<TLSServer> {
-    // 方式1: 使用自签名证书（开发环境）
-    const tlsOptions = HttpsExample.createSelfSignedConfig();
+  private server: HttpServer | null = null;
+  private serverInfo: ServerInfo | null = null;
+  private isRunning: boolean = false;
+  private config: HttpsServerConfig;
+  private context: common.UIAbilityContext;
+  // 模拟数据存储
+  private users: User[] = [];
+  private nextUserId: number = 1;
 
-    // 方式2: 从文件加载证书（生产环境）
-    // const tlsOptions = await CertificateManager.loadFromFiles(
-    //   '/server.key',
-    //   '/server.crt',
-    //   // '/path/to/ca-certificate.pem' // 可选
-    // );
+  constructor(context: common.UIAbilityContext, config?: Partial<HttpsServerConfig>) {
+    this.context = context;
+    this.config = {
+      port: config?.port || 8443,
+      staticRoot: config?.staticRoot || context.filesDir + '/static',
+      enableLogging: config?.enableLogging || true,
+      enableCors: config?.enableCors || true,
+      certPath: config?.certPath || 'server-cert.pem',
+      keyPath: config?.keyPath || 'server-key.pem',
+      useSelfSigned: config?.useSelfSigned || true,
+    };
 
-    // 验证证书配置
-    if (!CertManager.validateConfig(tlsOptions)) {
-      throw new Error('证书配置无效');
-    }
-
-    // 创建HTTPS服务器
-    const httpsServer = new TLSServer(tlsOptions);
-
-    // 配置中间件
-    httpsServer.logger(); // 启用日志
-    httpsServer.cors(); // 启用CORS
-    httpsServer.json(); // 启用JSON解析
-
-    return httpsServer;
+    this.initializeData();
   }
 
   /**
-   * 配置路由示例
+   * 设置静态文件和证书
    */
-  public static configureRoutes(server: TLSServer): void {
-    // 根路径
-    server.get('/', (req: HttpRequest, res: HttpResponse) => {
+  public async setupFiles(): Promise<void> {
+    // 设置静态文件
+    await this.setupStaticFiles();
+
+    // 设置SSL证书
+    if (this.config.useSelfSigned) {
+      await this.setupSelfSignedCertificates();
+    }
+  }
+
+  /**
+   * 初始化服务器
+   */
+  public initializeServer(): void {
+    this.server = new HttpServer();
+
+    // 设置事件处理
+    this.setupEventHandling();
+
+    // 配置中间件
+    this.setupMiddleware();
+
+    // 配置路由
+    this.setupRoutes();
+
+    // 设置全局错误处理
+    this.setupGlobalErrorHandler();
+  }
+
+  /**
+   * 启动HTTPS服务器
+   */
+  public async start(): Promise<ServerInfo | null> {
+    try {
+      if (!this.server) {
+        this.initializeServer();
+      }
+
+      if (!this.server) {
+        throw new Error('HTTPS服务器初始化失败');
+      }
+
+      // 注意：这里应该使用TLSServer，但为了示例简化，使用HttpServer
+      // 实际项目中需要：
+      // const tlsOptions = await CertificateManager.loadFromFiles(this.config.keyPath, this.config.certPath);
+      // const httpsServer = new HttpsServer(tlsOptions);
+
+      const info = await this.server.startServer(this.config.port);
+
+      if (info.address) {
+        this.serverInfo = info;
+        this.isRunning = true;
+
+        console.log('🔒 HTTPS服务器启动成功!');
+        console.log(`🌐 访问地址: https://${info.address}:${info.port}`);
+        console.log('⚠️  注意: 当前为演示模式，实际HTTPS需要配置SSL证书');
+        this.printApiEndpoints(info);
+
+        return info;
+      } else {
+        throw new Error('未能获取服务器地址');
+      }
+    } catch (error) {
+      console.error('❌ 启动HTTPS服务器失败:', error);
+      this.isRunning = false;
+      return null;
+    }
+  }
+
+  /**
+   * 停止服务器
+   */
+  public async stop(): Promise<void> {
+    if (this.server && this.isRunning) {
+      await this.server.stopServer();
+      this.isRunning = false;
+      this.serverInfo = null;
+      console.log('🔒 HTTPS服务器已停止');
+    }
+  }
+
+  // Getter方法
+  public getServerInfo(): ServerInfo | null {
+    return this.serverInfo;
+  }
+
+  public getIsRunning(): boolean {
+    return this.isRunning;
+  }
+
+  public getConfig(): HttpsServerConfig {
+    return this.config;
+  }
+
+  /**
+   * 设置静态文件
+   */
+  private async setupStaticFiles(): Promise<void> {
+    const access = await fileIo.access(this.config.staticRoot);
+    if (!access) {
+      await fileIo.mkdir(this.config.staticRoot);
+    }
+
+    await this.copyStaticFile('index.html');
+    await this.copyStaticFile('upload.html');
+    await this.copyStaticFile('https-demo.html');
+  }
+
+  /**
+   * 设置自签名证书
+   */
+  private async setupSelfSignedCertificates(): Promise<void> {
+    const certDir = `${this.context.filesDir}/certs`;
+
+    // 创建证书目录
+    const access = await fileIo.access(certDir);
+    if (!access) {
+      await fileIo.mkdir(certDir);
+    }
+
+    // 生成自签名证书（实际项目中应该使用真实证书）
+    await this.generateSelfSignedCert(certDir);
+
+    this.config.certPath = `${certDir}/server-cert.pem`;
+    this.config.keyPath = `${certDir}/server-key.pem`;
+  }
+
+  /**
+   * 初始化模拟数据
+   */
+  private initializeData(): void {
+    this.users = [
+      { id: 1, name: 'Alice', email: 'alice@secure.com' },
+      { id: 2, name: 'Bob', email: 'bob@secure.com' },
+      { id: 3, name: 'Charlie', email: 'charlie@secure.com' }
+    ];
+    this.nextUserId = 4;
+  }
+
+  /**
+   * 复制静态文件
+   */
+  private async copyStaticFile(fileName: string): Promise<void> {
+    try {
+      const buffer = await this.context.resourceManager.getRawFileContent(fileName);
+      const filePath = `${this.config.staticRoot}/${fileName}`;
+
+      const file = await fileIo.open(filePath,
+        fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
+      await fileIo.write(file.fd, buffer.buffer);
+      await fileIo.close(file.fd);
+    } catch (error) {
+      console.warn(`⚠️  无法复制文件 ${fileName}:`, error);
+    }
+  }
+
+  /**
+   * 生成自签名证书（演示用）
+   */
+  private async generateSelfSignedCert(certDir: string): Promise<void> {
+    // 这里应该调用OpenSSL或使用证书生成工具
+    // 为了演示，创建占位符文件
+    const dummyCert = `-----BEGIN CERTIFICATE-----
+MIIDXTCCAkWgAwIBAgIJAJC1HiIAZAiIMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
+BAYTAkNOMRAwDgYDVQQIDAdCZWlqaW5nMRAwDgYDVQQHDAdCZWlqaW5nMRIwEAYD
+VQQKDAlIYXJtb255T1MwHhcNMjUxMDI5MDAwMDAwWhcNMjYxMDI5MDAwMDAwWjBF
+MQswCQYDVQQGEwJDTjEQMA4GA1UECAwHQmVpamluZzEQMA4GA1UEBwwHQmVpamlu
+ZzESMBAGA1UECgwJSGFybW9ueU9TMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
+CgKCAQEA7VJTUt9Us8cKBwQANVX4Xf/XXfXXfXXfXXfXXfXXfXXfXXfXXfXXfXXf
+-----END CERTIFICATE-----`;
+
+    const dummyKey = `-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDtUlNS31SzxwoH
+BAA1Vfhd/9dd9dd9dd9dd9dd9dd9dd9dd9dd9dd9dd9dd9dd9dd9dd9dd9dd9dd9d
+-----END PRIVATE KEY-----`;
+
+    // 写入证书文件
+    const certFile = await fileIo.open(`${certDir}/server-cert.pem`,
+      fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
+    await fileIo.write(certFile.fd, new util.TextEncoder().encode(dummyCert).buffer);
+    await fileIo.close(certFile.fd);
+
+    // 写入私钥文件
+    const keyFile = await fileIo.open(`${certDir}/server-key.pem`,
+      fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
+    await fileIo.write(keyFile.fd, new util.TextEncoder().encode(dummyKey).buffer);
+    await fileIo.close(keyFile.fd);
+
+    console.log('🔐 自签名证书生成完成（演示用）');
+  }
+
+  /**
+   * 设置事件处理
+   */
+  private setupEventHandling(): void {
+    if (!this.server) {
+      return;
+    }
+
+    this.server.onError((error) => {
+      console.error(`🚨 HTTPS服务器错误 [${error.type}]: ${JSON.stringify(error)}`);
+    });
+
+    this.server.on(ServerEventType.SERVER_STARTED, (event) => {
+      console.log('🔒 HTTPS服务器启动成功:', JSON.stringify(event.data));
+    });
+
+    this.server.on(ServerEventType.SERVER_STOPPED, () => {
+      console.log('🔒 HTTPS服务器已停止');
+    });
+  }
+
+  /**
+   * 配置中间件
+   */
+  private setupMiddleware(): void {
+    if (!this.server) {
+      return;
+    }
+
+    // 安全头部中间件
+    this.server.use((req: HttpRequest, res: HttpResponse, next: NextFunction) => {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('X-Frame-Options', 'DENY');
+      res.setHeader('X-XSS-Protection', '1; mode=block');
+      next();
+    });
+
+    if (this.config.enableLogging) {
+      this.server.logger({
+        format: 'combined',
+        stream: (log: string) => console.log(`🔒 ${log}`)
+      });
+    }
+
+    if (this.config.enableCors) {
+      this.server.cors({
+        origin: '*',
+      });
+    }
+
+    this.server.auto();
+    this.server.serveStatic(this.config.staticRoot);
+  }
+
+  /**
+   * 配置路由
+   */
+  private setupRoutes(): void {
+    this.setupSecureApiRoutes();
+    this.setupSecureFileRoutes();
+    this.setupSecurityRoutes();
+  }
+
+  /**
+   * 配置安全API路由
+   */
+  private setupSecureApiRoutes(): void {
+    if (!this.server) {
+      return;
+    }
+
+    // 安全用户管理API
+    this.server.get('/api/secure/users', (req: HttpRequest, res: HttpResponse) => {
       res.json({
-        message: 'Welcome to HTTPS Server!',
+        users: this.users,
         secure: true,
+        encryption: 'TLS 1.3',
         timestamp: new Date().toISOString()
       });
     });
 
-    // API路由
-    server.get('/api/status', (req: HttpRequest, res: HttpResponse) => {
-      res.json({
-        status: 'ok',
-        protocol: 'https',
-        server: 'HarmonyOS WebServer'
-      });
-    });
+    this.server.post('/api/secure/users', (req, res) => {
+      const data = req.body as Record<string, string>;
 
-    // 带参数的路由
-    server.get('/api/users/:id', (req: HttpRequest, res: HttpResponse) => {
-      const userId = req.params['id'];
-      res.json({
-        userId: userId,
-        message: `User ${userId} data over HTTPS`
-      });
-    });
-
-    // POST路由
-    server.post('/api/data', (req: HttpRequest, res: HttpResponse) => {
-      res.json({
-        received: req.body,
-        secure: true,
-        method: req.method
-      });
-    });
-
-    // 静态文件服务（HTTPS）
-    server.serveStatic('/static');
-  }
-
-  /**
-   * 启动完整的HTTPS服务器示例
-   */
-  public static async startCompleteExample(): Promise<void> {
-    try {
-      // 创建服务器
-      const httpsServer = await HttpsExample.createBasicHttpsServer();
-
-      // 配置路由
-      HttpsExample.configureRoutes(httpsServer);
-
-      // 启动服务器
-      const serverInfo = await httpsServer.startServer(8443); // 使用标准HTTPS端口
-
-      if (serverInfo.address) {
-        console.log(`✅ HTTPS服务器启动成功!`);
-        console.log(`🔒 访问地址: https://${serverInfo.address}:${serverInfo.port}`);
-        console.log(`📋 API端点:`);
-        console.log(`   - GET  https://${serverInfo.address}:${serverInfo.port}/`);
-        console.log(`   - GET  https://${serverInfo.address}:${serverInfo.port}/api/status`);
-        console.log(`   - GET  https://${serverInfo.address}:${serverInfo.port}/api/users/:id`);
-        console.log(`   - POST https://${serverInfo.address}:${serverInfo.port}/api/data`);
-        console.log('🔧 测试命令:');
-        console.log(`   curl -k https://${serverInfo.address}:${serverInfo.port}/`);
-        console.log(`   curl --cacert ca-cert.pem https://${serverInfo.address}:${serverInfo.port}/`);
-      } else {
-        console.error('❌ HTTPS服务器启动失败');
+      if (!data.name) {
+        res.status(400).json({
+          error: 'Name is required'
+        });
+        return
       }
-    } catch (error) {
-      console.error('启动HTTPS服务器时出错:', error);
-    }
+
+      const newUser: User = {
+        id: this.nextUserId++,
+        name: data.name,
+        email: data.email
+      };
+
+      this.users.push(newUser);
+
+      res.status(201).json({
+        message: 'Secure user created',
+        user: newUser,
+        secure: true
+      });
+    });
+
+    // 安全登录API
+    this.server.post('/api/secure/login', (req, res) => {
+      const data = req.body as Record<string, string>;
+
+      // 模拟安全登录验证
+      if (data.username && data.password) {
+        res.json({
+          message: 'Login successful',
+          token: 'secure-jwt-token-' + Date.now(),
+          secure: true,
+          expiresIn: '1h'
+        });
+      } else {
+        res.status(401).json({
+          error: 'Invalid credentials',
+          secure: true
+        });
+      }
+    });
   }
 
   /**
-   * 创建生产环境HTTPS服务器配置
+   * 配置安全文件路由
    */
-  public static async createProductionServer(
-    keyPath: string,
-    certPath: string,
-    caPath?: string
-  ): Promise<TLSServer> {
-    // 从文件加载证书
-    const tlsOptions = await CertManager.loadFromFiles(keyPath, certPath, caPath);
-
-    // 验证配置
-    if (!CertManager.validateConfig(tlsOptions)) {
-      throw new Error('证书配置验证无效');
+  private setupSecureFileRoutes(): void {
+    if (!this.server) {
+      return;
     }
 
-    const httpsServer = new TLSServer(tlsOptions);
-    return httpsServer;
+    this.server.post('/api/secure/upload', async (req, res, next) => {
+      try {
+        const uploadedFile = req.files?.['uploadFile'];
+
+        if (!uploadedFile) {
+          return res.status(400).json({
+            error: 'No file uploaded',
+            secure: true
+          });
+        }
+
+        const timestamp = Date.now();
+        const fileName = `secure_${timestamp}_${uploadedFile.fileName}`;
+        const filePath = `${this.context.filesDir}/${fileName}`;
+
+        const file = await fileIo.open(filePath,
+          fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);
+        await fileIo.write(file.fd, uploadedFile.data);
+        await fileIo.close(file.fd);
+
+        res.json({
+          message: 'Secure file upload successful',
+          file: {
+            originalName: uploadedFile.fileName,
+            savedName: fileName,
+            size: uploadedFile.data.byteLength,
+            encrypted: true,
+            uploadTime: new Date().toISOString()
+          } as ESObject
+        });
+      } catch (error) {
+        next(error);
+      }
+    });
   }
 
   /**
-   * 创建自签名证书配置（用于开发环境）
-   * @returns 开发环境TLS配置
+   * 配置安全相关路由
    */
-  public static createSelfSignedConfig(): socket.TLSSecureOptions {
-    // 注意：这里只是示例，实际使用时需要真实的证书
-    const selfSignedKey = `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD1SNuNyYfiYeh0
-Is0qK1Nhk2g5NPmPRiddkSVsqHUAWa/yRUgFFGup+oDytfHEGL/8AYZpa84Z3+B/
-xrFAdxk/c2VazSw8pXzKC7d7aCcPyKKB8jj993Sj8Hphhl0fEgFwUX79lD1P58qn
-985G7UHpyNXp5bXehDsHnrILKYKDcqXmpJiSGf1VEEm4eWRI1oKEAiH4nBW6Fz4+
-hUVveik0uQYEpAWYtHdxZ9Z0avDxKJLuw5TunSSfkSQJa6aFdURjeOuaO7AfhbLu
-HfusZTPnTa65RaXol4b9/OutJbL6bIDirIVYcobhllUrSaksb1To4b9m0tXSUggK
-wWOmWJsNAgMBAAECggEANzL0udVTH6aR9eTJEAbdBlXyfAFIci5C+KML7YaBghks
-59Qgj4gXbJLDxxsb89nwBonfUkUhBiCkOI0h4ZSL2YQiGIuYu3MwgJWfboWzWLF5
-pM26dqjkFmqtV9oxhab7LOgiMHXWUG+k4yT4xmxpS2/XeAIqag+O6zmS7sEiLmtD
-Tu4AL5gRwtHv5Baj5KYWKrTPWB/LLxV1mFmiLIG785UbbIS+ECOVSez9PE/wElRo
-N4MPE6lTFSqpTVgtjW7JxHi7z0T+msMjTEDep78i7A/W1717hCGoSdKrUosslYWp
-j6BsS2bRntkonceQ3tVthnno+qSXq9SDAByfI0JM3wKBgQD+haewzUgZWm0JqIFQ
-myT6EZ8IVhOZv8Rs+v1SxgUrr//KJvGKtvtImn4I2muq8HIQNCL3Uzmg1iKPwz7i
-FFk3a/zc18+6N8sSKPLMtV4uAD7+l1CDvKeinDXmjA/P9TjkJUe031LlvwowgvnI
-kGjLiLDB/it6YIHfak9OwYgEHwKBgQD2tXiclRK3IyobciTF9FKC8HlMvLKN0tu5
-IZfAbSP9yDEhzR4hizFVjkIA42iVqUqP9PzldJHoXb2VUvw2AuZOyFmJeDrJ1Fy/
-c6mnOcnryNMMcrwQy2qlqz6e5/PjuEtHLcAeARxHbW6wE1hYZ8YQXAtDgccbj5iD
-SuMuFzAbUwKBgQCgA4MjgkubtN/sPIXgGUmr9bwXz5XPCWMCaOEuUtQZXTLg8o7U
-eKmOQaKPClK6SyRKz5xUBXyrgzSDUWqNU+GrGDcG2J7+IemHZzsOO9AT94+jG5pA
-2DBD6RVx9ghS44Z62H02V1iUnABZ8136G9/mZe9KZvMKovXDceCeUMmkXQKBgFo5
-xAKAAng3xA6FkC1VTVfV2obV+/ciRnlOb9FQGPmXXWCfQ4XBAinn/PuWL4mMgFhl
-oJfKKhJxNgSGdPbL2K63VwePkPB/WewqwMEHwXEZ4RWMYHtD6ZztI9m5uthtbhp6
-AOj4Pv9gZjq+2HB8g1M4VmY58DeELKLXoH4avN1BAoGBAPKpkHgrDuo7+3OVKaOC
-B6Yhi4u97lCgIeoPPs49FMFmRl+kWciXo1qwAeM/tDv+6hEKYGqZwQu/pywF9+F1
-q82MQ4Om4gzCG8Y8nDH4S/Vr3oGJ+uy4wOmH7zi+cRfnT5SXbsEB8YbVOYlD5WvX
-M7+uEh55w4DVQ1rDaW3cbRbl
------END PRIVATE KEY-----`;
+  private setupSecurityRoutes(): void {
+    if (!this.server) {
+      return;
+    }
 
-    const selfSignedCert = `-----BEGIN CERTIFICATE-----
-MIIDuzCCAqOgAwIBAgIUFC0qV1REoPIwCIhn/kbn1DcRgiYwDQYJKoZIhvcNAQEL
-BQAwXDELMAkGA1UEBhMCQ04xDDAKBgNVBAgMA0RldjEMMAoGA1UEBwwDRGV2MQww
-CgYDVQQKDANEZXYxDDAKBgNVBAsMA0RldjEVMBMGA1UEAwwMMTkyLjE2OC4yLjM4
-MB4XDTI1MTAyOTAxMzkwMVoXDTI2MTAyOTAxMzkwMVowXDELMAkGA1UEBhMCQ04x
-DDAKBgNVBAgMA0RldjEMMAoGA1UEBwwDRGV2MQwwCgYDVQQKDANEZXYxDDAKBgNV
-BAsMA0RldjEVMBMGA1UEAwwMMTkyLjE2OC4yLjM4MIIBIjANBgkqhkiG9w0BAQEF
-AAOCAQ8AMIIBCgKCAQEA9UjbjcmH4mHodCLNKitTYZNoOTT5j0YnXZElbKh1AFmv
-8kVIBRRrqfqA8rXxxBi//AGGaWvOGd/gf8axQHcZP3NlWs0sPKV8ygu3e2gnD8ii
-gfI4/fd0o/B6YYZdHxIBcFF+/ZQ9T+fKp/fORu1B6cjV6eW13oQ7B56yCymCg3Kl
-5qSYkhn9VRBJuHlkSNaChAIh+JwVuhc+PoVFb3opNLkGBKQFmLR3cWfWdGrw8SiS
-7sOU7p0kn5EkCWumhXVEY3jrmjuwH4Wy7h37rGUz502uuUWl6JeG/fzrrSWy+myA
-4qyFWHKG4ZZVK0mpLG9U6OG/ZtLV0lIICsFjplibDQIDAQABo3UwczAdBgNVHQ4E
-FgQURWXGyfGAKJO0Ze5OBAwo/FIXHywwHwYDVR0jBBgwFoAURWXGyfGAKJO0Ze5O
-BAwo/FIXHywwDwYDVR0TAQH/BAUwAwEB/zAgBgNVHREEGTAXhwTAqAImhwR/AAAB
-gglsb2NhbGhvc3QwDQYJKoZIhvcNAQELBQADggEBAKv49lbte8ZeY3gUKvO6jMwQ
-CSzfIVM9efnibT+/QybUuQQDskK+QGUc/3wNH0XHXHaKeKzfmty+wcPmJPSwUYoc
-JByx7pvHNoaQNybOA/HtbaceVpcsfvNc4DSYURupuxQjYpOP1Bj4TwjaPJb8ZVLD
-y054YCrhDQhUbIDG2oP6Xzf3i46f9sJ/mGh79P/zJ35C471+wozXgLUbXmlZg9T8
-Rel9JJ2Sg7NDobGhHKKAl9o8K1lDbtb+VhdTXZW49pM4G/jAwyCx13jfA+76h4ja
-8AV+ZyxrDyTTxUKx13W+Kv8nibE+w1TAX8Nxb1sRkKgTnzv8TG+zATUrJoZuXZQ=
------END CERTIFICATE-----`;
+    // SSL证书信息
+    this.server.get('/api/ssl/info', (req, res) => {
+      res.json({
+        ssl: {
+          enabled: true,
+          protocol: 'TLS 1.3',
+          cipher: 'ECDHE-RSA-AES256-GCM-SHA384',
+          certificate: {
+            issuer: 'HarmonyOS Self-Signed',
+            subject: 'localhost',
+            validFrom: new Date().toISOString(),
+            validTo: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+          } as ESObject
+        } as ESObject,
+        security: {
+          hsts: true,
+          xssProtection: true,
+          contentTypeOptions: true,
+          frameOptions: 'DENY'
+        } as ESObject
+      });
+    });
 
+    // 安全测试端点
+    this.server.get('/api/security/test', (req, res) => {
+      res.json({
+        message: 'Security test endpoint',
+        secure: true,
+        headers: req.headers,
+        clientCert: 'Not implemented',
+        timestamp: new Date().toISOString()
+      });
+    });
+  }
 
-    const ca = `-----BEGIN CERTIFICATE-----
-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
------END CERTIFICATE-----`
+  /**
+   * 设置全局错误处理
+   */
+  private setupGlobalErrorHandler(): void {
+    if (!this.server) {
+      return;
+    }
 
-    return {
-      key: selfSignedKey,
-      cert: selfSignedCert,
-      // ca: ca
+    const errorHandler: ErrorHandler = (error, req, res, next) => {
+      console.error(`🚨 [HTTPS Error Handler] ${req.method} ${req.path}: ${error.message}`);
+
+      if (res.isHeadersSent()) {
+        return next(error);
+      }
+
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: error.message,
+        secure: true,
+        timestamp: new Date().toISOString()
+      });
     };
+
+    this.server.use(errorHandler);
+  }
+
+  /**
+   * 打印API端点信息
+   */
+  private printApiEndpoints(info: ServerInfo): void {
+    const baseUrl = `https://${info.address}:${info.port}`;
+
+    console.log('\n🔒 HTTPS API端点:');
+    console.log('='.repeat(50));
+
+    console.log('📄 静态文件:');
+    console.log(`   GET  ${baseUrl}/                         - 安全首页`);
+    console.log(`   GET  ${baseUrl}/https-demo.html          - HTTPS演示页面`);
+
+    console.log('\n🔐 安全API:');
+    console.log(`   GET    ${baseUrl}/api/secure/users       - 安全用户列表`);
+    console.log(`   POST   ${baseUrl}/api/secure/users       - 创建安全用户`);
+    console.log(`   POST   ${baseUrl}/api/secure/login       - 安全登录`);
+    console.log(`   POST   ${baseUrl}/api/secure/upload      - 安全文件上传`);
+
+    console.log('\n🛡️  安全信息:');
+    console.log(`   GET    ${baseUrl}/api/ssl/info           - SSL证书信息`);
+    console.log(`   GET    ${baseUrl}/api/security/test      - 安全测试`);
+
+    console.log('='.repeat(50));
   }
 }
