@@ -1,109 +1,214 @@
 # HTTPS服务器使用指南
 
-本指南介绍如何在HarmonyOS WebServer中使用HTTPS功能，基于HarmonyOS的TLSSocket API实现。
+本指南专注于HarmonyOS WebServer的HTTPS核心安全特性，包括SSL/TLS加密、数字证书管理、安全头部配置等关键功能。
+
+## 🔒 HTTPS核心特性
+
+### SSL/TLS加密通信
+- **端到端加密**: 所有数据传输均通过SSL/TLS加密
+- **协议支持**: TLS 1.2+ (推荐TLS 1.3)
+- **完美前向保密**: 支持ECDHE密钥交换
+- **强加密套件**: AES256-GCM、ChaCha20-Poly1305等
+
+### 数字证书验证
+- **X.509证书**: 标准数字证书格式
+- **证书链验证**: 支持完整的证书信任链
+- **自签名证书**: 开发环境快速部署
+- **证书管理**: 安全的证书加载和存储
 
 ## 快速开始
 
 ### 1. 基本HTTPS服务器
 
 ```typescript
-import { TLSServer, CertificateManager, HttpsExample } from '@cxy/webserver';
+import { HttpsExample } from './HttpsExample';
 
-// 方式1: 使用示例快速启动
-await HttpsExample.startCompleteExample();
+// 创建HTTPS服务器实例
+const httpsServer = new HttpsExample();
 
-// 方式2: 手动配置
-const tlsOptions = CertificateManager.createSelfSignedConfig();
-const httpsServer = new TLSServer(tlsOptions);
+// 初始化配置
+httpsServer.init();
 
-httpsServer.get('/', (req, res) => {
-  res.json({ message: 'Hello HTTPS!' });
+// 启动安全服务器
+const serverInfo = await httpsServer.start(8443);
+console.log(`🔒 HTTPS服务器运行: https://${serverInfo.address}:${serverInfo.port}`);
+```
+
+### 2. 手动TLS配置
+
+```typescript
+import { TLSServer } from '@cxy/webserver';
+import { socket } from '@kit.NetworkKit';
+
+// 配置TLS选项
+const tlsOptions: socket.TLSSecureOptions = {
+  key: privateKeyPEM,
+  cert: certificatePEM,
+  protocols: [socket.Protocol.TLSv12, socket.Protocol.TLSv13]
+};
+
+// 创建HTTPS服务器
+const server = new TLSServer(tlsOptions);
+
+// 配置安全路由
+server.get('/secure', (req, res) => {
+  res.json({ 
+    message: '安全数据传输',
+    encrypted: true,
+    timestamp: new Date().toISOString()
+  });
 });
 
-await httpsServer.startServer(8443);
+await server.startServer(8443);
 ```
 
-### 2. 生产环境配置
+## 🔐 SSL/TLS证书管理
 
-```typescript
-// 从文件加载证书
-const httpsServer = await HttpsExample.createProductionServer(
-  '/path/to/private-key.pem',
-  '/path/to/certificate.pem',
-  '/path/to/ca-certificate.pem' // 可选
-);
+### 开发环境证书生成
 
-await httpsServer.startServer(443);
+```bash
+# 快速生成开发证书
+cd scripts
+./generate-dev-cert.sh 192.168.1.100
+
+# 生成的文件
+# - dev-key.pem  (私钥)
+# - dev-cert.pem (证书)
 ```
 
-## 证书管理
-
-### 自签名证书（开发环境）
+### 证书文件加载
 
 ```typescript
-import { CertificateManager } from '@your-package/webserver';
+// 从文件系统加载证书
+const loadCertificate = async (certPath: string, keyPath: string) => {
+  const tlsOptions: socket.TLSSecureOptions = {
+    key: await loadFileAsString(keyPath),
+    cert: await loadFileAsString(certPath),
+    protocols: [socket.Protocol.TLSv12, socket.Protocol.TLSv13]
+  };
+  return tlsOptions;
+};
 
-const tlsOptions = CertificateManager.createSelfSignedConfig();
-// 注意：自签名证书仅用于开发，浏览器会显示安全警告
+// 使用证书创建服务器
+const tlsOptions = await loadCertificate('/path/to/cert.pem', '/path/to/key.pem');
+const server = new TLSServer(tlsOptions);
 ```
 
-### 从文件加载证书
+### 生产环境证书配置
 
 ```typescript
-const tlsOptions = await CertificateManager.loadFromFiles(
-  'server.key', // 私钥文件
-  'server.crt', // 证书文件
-  'ca.crt'         // CA证书（可选）
-);
-```
-
-### 证书验证
-
-```typescript
-const isValid = CertificateManager.validateConfig(tlsOptions);
-if (!isValid) {
-  throw new Error('证书配置无效');
-}
-```
-
-## TLS配置选项
-
-https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-socket#tlssecureoptions9
-
-```typescript
-const secureOptions: socket.TLSSecureOptions = {
-  key: privateKey,
-  cert: certificate,
-  protocols: ['TLSv1.2', 'TLSv1.3'], // 只支持安全协议
-  cipherSuite: 'ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS'
+// 生产环境推荐配置
+const productionTLSOptions: socket.TLSSecureOptions = {
+  key: productionPrivateKey,
+  cert: productionCertificate,
+  ca: caCertificate, // CA证书链
+  protocols: [socket.Protocol.TLSv13], // 仅使用最新协议
+  cipherSuite: 'ECDHE+AESGCM:ECDHE+CHACHA20:!aNULL:!MD5:!DSS'
 };
 ```
 
-## 中间件支持
+## 🛡️ 安全配置选项
 
-HTTPS服务器完全支持所有现有中间件：
+### TLS协议配置
+
+参考: [HarmonyOS TLSSecureOptions](https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-socket#tlssecureoptions9)
+
+```typescript
+const secureOptions: socket.TLSSecureOptions = {
+  key: privateKey,           // 私钥 (PEM格式)
+  cert: certificate,         // 证书 (PEM格式)
+  ca: caCertificate,        // CA证书 (可选)
+  protocols: [              // 支持的TLS协议版本
+    socket.Protocol.TLSv12,
+    socket.Protocol.TLSv13
+  ],
+  // 加密套件配置 (可选)
+  cipherSuite: 'ECDHE+AESGCM:ECDHE+CHACHA20:!aNULL:!MD5:!DSS'
+};
+```
+
+### 安全头部配置
+
+```typescript
+// HTTPS安全中间件
+server.use((req, res, next) => {
+  // HSTS - 强制HTTPS
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  
+  // 内容安全策略
+  res.setHeader('Content-Security-Policy', "default-src 'self'");
+  
+  // 防止MIME嗅探
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  
+  // 防止点击劫持
+  res.setHeader('X-Frame-Options', 'DENY');
+  
+  // XSS保护
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  
+  next();
+});
+```
+
+## 🔗 HTTPS路由和中间件
+
+### 安全路由配置
 
 ```typescript
 const httpsServer = new TLSServer(tlsOptions);
 
-// 日志中间件
-httpsServer.logger({
-  format: 'combined',
-  logLevel: 'info'
+// HTTPS首页 - 展示加密连接状态
+httpsServer.get('/', (req, res) => {
+  res.json({
+    message: '🔒 安全连接已建立',
+    encryption: 'SSL/TLS',
+    secure: true,
+    timestamp: new Date().toISOString()
+  });
 });
 
-// CORS中间件
+// 敏感数据传输端点
+httpsServer.post('/api/secure/data', (req, res) => {
+  const sensitiveData = req.body;
+  
+  // 处理加密传输的敏感数据
+  res.json({
+    message: '敏感数据已安全接收',
+    encryptedTransport: true,
+    dataProcessed: true
+  });
+});
+
+// 安全Token获取
+httpsServer.get('/api/secure/token', (req, res) => {
+  const token = generateSecureToken();
+  res.json({
+    token,
+    secureTransport: true,
+    expiresIn: 3600
+  });
+});
+```
+
+### HTTPS中间件配置
+
+```typescript
+// 安全日志中间件
+httpsServer.logger({
+  format: 'combined',
+  stream: (log) => console.log(`🔒 [HTTPS] ${log}`)
+});
+
+// HTTPS CORS配置
 httpsServer.cors({
-  origin: ['https://yourdomain.com'],
-  credentials: true
+  origin: 'https://yourdomain.com', // 仅允许HTTPS来源
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE']
 });
 
 // 请求体解析
-httpsServer.json();
-httpsServer.urlencoded();
-
-// 静态文件服务
-httpsServer.serveStatic('/public');
+httpsServer.auto();
 ```
 
 ## 路由配置

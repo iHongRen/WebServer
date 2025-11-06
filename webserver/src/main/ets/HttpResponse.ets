@@ -45,6 +45,15 @@ export class HttpResponse {
   }
 
   /**
+   * 获取相应头
+   * @param name 响应头名称
+   * @returns
+   */
+  public getHeader(name: string): string | undefined {
+    return this.headers.get(name);
+  }
+
+  /**
    * 设置响应头
    * @param name 响应头名称
    * @param value 响应头值
@@ -54,6 +63,7 @@ export class HttpResponse {
     this.headers.set(name, value);
     return this;
   }
+
 
   /**
    * 设置HTTP状态码

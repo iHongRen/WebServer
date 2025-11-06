@@ -1,172 +1,291 @@
 # HTTPS证书生成脚本使用指南
 
-本目录包含了多个用于生成HTTPS证书的脚本，适用于不同的使用场景。
+本目录包含了用于生成HTTPS证书的脚本工具，支持开发环境和生产环境的不同需求。
 
-## 脚本说明
+## 📁 脚本文件说明
 
-### 1. `generate-cert.sh` - 完整CA和服务器证书
-生成CA根证书和由CA签名的服务器证书，适合需要证书链验证的场景。
+| 脚本文件 | 用途 | 适用场景 |
+|---------|------|----------|
+| `generate-dev-cert.sh` | 快速生成开发证书 | 开发测试环境 |
+| `generate-cert.sh` | 生成完整证书链 | 开发和生产环境 |
+| `generate-full-chain.sh` | 生成三级证书链 | 企业级生产环境 |
+
+## 🚀 快速开始
+
+### 1. 开发环境快速证书生成
+
+最简单的方式，一键生成自签名证书：
 
 ```bash
-# 基本用法
-./generate-cert.sh
-
-# 指定域名/IP和有效期
-./generate-cert.sh 192.168.1.100 730
-
-# 只生成自签名服务器证书（不生成CA）
-./generate-cert.sh 192.168.1.100 365 false
+cd scripts
+./generate-dev-cert.sh 192.168.2.38
 ```
 
-**生成的文件：**
+生成文件：
+- `dev-key.pem` - 私钥文件
+- `dev-cert.pem` - 证书文件
+
+### 2. 标准证书链生成
+
+生成包含CA的完整证书链：
+
+```bash
+cd scripts
+./generate-cert.sh example.com 365 true
+```
+
+参数说明：
+- `example.com` - 域名或IP地址
+- `365` - 证书有效期（天）
+- `true` - 是否生成CA证书
+
+生成文件：
 - `ca-key.pem` - CA私钥
-- `ca-cert.pem` - CA根证书
+- `ca-cert.pem` - CA证书
 - `server-key.pem` - 服务器私钥
 - `server-cert.pem` - 服务器证书
 
-### 2. `generate-dev-cert.sh` - 快速开发证书
-快速生成用于开发环境的自签名证书，配置简单。
+### 3. 企业级三级证书链
 
+生成根CA、中间CA和服务器证书的完整链：
+
+```bash
+cd scripts
+./generate-full-chain.sh example.com 365
+```
+
+## 📋 详细使用说明
+
+### generate-dev-cert.sh
+
+**用法：**
+```bash
+./generate-dev-cert.sh [IP地址]
+```
+
+**示例：**
 ```bash
 # 使用默认IP
 ./generate-dev-cert.sh
 
 # 指定IP地址
-./generate-dev-cert.sh 192.168.2.38
+./generate-dev-cert.sh 192.168.1.100
+
+# 使用域名
+./generate-dev-cert.sh localhost
 ```
 
-**生成的文件：**
-- `dev-key.pem` - 开发环境私钥
-- `dev-cert.pem` - 开发环境证书
+**特点：**
+- 一步生成，无需交互
+- 自动配置SAN扩展
+- 包含常用的IP和域名
+- 适合快速开发测试
 
-### 3. `generate-full-chain.sh` - 完整证书链
-生成包含根CA、中间CA和服务器证书的完整证书链，最接近生产环境。
+### generate-cert.sh
 
+**用法：**
 ```bash
-# 基本用法
+./generate-cert.sh [域名] [有效期天数] [是否生成CA]
+```
+
+**示例：**
+```bash
+# 生成完整CA证书链
+./generate-cert.sh example.com 365 true
+
+# 只生成自签名服务器证书
+./generate-cert.sh example.com 365 false
+
+# 使用默认参数
+./generate-cert.sh
+```
+
+**特点：**
+- 支持CA证书链
+- 可配置证书有效期
+- 支持多域名和IP
+- 自动验证证书链
+
+### generate-full-chain.sh
+
+**用法：**
+```bash
+./generate-full-chain.sh [域名] [有效期天数]
+```
+
+**示例：**
+```bash
+# 生成三级证书链
+./generate-full-chain.sh company.com 730
+
+# 使用默认参数
 ./generate-full-chain.sh
-
-# 指定域名和有效期
-./generate-full-chain.sh example.com 365
 ```
 
-**生成的文件：**
-- `root-ca-key.pem` - 根CA私钥
-- `root-ca-cert.pem` - 根CA证书
-- `intermediate-ca-key.pem` - 中间CA私钥
-- `intermediate-ca-cert.pem` - 中间CA证书
-- `server-key.pem` - 服务器私钥
-- `server-cert.pem` - 服务器证书
-- `cert-chain.pem` - 完整证书链文件
+**特点：**
+- 三级证书链结构
+- 企业级安全标准
+- 完整的证书验证链
+- 适合生产环境部署
 
-## 使用场景推荐
+## 🔧 证书配置
 
-### 开发环境
-推荐使用 `generate-dev-cert.sh`：
-```bash
-./generate-dev-cert.sh 192.168.2.38
-```
+### 在代码中使用证书
 
-### 测试环境
-推荐使用 `generate-cert.sh`：
-```bash
-./generate-cert.sh test.example.com 365 true
-```
-
-### 生产环境模拟
-推荐使用 `generate-full-chain.sh`：
-```bash
-./generate-full-chain.sh prod.example.com 365
-```
-
-## 在HarmonyOS WebServer中使用
-
-### 基本用法
-```typescript
-import { CertificateManager, TLSServer } from '@your-package/webserver';
-
-// 加载证书
-const tlsOptions = await CertificateManager.loadFromFiles(
-  'server-key.pem',
-  'server-cert.pem',
-  'ca-cert.pem'  // 可选，如果有CA证书
-);
-
-// 创建HTTPS服务器
-const httpsServer = new TLSServer(tlsOptions);
-await httpsServer.startServer(8443);
-```
-
-### 开发环境快速启动
 ```typescript
 // 使用开发证书
 const tlsOptions = await CertificateManager.loadFromFiles(
-  'dev-key.pem',
-  'dev-cert.pem'
+  'scripts/dev-key.pem',
+  'scripts/dev-cert.pem'
 );
 
-const httpsServer = new TLSServer(tlsOptions);
-httpsServer.get('/', (req, res) => {
-  res.json({ message: 'Hello HTTPS!', secure: true });
-});
-
-await httpsServer.startServer(8443);
+// 使用CA签名证书
+const tlsOptions = await CertificateManager.loadFromFiles(
+  'scripts/server-key.pem',
+  'scripts/server-cert.pem',
+  'scripts/ca-cert.pem'
+);
 ```
 
-## 证书验证
+### 证书文件权限设置
 
-### 验证证书内容
+脚本会自动设置正确的文件权限：
+- 私钥文件：`600` (仅所有者可读写)
+- 证书文件：`644` (所有者可读写，其他人只读)
+
+## 🔍 证书验证
+
+### 验证证书有效性
+
 ```bash
-# 查看证书详细信息
+# 检查证书内容
 openssl x509 -in server-cert.pem -text -noout
+
+# 验证私钥和证书匹配
+openssl x509 -noout -modulus -in server-cert.pem | openssl md5
+openssl rsa -noout -modulus -in server-key.pem | openssl md5
 
 # 验证证书链
 openssl verify -CAfile ca-cert.pem server-cert.pem
-
-# 检查私钥和证书是否匹配
-openssl x509 -noout -modulus -in server-cert.pem | openssl md5
-openssl rsa -noout -modulus -in server-key.pem | openssl md5
 ```
 
-### 测试HTTPS连接
+### 测试SSL连接
+
 ```bash
-# 使用curl测试（忽略证书验证）
-curl -k -v https://192.168.2.38:8443/
+# 测试SSL握手
+openssl s_client -connect localhost:8443 -servername localhost
 
-# 使用curl测试（指定CA证书）
-curl --cacert ca-cert.pem https://192.168.2.38:8443/
+# 测试特定TLS版本
+openssl s_client -connect localhost:8443 -tls1_2
+openssl s_client -connect localhost:8443 -tls1_3
 ```
 
-## 客户端配置
+## 🌐 客户端配置
 
 ### 浏览器访问
-1. **自签名证书**：浏览器会显示安全警告，需要手动信任
-2. **CA签名证书**：需要将CA证书添加到系统受信任根证书存储
 
-## 安全注意事项
+1. **自签名证书：**
+   - 浏览器会显示安全警告
+   - 点击"高级" → "继续访问"
+   - 或将CA证书添加到受信任根证书
 
-1. **私钥保护**：私钥文件权限应设置为600（仅所有者可读写）
-2. **证书有效期**：定期更新证书，避免过期
-3. **生产环境**：使用受信任的CA签发的证书，不要使用自签名证书
-4. **密钥强度**：使用至少2048位RSA密钥，推荐4096位
-5. **协议版本**：只启用TLS 1.2和TLS 1.3
+2. **CA签名证书：**
+   - 将`ca-cert.pem`导入浏览器受信任根证书
+   - 或系统级证书存储
 
-## 故障排除
+### 程序访问
 
-### 常见错误
-1. **证书格式错误**：确保证书文件包含正确的PEM格式头部和尾部
-2. **私钥不匹配**：验证私钥和证书是否匹配
-3. **权限问题**：检查文件权限设置
-4. **路径问题**：确保证书文件路径正确
+```bash
+# 忽略证书验证（仅开发环境）
+curl -k https://localhost:8443/api/ssl/info
+
+# 使用CA证书验证
+curl --cacert ca-cert.pem https://localhost:8443/api/ssl/info
+
+# 使用客户端证书认证
+curl --cert client.pem --key client-key.pem https://localhost:8443/api/secure/users
+```
+
+## 📚 证书类型对比
+
+| 证书类型 | 安全级别 | 部署复杂度 | 适用场景 | 浏览器信任 |
+|---------|----------|------------|----------|------------|
+| 自签名 | 中等 | 简单 | 开发测试 | 需要手动信任 |
+| CA签名 | 高 | 中等 | 内部系统 | 需要导入CA |
+| 商业证书 | 最高 | 复杂 | 公网服务 | 自动信任 |
+
+## 🛠️ 故障排除
+
+### 常见问题
+
+1. **权限错误**
+   ```bash
+   chmod +x *.sh
+   ```
+
+2. **OpenSSL未安装**
+   ```bash
+   # macOS
+   brew install openssl
+   
+   # Ubuntu/Debian
+   sudo apt-get install openssl
+   
+   # CentOS/RHEL
+   sudo yum install openssl
+   ```
+
+3. **证书格式错误**
+   - 确保使用PEM格式
+   - 检查文件编码为UTF-8
+   - 验证文件完整性
+
+4. **域名不匹配**
+   - 检查证书SAN扩展
+   - 确认域名或IP正确
+   - 重新生成匹配的证书
 
 ### 调试命令
+
 ```bash
-# 检查证书有效期
-openssl x509 -in server-cert.pem -noout -dates
+# 查看证书详细信息
+openssl x509 -in cert.pem -text -noout
 
-# 检查证书主题和SAN
-openssl x509 -in server-cert.pem -noout -subject -ext subjectAltName
+# 检查私钥
+openssl rsa -in key.pem -check
 
-# 测试私钥
-openssl rsa -in server-key.pem -check
+# 验证证书和私钥匹配
+diff <(openssl x509 -noout -modulus -in cert.pem) <(openssl rsa -noout -modulus -in key.pem)
+
+# 检查证书链
+openssl crl2pkcs7 -nocrl -certfile cert-chain.pem | openssl pkcs7 -print_certs -noout
 ```
+
+## 🔐 安全最佳实践
+
+1. **私钥保护**
+   - 设置正确的文件权限
+   - 不要将私钥提交到版本控制
+   - 定期轮换证书
+
+2. **证书管理**
+   - 监控证书过期时间
+   - 建立证书更新流程
+   - 备份重要证书文件
+
+3. **生产环境**
+   - 使用商业SSL证书
+   - 启用HSTS头部
+   - 配置强加密套件
+
+4. **开发环境**
+   - 使用自签名证书
+   - 不要在生产环境使用开发证书
+   - 定期更新开发证书
+
+## 📖 相关文档
+
+- [HTTPS服务器示例](../README.md)
+- [WebServer完整文档](../../../../webserver/README.md)
+- [OpenSSL官方文档](https://www.openssl.org/docs/)
+- [SSL/TLS最佳实践](https://wiki.mozilla.org/Security/Server_Side_TLS)

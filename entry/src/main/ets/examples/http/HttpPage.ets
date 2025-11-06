@@ -17,16 +17,16 @@ function httpBuilder() {
 @Component
 struct HttpPage {
   @State title: string = 'HTTP服务器示例'
-  @State httpExample: HttpExample | null = null;
+  @State httpExample: HttpExample = new HttpExample();
   @State serverInfo: ServerInfo | null = null;
   @State port: number = 8080;
   @State errorMessage: string = '';
   @State successMessage: string = '';
 
   aboutToAppear() {
-    setTimeout(() => {
-      this.startServer();
-    }, 0);
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    this.httpExample.init(context)
+    this.startServer();
   }
 
   aboutToDisappear() {
@@ -39,9 +39,6 @@ struct HttpPage {
   async startServer() {
     this.errorMessage = '';
     this.successMessage = '';
-
-    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    this.httpExample = new HttpExample(context);
 
     const info = await this.httpExample.start(this.port);
     if (info) {
@@ -58,25 +55,19 @@ struct HttpPage {
   async stopServer() {
     this.errorMessage = '';
     this.successMessage = '';
-
-    if (!this.httpExample) {
-      return;
-    }
     await this.httpExample.stop();
-    this.httpExample = null;
     this.serverInfo = null;
     this.successMessage = '服务器已停止';
   }
 
   build() {
     NavDestination() {
-      Column() {
+      Column({ space: 20 }) {
         // 消息显示区域
         if (this.errorMessage) {
           Text(this.errorMessage)
             .fontColor(Color.Red)
             .fontSize(14)
-            .margin({ bottom: 10 })
             .padding(10)
             .backgroundColor('#ffebee')
             .borderRadius(8)
@@ -86,7 +77,6 @@ struct HttpPage {
           Text(this.successMessage)
             .fontColor(Color.Green)
             .fontSize(14)
-            .margin({ bottom: 10 })
             .padding(10)
             .backgroundColor('#e8f5e8')
             .borderRadius(8)

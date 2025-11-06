@@ -33,15 +33,25 @@ interface User {
 export class HttpExample {
   public staticRoot: string = ''
   private server: HttpServer | null = null;
-  private context: common.UIAbilityContext;
+  private context?: common.UIAbilityContext;
   // 模拟数据存储
   private users: User[] = [];
   private nextUserId: number = 1;
 
-  constructor(context: common.UIAbilityContext) {
+  init(context: common.UIAbilityContext) {
     this.context = context;
     this.staticRoot = context.filesDir + '/static'
-    this.initializeData();
+    this.users = [
+      {
+        id: 1,
+        name: 'cxy',
+      },
+      {
+        id: 2,
+        name: 'ihongren',
+      }
+    ];
+    this.nextUserId = 3;
   }
 
   /**
@@ -111,30 +121,13 @@ export class HttpExample {
    * 复制静态文件到沙箱目录
    */
   private async copyStaticFile(fileName: string): Promise<void> {
-    const buffer = await this.context.resourceManager.getRawFileContent(fileName);
+    const buffer = await this.context?.resourceManager.getRawFileContent(fileName);
     const filePath = `${this.staticRoot}/${fileName}`;
 
     const file = await fileIo.open(filePath,
       fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
-    await fileIo.write(file.fd, buffer.buffer);
+    await fileIo.write(file.fd, buffer?.buffer);
     await fileIo.close(file.fd);
-  }
-
-  /**
-   * 初始化模拟数据
-   */
-  private initializeData(): void {
-    this.users = [
-      {
-        id: 1,
-        name: 'cxy',
-      },
-      {
-        id: 2,
-        name: 'ihongren',
-      }
-    ];
-    this.nextUserId = 3;
   }
 
 
@@ -348,7 +341,7 @@ export class HttpExample {
         // 生成唯一文件名
         const timestamp = Date.now();
         const fileName = `${timestamp}_${uploadedFile.fileName}`;
-        const filePath = `${this.context.filesDir}/${fileName}`;
+        const filePath = `${this.context?.filesDir}/${fileName}`;
 
         // 保存文件
         const file = await fileIo.open(filePath,
@@ -378,21 +371,25 @@ export class HttpExample {
     // GET /api/files - 获取已上传文件列表
     this.server.get('/api/files', async (req: HttpRequest, res: HttpResponse) => {
       try {
-        const files = await fileIo.listFile(this.context.filesDir);
-        const fileList: Record<string, string>[] = files
-          .filter(file => !file.startsWith('.'))
-          .map(file => {
-            const item: Record<string, string> = {
-              'name': file,
-              'path': `${this.context.filesDir}/${file}`
-            }
-            return item
-          });
+        if (this.context) {
+          const files = await fileIo.listFile(this.context.filesDir);
+          const fileList: Record<string, string>[] = files
+            .filter(file => !file.startsWith('.'))
+            .map(file => {
+              const item: Record<string, string> = {
+                'name': file,
+                'path': `${this.context?.filesDir}/${file}`
+              }
+              return item
+            });
 
-        res.json({
-          files: fileList,
-          count: fileList.length
-        });
+          res.json({
+            files: fileList,
+            count: fileList.length
+          });
+        } else {
+          res.status(500).json({ error: 'context is undefined' });
+        }
       } catch (error) {
         console.error('❌ 获取文件列表失败:', error);
         res.status(500).json({ error: 'Failed to list files' });
