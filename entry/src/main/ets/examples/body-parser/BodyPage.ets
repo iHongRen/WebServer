@@ -18,17 +18,14 @@ function bodyBuilder() {
 @Component
 struct BodyPage {
   @State title: string = 'Body Parser示例'
-  @State bodyParserExample: BodyParserExample | null = null;
+  @State bodyParserExample: BodyParserExample = new BodyParserExample()
   @State serverInfo: ServerInfo | null = null;
   @State port: number = 8082;
   @State errorMessage: string = '';
   @State successMessage: string = '';
-  @State parseResultCount: number = 0;
 
   aboutToAppear() {
-    setTimeout(() => {
-      this.startServer();
-    }, 0);
+    this.startServer();
   }
 
   aboutToDisappear() {
@@ -36,41 +33,19 @@ struct BodyPage {
   }
 
   /**
-   * 初始化Body Parser示例
-   */
-  async initializeExample() {
-    this.errorMessage = '';
-    this.bodyParserExample = new BodyParserExample();
-  }
-
-  /**
    * 启动服务器
    */
   async startServer() {
-    if (!this.bodyParserExample) {
-      await this.initializeExample();
-    }
 
-    if (!this.bodyParserExample) {
-      this.errorMessage = 'Body Parser服务器初始化失败';
-      return;
-    }
+    this.errorMessage = '';
 
-    try {
-      this.errorMessage = '';
+    const info = await this.bodyParserExample.start(this.port);
 
-      const info = await this.bodyParserExample.start(this.port);
-
-      if (info) {
-        this.serverInfo = info;
-        this.successMessage = `🔧 Body Parser服务器运行中`;
-        this.startStatsUpdate();
-      } else {
-        this.errorMessage = 'Body Parser服务器启动失败，未获取到地址';
-      }
-    } catch (error) {
-      const businessError = error as BusinessError;
-      this.errorMessage = `启动失败: ${businessError.message}`;
+    if (info) {
+      this.serverInfo = info;
+      this.successMessage = `服务器运行中`;
+    } else {
+      this.errorMessage = '服务器启动失败，未获取到地址';
     }
   }
 
@@ -78,35 +53,9 @@ struct BodyPage {
    * 停止服务器
    */
   async stopServer() {
-    if (!this.bodyParserExample) {
-      return;
-    }
-
-    try {
-      await this.bodyParserExample.stop();
-
-      this.bodyParserExample = null;
-      this.serverInfo = null;
-      this.successMessage = '🔧 Body Parser服务器已停止';
-      this.parseResultCount = 0;
-
-    } catch (error) {
-      this.errorMessage = `停止服务器失败: ${error}`;
-    }
-  }
-
-  /**
-   * 启动统计数据更新
-   */
-  startStatsUpdate() {
-    const updateStats = () => {
-      if (this.bodyParserExample) {
-        this.parseResultCount = this.bodyParserExample.getParseResultCount();
-      }
-    };
-
-    updateStats();
-    setInterval(updateStats, 3000);
+    await this.bodyParserExample.stop();
+    this.serverInfo = null;
+    this.successMessage = '服务器已停止';
   }
 
   /**
@@ -114,12 +63,7 @@ struct BodyPage {
    */
   updatePort(newPort: string) {
     const portNum = parseInt(newPort);
-    if (portNum > 0 && portNum <= 65535) {
-      this.port = portNum;
-      this.errorMessage = '';
-    } else {
-      this.errorMessage = '端口号必须在1-65535之间';
-    }
+    this.port = portNum;
   }
 
   /**
@@ -162,9 +106,9 @@ struct BodyPage {
             // 服务器信息卡片
             Column({ space: 10 }) {
               Row() {
-                Text('🔧 服务地址:')
+                Text('服务地址:')
                   .fontWeight(FontWeight.Medium)
-                  .width(100)
+                  .width(80)
                 Text(`http://${this.serverInfo.address}:${this.serverInfo.port}`)
                   .fontColor(Color.Blue)
                   .fontSize(16)
@@ -172,65 +116,33 @@ struct BodyPage {
               .width('100%')
               .justifyContent(FlexAlign.Start)
 
-              Row() {
-                Text('演示页面:')
-                  .fontWeight(FontWeight.Medium)
-                  .width(100)
-                Text(`/body-parser-demo.html`)
-                  .fontSize(14)
-                  .fontColor(Color.Blue)
-              }
-              .width('100%')
-              .justifyContent(FlexAlign.Start)
             }
             .padding(15)
             .backgroundColor('#f0f8ff')
             .borderRadius(10)
             .width('90%')
 
-            // 解析统计
-            Column({ space: 10 }) {
-              Text('📊 解析统计')
-                .fontWeight(FontWeight.Bold)
-                .fontSize(16)
-                .margin({ bottom: 5 })
-
-              Row() {
-                Text('解析次数:')
-                  .fontWeight(FontWeight.Medium)
-                  .width(80)
-                Text(this.parseResultCount.toString())
-                  .fontSize(16)
-                  .fontColor(Color.Blue)
-              }
-              .width('100%')
-              .justifyContent(FlexAlign.Start)
-            }
-            .padding(15)
-            .backgroundColor('#f0fff0')
-            .borderRadius(10)
-            .width('90%')
 
             // 解析器类型
             Column({ space: 8 }) {
-              Text('🔧 支持的解析器')
+              Text('支持的解析器')
                 .fontWeight(FontWeight.Bold)
                 .fontSize(16)
                 .margin({ bottom: 5 })
 
-              Text('✅ JSON Parser (application/json)')
+              Text('json: application/json')
                 .fontSize(12)
                 .fontColor('#666')
-              Text('✅ URL-Encoded Parser (form data)')
+              Text('urlencoded: application/x-www-form-urlencoded')
                 .fontSize(12)
                 .fontColor('#666')
-              Text('✅ Multipart Parser (file upload)')
+              Text('multipart: multipart/form-data (文件上传)')
                 .fontSize(12)
                 .fontColor('#666')
-              Text('✅ Plain Text Parser (text/plain)')
+              Text('plain: text/plain')
                 .fontSize(12)
                 .fontColor('#666')
-              Text('✅ Auto Parser (智能识别)')
+              Text('auto: 根据 Content-Type 自动识别')
                 .fontSize(12)
                 .fontColor('#666')
             }
@@ -240,11 +152,36 @@ struct BodyPage {
             .borderRadius(10)
             .width('90%')
 
+            // 新增：测试命令区域
+            Column({ space: 8 }) {
+              Text('如何测试')
+                .fontWeight(FontWeight.Bold)
+                .fontSize(16)
+                .margin({ bottom: 5 })
+
+              Text('在终端中运行以下命令:')
+                .fontSize(12)
+                .fontColor('#333')
+
+              Text('sh ./test-body-parser.sh')
+                .fontSize(12)
+                .padding(10)
+                .backgroundColor('#eee')
+                .borderRadius(5)
+                .width('100%')
+            }
+            .alignItems(HorizontalAlign.Start)
+            .padding(15)
+            .backgroundColor('#e0f7fa')
+            .borderRadius(10)
+            .width('90%')
+
+
             // 停止按钮
-            Button('停止Body Parser服务器')
+            Button('停止服务器')
               .width('80%')
               .height(50)
-              .backgroundColor('#d32f2f')
+              .backgroundColor(Color.Red)
               .onClick(() => {
                 this.clearMessages();
                 this.stopServer();
@@ -278,29 +215,16 @@ struct BodyPage {
 
             // 功能说明
             Column({ space: 8 }) {
-              Text('🔧 Body Parser功能')
+              Text('Body Parser功能')
                 .fontWeight(FontWeight.Bold)
                 .fontSize(16)
                 .margin({ bottom: 5 })
 
-              Text('📝 JSON数据解析')
-                .fontSize(14)
-                .fontColor('#666')
-              Text('📋 表单数据解析')
-                .fontSize(14)
-                .fontColor('#666')
-              Text('📁 文件上传解析')
-                .fontSize(14)
-                .fontColor('#666')
-              Text('📄 纯文本解析')
-                .fontSize(14)
-                .fontColor('#666')
-              Text('🤖 智能自动解析')
-                .fontSize(14)
-                .fontColor('#666')
-              Text('📊 解析结果统计')
-                .fontSize(14)
-                .fontColor('#666')
+              ForEach(['JSON数据解析', '表单数据解析', '多部分表单解析', '纯文本解析', '自动解析'], (item: string) => {
+                Text(item)
+                  .fontSize(14)
+                  .fontColor('#666')
+              })
             }
             .alignItems(HorizontalAlign.Start)
             .padding(15)
@@ -309,10 +233,10 @@ struct BodyPage {
             .width('90%')
 
             // 启动按钮
-            Button('启动Body Parser服务器')
+            Button('启动服务器')
               .width('80%')
               .height(50)
-              .backgroundColor('#1976d2')
+              .backgroundColor(Color.Blue)
               .onClick(() => {
                 this.clearMessages();
                 this.startServer();
