@@ -85,6 +85,7 @@ export class HttpExample {
     // 设置全局错误处理中间件
     this.setupGlobalErrorHandler();
 
+    // 静态文件
     await this.setupStaticFiles();
   }
 
