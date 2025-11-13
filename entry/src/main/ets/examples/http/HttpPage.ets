@@ -108,8 +108,6 @@ struct HttpPage {
                   .layoutWeight(1)
                   .fontSize(12)
                   .fontColor(Color.Gray)
-                  .maxLines(2)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
               }
               .width('100%')
               .justifyContent(FlexAlign.Start)
