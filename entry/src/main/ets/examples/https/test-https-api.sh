@@ -114,37 +114,19 @@ test_https_features() {
     fi
 }
 
-# 测试加密数据传输
+# 测试加密数据传输 (已移除，专注于核心HTTPS特性)
 test_encrypted_data_transfer() {
-    echo -e "${CYAN}📡 测试加密数据传输...${NC}"
+    echo -e "${CYAN}📡 测试HTTPS核心安全特性...${NC}"
     
-    # 1. 测试敏感数据传输
-    echo "1. 测试敏感数据安全传输:"
-    local sensitive_data='{
-        "userId": "user123",
-        "creditCard": "4532-1234-5678-9012",
-        "personalInfo": {
-            "name": "张三",
-            "phone": "13800138000",
-            "address": "北京市朝阳区"
-        }
-    }'
+    # 测试安全头部信息
+    echo "1. 测试安全头部信息:"
+    local headers_response=$(curl -k -s "$BASE_URL/api/security/headers" 2>/dev/null)
     
-    local data_response=$(curl -k -s -X POST \
-        -H "Content-Type: application/json" \
-        -d "$sensitive_data" \
-        "$BASE_URL/api/secure/data" 2>/dev/null)
-    
-    if echo "$data_response" | jq . >/dev/null 2>&1; then
-        local encrypted_flag=$(echo "$data_response" | jq -r '.encryptedTransport' 2>/dev/null)
-        if [ "$encrypted_flag" = "true" ]; then
-            print_result "敏感数据传输" "success"
-            echo "$data_response" | jq '.processedData'
-        else
-            print_result "敏感数据传输" "failed"
-        fi
+    if echo "$headers_response" | jq . >/dev/null 2>&1; then
+        print_result "安全头部信息" "success"
+        echo "$headers_response" | jq '.securityHeaders'
     else
-        print_result "敏感数据传输" "failed"
+        print_result "安全头部信息" "failed"
     fi
 }
 
@@ -333,8 +315,8 @@ main() {
     echo "- 安全首页: $BASE_URL/"
     echo "- SSL信息: $BASE_URL/api/ssl/info"
     echo "- 安全头部: $BASE_URL/api/security/headers"
-    echo "- 数据传输: $BASE_URL/api/secure/data"
     echo "- Token获取: $BASE_URL/api/secure/token"
+    echo "- Token验证: $BASE_URL/api/secure/verify/[TOKEN]"
     echo ""
     echo -e "${YELLOW}⚠️  注意: 自签名证书会显示安全警告，这是正常现象${NC}"
     echo "点击浏览器中的"高级" → "继续访问"即可"

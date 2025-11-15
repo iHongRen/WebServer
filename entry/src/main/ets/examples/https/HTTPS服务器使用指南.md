@@ -161,33 +161,95 @@ const httpsServer = new TLSServer(tlsOptions);
 // HTTPS首页 - 展示加密连接状态
 httpsServer.get('/', (req, res) => {
   res.json({
-    message: '🔒 安全连接已建立',
-    encryption: 'SSL/TLS',
-    secure: true,
-    timestamp: new Date().toISOString()
+    message: '🔒 欢迎访问HTTPS安全服务器',
+    features: {
+      encryption: 'SSL/TLS加密传输',
+      security: '安全头部保护',
+      certificate: 'X.509数字证书验证',
+      protocol: 'HTTPS协议'
+    },
+    connection: {
+      secure: true,
+      encrypted: true,
+      protocol: 'HTTPS/1.1',
+      timestamp: new Date().toISOString()
+    }
   });
 });
 
-// 敏感数据传输端点
-httpsServer.post('/api/secure/data', (req, res) => {
-  const sensitiveData = req.body;
-  
-  // 处理加密传输的敏感数据
+// SSL证书信息端点
+httpsServer.get('/api/ssl/info', (req, res) => {
   res.json({
-    message: '敏感数据已安全接收',
-    encryptedTransport: true,
-    dataProcessed: true
+    ssl: {
+      enabled: true,
+      protocol: 'TLS',
+      version: '1.2+',
+      cipher: 'AES256-GCM-SHA384',
+      keyExchange: 'ECDHE',
+      keySize: 2048,
+      signatureAlgorithm: 'RSA-SHA256'
+    },
+    certificate: {
+      type: 'X.509',
+      selfSigned: true,
+      validFrom: new Date().toISOString(),
+      validTo: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      subject: 'CN=localhost',
+      issuer: 'CN=Dev-CA'
+    },
+    security: {
+      hsts: true,
+      perfectForwardSecrecy: true,
+      secureRenegotiation: true,
+      compression: false
+    }
   });
 });
 
-// 安全Token获取
+// 安全Token获取 (需要认证)
 httpsServer.get('/api/secure/token', (req, res) => {
-  const token = generateSecureToken();
+  const authHeader = req.headers?.['authorization'];
+  
+  if (!authHeader || authHeader !== 'Basic ZGVtbzpzZWN1cmU=') {
+    res.status(401).json({
+      error: 'Authentication required',
+      message: '请提供有效的认证信息',
+      note: 'HTTPS确保认证信息在传输过程中被加密保护'
+    });
+    return;
+  }
+
+  const secureToken = `secure_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   res.json({
-    token,
+    message: '🔐 安全Token已生成',
+    token: secureToken,
+    expiresIn: 3600,
+    tokenType: 'Bearer',
     secureTransport: true,
-    expiresIn: 3600
+    issuedAt: new Date().toISOString()
   });
+});
+
+// Token验证端点
+httpsServer.get('/api/secure/verify/:token', (req, res) => {
+  const token = req.params['token'];
+  const isValidToken = token && token.startsWith('secure_') && token.length > 20;
+
+  if (isValidToken) {
+    res.json({
+      message: '✅ Token验证成功',
+      valid: true,
+      token: token.substring(0, 15) + '...',
+      verifiedAt: new Date().toISOString(),
+      secureConnection: true
+    });
+  } else {
+    res.status(401).json({
+      message: '❌ Token验证失败',
+      valid: false,
+      error: 'Invalid or expired token'
+    });
+  }
 });
 ```
 

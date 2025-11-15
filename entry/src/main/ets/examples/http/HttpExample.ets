@@ -172,9 +172,7 @@ export class HttpExample {
     });
 
     // 2. CORS中间件
-    this.server.cors({
-      origin: '*'
-    });
+    this.server.cors();
 
     // 3. 请求体解析中间件
     this.server.auto();

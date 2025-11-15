@@ -285,7 +285,5 @@ openssl crl2pkcs7 -nocrl -certfile cert-chain.pem | openssl pkcs7 -print_certs -
 
 ## 📖 相关文档
 
-- [HTTPS服务器示例](../README.md)
-- [WebServer完整文档](../../../../webserver/README.md)
 - [OpenSSL官方文档](https://www.openssl.org/docs/)
 - [SSL/TLS最佳实践](https://wiki.mozilla.org/Security/Server_Side_TLS)
