@@ -176,6 +176,7 @@ struct EventPage {
 
             // 启动按钮
             Button('启动服务器')
+              .enabled(this.port > 0)
               .width('80%')
               .height(50)
               .backgroundColor(Color.Blue)

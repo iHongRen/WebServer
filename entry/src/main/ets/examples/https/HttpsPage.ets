@@ -184,6 +184,7 @@ struct HttpsPage {
 
             // 启动按钮
             Button('启动HTTPS服务器')
+              .enabled(this.port > 0)
               .width('80%')
               .height(50)
               .backgroundColor(Color.Blue)
