@@ -7,23 +7,14 @@
 ## 特性
 
 - 类 Express.js 的 API 设计
-
 - 支持 https
-
 - 支持路由参数和查询字符串
-
 - CORS 跨域支持
-
 - 静态文件服务
-
 - 文件上传支持
-
 - 缓存控制
-
 - 错误处理
-
 - 中间件系统
-
 - 多种日志格式支持
 
 ## 安装
@@ -47,22 +38,19 @@ ohpm install @cxy/webserver
 ```typescript
 import { HttpServer } from '@cxy/webserver';
 
-this.server = new HttpServer();
+const server = new HttpServer();
 
 // 注册 GET / 接口
-this.server.get('/', (req, res, next) => {
+server.get('/', (req, res, next) => {
   res.status(200).json({
     message: '欢迎使用 WebServer'
   })
 })
 
 // 在8080端口 启动服务器
-const info = await this.server.startServer(8080);
-if (info.address) {
+server.startServer(8080).then((info) => {
   console.log(`http://${info.address}:${info.port}`)
-} else {
-  console.error("启动失败，未获取到地址");
-}
+})
 
 // 访问：http://设备的ip:8080/   
 ```
@@ -253,12 +241,19 @@ await this.server.stopServer();
 查看 [examples/](https://github.com/iHongRen/WebServer/tree/main/entry/src/main/ets/examples) 目录获取更多示例：
 
 - **HTTP服务器** - 完整的RESTful API和文件管理
+
 - **HTTPS服务器** - SSL/TLS加密通信
+
 - **Body Parser** - 各种请求体解析
+
 - **CORS** - 跨域资源共享
+
 - **Event** - 事件系统使用
+
 - **Logger** - 日志记录
+
 - **Router** - 路由系统
+
 - **Static** - 静态文件服务
 
   
@@ -308,7 +303,7 @@ Web服务器主类，提供HTTP服务器功能。
 - `setConfig(key: string, value: Object)` - 设置配置项
 - `getConfig(key: string): Object | undefined` - 获取配置项
 
----
+------
 
 ### TLSServer 类
 
@@ -324,7 +319,7 @@ HTTPS服务器类，继承自HttpServer，提供TLS加密的HTTP服务。
 - `startServer(port: number): Promise<ServerInfo>` - 启动HTTPS服务器
 - `stopServer(): Promise<void>` - 停止HTTPS服务器
 
----
+------
 
 ### HttpRequest 类
 
@@ -356,7 +351,7 @@ HTTP请求解析类，包含请求的所有信息。
 - `get referer(): string` - 获取Referer
 - `get contentLength(): number` - 获取Content-Length
 
----
+------
 
 ### HttpResponse 类
 
@@ -373,7 +368,7 @@ HTTP响应构建类，用于构建和发送响应。
 - `getStatusCode(): number` - 获取当前状态码
 - `onFinish(callback: ResponseFinishCallback): void` - 添加响应完成回调
 
----
+------
 
 ### Router 类
 
@@ -385,7 +380,7 @@ HTTP响应构建类，用于构建和发送响应。
 - `handle(req: HttpRequest, res: HttpResponse)` - 处理HTTP请求
 - `getRoutes(): Route[]` - 获取所有路由
 
----
+------
 
 ## 中间件
 
@@ -452,7 +447,7 @@ interface LoggerOptions {
 - `short` - 简短格式
 - `tiny` - 最简格式
 
----
+------
 
 ## 工具类
 
@@ -468,7 +463,7 @@ interface LoggerOptions {
 - `static joinPath(...paths: string[]): string` - 拼接路径
 - `static sanitizeFilename(filename: string): string` - 清理文件名
 
----
+------
 
 ## 事件系统
 
@@ -494,7 +489,7 @@ interface LoggerOptions {
 - `SOCKET_ERROR` - Socket错误
 - `UNKNOWN_ERROR` - 未知错误
 
----
+------
 
 ## 类型定义
 
@@ -546,8 +541,8 @@ interface ServerError {
   type: ServerErrorType; // 错误类型
   error: any; // 错误对象
 }
-```
 
+```
 
 ❓如果是使用过程中有什么问题，欢迎提 [issues](https://github.com/iHongRen/WebServer/issues)
 

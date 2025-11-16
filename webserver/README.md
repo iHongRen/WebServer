@@ -38,22 +38,19 @@ ohpm install @cxy/webserver
 ```typescript
 import { HttpServer } from '@cxy/webserver';
 
-this.server = new HttpServer();
+const server = new HttpServer();
 
 // 注册 GET / 接口
-this.server.get('/', (req, res, next) => {
+server.get('/', (req, res, next) => {
   res.status(200).json({
     message: '欢迎使用 WebServer'
   })
 })
 
 // 在8080端口 启动服务器
-const info = await this.server.startServer(8080);
-if (info.address) {
+server.startServer(8080).then((info) => {
   console.log(`http://${info.address}:${info.port}`)
-} else {
-  console.error("启动失败，未获取到地址");
-}
+})
 
 // 访问：http://设备的ip:8080/   
 ```
