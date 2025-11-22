@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.0.0-blue)  ![License](https://img.shields.io/badge/License-Apache%202.0-green.svg) ![GitHub Stars](https://img.shields.io/github/stars/iHongRen/WebServer.svg?style=social)
+![Version](https://img.shields.io/badge/version-2.0.0-blue)  ![License](https://img.shields.io/badge/License-Apache%202.0-green.svg) ![GitHub Stars](https://img.shields.io/github/stars/iHongRen/WebServer.svg?style=social)
 
 # WebServer - 鸿蒙Web服务器框架
 
@@ -28,7 +28,7 @@ ohpm install @cxy/webserver
 ```json
 {
   "dependencies": {
-    "@cxy/webserver": "^1.0.1"
+    "@cxy/webserver": "^2.0.0"
   }
 }
 ```
