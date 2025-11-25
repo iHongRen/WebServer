@@ -12,6 +12,7 @@ import { ServerInfo } from './ServerInfo';
 import { HttpRequest } from './HttpRequest';
 import { HttpResponse } from './HttpResponse';
 import { Utils } from './Utils';
+import { deviceInfo } from '@kit.BasicServicesKit';
 
 
 /**
@@ -81,6 +82,9 @@ export class TLSServer extends HttpServer {
       this.tlsClients = [];
       this.tlsServer.off('connect')
       this.tlsServer.off('error')
+      if (deviceInfo.sdkApiVersion >= 20) {
+        await this.tlsServer.close()
+      }
       this.tlsServer = null;
       console.log('HTTPS服务器已停止');
     }

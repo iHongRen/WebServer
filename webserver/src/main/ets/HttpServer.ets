@@ -14,6 +14,8 @@ import { HttpRequest } from './HttpRequest';
 import { HttpResponse } from './HttpResponse';
 import { Router } from './Router';
 import { LoggerOptions } from './middleware/logger';
+import { deviceInfo } from '@kit.BasicServicesKit';
+
 import {
   NextFunction,
   RequestHandler,
@@ -345,6 +347,10 @@ export class HttpServer {
         this.clients.clear();
         this.tcpServer.off('connect');
         this.tcpServer.off('error');
+
+        if (deviceInfo.sdkApiVersion >= 20) {
+          await this.tcpServer.close()
+        }
         this.tcpServer = null;
         this.isRunning = false;
 
