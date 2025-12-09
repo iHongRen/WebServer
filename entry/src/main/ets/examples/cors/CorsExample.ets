@@ -5,10 +5,10 @@
  * @description : CORS示例 - 展示跨域资源共享功能
  */
 
-import { common } from '@kit.AbilityKit';
 import {
-  HttpServer, ServerInfo, HttpRequest, HttpResponse, NextFunction,
+  HttpServer, HttpRequest, HttpResponse, NextFunction,
 } from '@cxy/webserver';
+import { socket } from '@kit.NetworkKit';
 
 /**
  * CORS配置接口，用于定义服务器的CORS策略和行为
@@ -63,7 +63,7 @@ export class CorsExample {
   /**
    * 启动服务器
    */
-  public async start(port: number): Promise<ServerInfo | null> {
+  public async start(port: number): Promise<socket.NetAddress | null> {
     try {
       if (!this.server) {
         this.initializeServer();
@@ -290,7 +290,7 @@ export class CorsExample {
   /**
    * 在控制台打印所有可用的API端点和测试信息
    */
-  private printApiEndpoints(info: ServerInfo): void {
+  private printApiEndpoints(info: socket.NetAddress): void {
     const baseUrl = `http://${info.address}:${info.port}`;
 
     console.log('\n🌐 CORS API端点:');

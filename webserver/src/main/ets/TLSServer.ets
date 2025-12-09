@@ -8,7 +8,6 @@
 import { socket } from '@kit.NetworkKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { HttpServer } from './HttpServer';
-import { ServerInfo } from './ServerInfo';
 import { HttpRequest } from './HttpRequest';
 import { HttpResponse } from './HttpResponse';
 import { Utils } from './Utils';
@@ -38,7 +37,7 @@ export class TLSServer extends HttpServer {
    * @param port 监听端口
    * @returns 服务器信息
    */
-  public async startServer(port: number): Promise<ServerInfo> {
+  public async startServer(port: number): Promise<socket.NetAddress> {
     try {
       // 创建TLS服务器实例
       this.tlsServer = socket.constructTLSSocketServerInstance();
@@ -46,9 +45,8 @@ export class TLSServer extends HttpServer {
       // 配置TLS选项
       const tlsConnectOptions: socket.TLSConnectOptions = {
         address: {
-          address: '0.0.0.0',
-          port: port,
-          family: 1
+          address: this.getLocalIP(),
+          port: port
         },
         secureOptions: this.tlsOptions
       };
@@ -61,9 +59,8 @@ export class TLSServer extends HttpServer {
         console.error('HTTPS服务器错误:', JSON.stringify(error))
       });
 
-      const ip = this.getLocalIP();
-      console.log(`HTTPS Server running at https://${ip}:${port}/`);
-      return { address: ip, port: port };
+      const info = await this.tlsServer.getLocalAddress()
+      return info;
     } catch (error) {
       console.error('HTTPS服务器启动失败:', error);
       return { address: '', port: 0 };
@@ -75,18 +72,21 @@ export class TLSServer extends HttpServer {
    */
   public async stopServer(): Promise<void> {
     if (this.tlsServer) {
-      // 关闭所有客户端连接
-      for (const client of this.tlsClients) {
-        await client.close();
+      try {
+        // 关闭所有客户端连接
+        for (const client of this.tlsClients) {
+          await client.close();
+        }
+        this.tlsClients = [];
+        this.tlsServer.off('connect')
+        this.tlsServer.off('error')
+        if (deviceInfo.sdkApiVersion >= 20) {
+          await this.tlsServer.close()
+        }
+        this.tlsServer = null;
+        console.log('HTTPS服务器已停止');
+      } catch (e) {
       }
-      this.tlsClients = [];
-      this.tlsServer.off('connect')
-      this.tlsServer.off('error')
-      if (deviceInfo.sdkApiVersion >= 20) {
-        await this.tlsServer.close()
-      }
-      this.tlsServer = null;
-      console.log('HTTPS服务器已停止');
     }
   }
 

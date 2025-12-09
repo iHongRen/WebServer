@@ -6,8 +6,9 @@
  */
 
 import {
-  HttpServer, ServerInfo, HttpRequest, HttpResponse,
+  HttpServer, HttpRequest, HttpResponse,
 } from '@cxy/webserver';
+import { socket } from '@kit.NetworkKit';
 
 // 定义用于存储解析结果的接口
 interface ParseResult {
@@ -20,7 +21,7 @@ interface ParseResult {
 
 export class BodyParserExample {
   private server: HttpServer | null = null;
-  private serverInfo: ServerInfo | null = null;
+  private serverInfo: socket.NetAddress | null = null;
   // 使用数组存储每次请求的解析结果，用于在UI上展示
   private parseResults: ParseResult[] = [];
   private nextId: number = 1; // 自增ID
@@ -38,7 +39,7 @@ export class BodyParserExample {
    * @param port - 监听的端口号
    * @returns 服务器信息或 null
    */
-  public async start(port: number): Promise<ServerInfo | null> {
+  public async start(port: number): Promise<socket.NetAddress | null> {
     try {
       if (!this.server) {
         this.initializeServer();
@@ -80,7 +81,7 @@ export class BodyParserExample {
   }
 
   // --- Getter方法 ---
-  public getServerInfo(): ServerInfo | null {
+  public getServiceInfo(): socket.NetAddress | null {
     return this.serverInfo;
   }
 
@@ -214,7 +215,8 @@ export class BodyParserExample {
         contentType,
         data: {
           body: req.body, // 表单中的文本字段在 req.body
-          files: Object.keys(req.files).map(key => ({ // 上传的文件在 req.files
+          files: Object.keys(req.files).map(key => ({
+            // 上传的文件在 req.files
             'fieldName': key,
             'fileName': req.files?.[key]?.fileName,
             'size': req.files?.[key]?.data.byteLength,
@@ -393,7 +395,7 @@ export class BodyParserExample {
   /**
    * 在控制台打印所有可用的API端点，方便开发者测试
    */
-  private printApiEndpoints(info: ServerInfo): void {
+  private printApiEndpoints(info: socket.NetAddress): void {
     const baseUrl = `http://${info.address}:${info.port}`;
 
     console.log('\n📋 Body Parser API端点:');

@@ -7,7 +7,7 @@
 
 import { socket } from '@kit.NetworkKit';
 import {
-  TLSServer, ServerInfo, HttpRequest, HttpResponse,
+  TLSServer, HttpRequest, HttpResponse,
 } from '@cxy/webserver';
 import { common } from '@kit.AbilityKit';
 import { buffer } from '@kit.ArkTS';
@@ -49,7 +49,7 @@ export class HttpsExample {
   /**
    * 启动HTTPS服务器
    */
-  public async start(port: number): Promise<ServerInfo | null> {
+  public async start(port: number): Promise<socket.NetAddress | null> {
     if (!this.server) {
       await this.initializeServer();
     }
@@ -333,7 +333,7 @@ export class HttpsExample {
   /**
    * 打印HTTPS特性和端点信息
    */
-  private printHttpsFeatures(info: ServerInfo): void {
+  private printHttpsFeatures(info: socket.NetAddress): void {
     const baseUrl = `https://${info.address}:${info.port}`;
 
     console.log('\n� H用TTPS安全特性演示端点:');

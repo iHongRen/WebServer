@@ -5,9 +5,7 @@
  * @description : Http服务器
  */
 
-import { wifiManager } from '@kit.ConnectivityKit';
-import { ServerInfo } from './ServerInfo';
-import { socket } from '@kit.NetworkKit';
+import { connection, socket } from '@kit.NetworkKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { Utils } from './Utils';
 import { HttpRequest } from './HttpRequest';
@@ -289,7 +287,7 @@ export class HttpServer {
    * @param port 监听端口
    * @returns 服务器信息
    */
-  public async startServer(port: number): Promise<ServerInfo> {
+  public async startServer(port: number): Promise<socket.NetAddress> {
     try {
       if (this.isRunning) {
         this.eventEmitter.emitError(new Error('服务器已在运行中'), ServerErrorType.STARTUP_FAILED);
@@ -304,26 +302,28 @@ export class HttpServer {
       });
 
       // 尝试监听端口
+      const ip = this.getLocalIP()
       try {
-        await this.tcpServer.listen({ address: '0.0.0.0', port: port });
+        await this.tcpServer.listen({ address: ip, port: port });
       } catch (listenError) {
         this.eventEmitter.emitError(listenError, ServerErrorType.LISTEN_ERROR);
         return { address: '', port: 0 };
       }
 
+      const info = await this.tcpServer.getLocalAddress()
+
       // 设置客户端连接监听
       this.tcpServer.on('connect', (clientSocket) => this.handleClient(clientSocket));
 
-      const ip = this.getLocalIP();
       this.isRunning = true;
 
       // 发射服务器启动事件
       const startEvent: ServerEvent = {
         type: ServerEventType.SERVER_STARTED,
-        data: { address: ip, port }
+        data: info
       };
       this.eventEmitter.emit(startEvent);
-      return { address: ip, port: port };
+      return info
     } catch (error) {
       this.eventEmitter.emitError(new Error('服务器启动失败'), ServerErrorType.STARTUP_FAILED);
       return { address: '', port: 0 };
@@ -362,21 +362,6 @@ export class HttpServer {
       } catch (error) {
         this.eventEmitter.emitError(error, ServerErrorType.UNKNOWN_ERROR);
       }
-    }
-  }
-
-  /**
-   * 获取本地IP地址
-   * @returns IP地址字符串
-   */
-  protected getLocalIP(): string {
-    try {
-      const ipAddress = wifiManager.getIpInfo().ipAddress;
-      return (ipAddress >>> 24) + "." + (ipAddress >> 16 & 0xFF) + "." + (ipAddress >> 8 & 0xFF) + "." +
-        (ipAddress & 0xFF);
-    } catch (e) {
-      console.error("Get local IP failed", e);
-      return '127.0.0.1';
     }
   }
 
@@ -470,5 +455,23 @@ export class HttpServer {
 
     clientSocket.on('error', (err) => this.removeClient(clientSocket, err));
     clientSocket.on('close', () => this.removeClient(clientSocket));
+  }
+
+  /**
+   * 获取本地IP地址
+   * @returns IP地址字符串
+   */
+  protected getLocalIP(): string {
+    try {
+      const netHandle = connection.getDefaultNetSync();
+      if (netHandle.netId === 0) {
+        // 当前没有已连接的网络时，获取的netHandler的netid为0
+        return '127.0.0.1';
+      }
+      const connectionproperties = connection.getConnectionPropertiesSync(netHandle);
+      return connectionproperties.linkAddresses[0].address.address;
+    } catch (e) {
+      return '127.0.0.1';
+    }
   }
 }

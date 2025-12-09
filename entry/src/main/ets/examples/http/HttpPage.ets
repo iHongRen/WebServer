@@ -6,8 +6,8 @@
  */
 
 import { common } from '@kit.AbilityKit';
-import { ServerInfo } from '@cxy/webserver';
 import { HttpExample } from './HttpExample';
+import { socket } from '@kit.NetworkKit';
 
 @Builder
 function httpBuilder() {
@@ -18,7 +18,7 @@ function httpBuilder() {
 struct HttpPage {
   @State title: string = 'HTTP服务器示例'
   @State httpExample: HttpExample = new HttpExample();
-  @State serverInfo: ServerInfo | null = null;
+  @State serverInfo: socket.NetAddress | null = null;
   @State port: number = 8080;
   @State errorMessage: string = '';
   @State successMessage: string = '';

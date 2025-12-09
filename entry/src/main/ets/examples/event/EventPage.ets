@@ -1,5 +1,5 @@
-import { ServerInfo } from '@cxy/webserver';
 import { EventExample } from './EventExample';
+import { socket } from '@kit.NetworkKit';
 
 @Builder
 function eventBuilder() {
@@ -10,7 +10,7 @@ function eventBuilder() {
 struct EventPage {
   @State title: string = '事件处理示例'
   @State eventExample: EventExample = new EventExample();
-  @State serverInfo: ServerInfo | null = null;
+  @State serverInfo: socket.NetAddress | null = null;
   @State port: number = 8084;
   @State errorMessage: string = '';
   @State successMessage: string = '';

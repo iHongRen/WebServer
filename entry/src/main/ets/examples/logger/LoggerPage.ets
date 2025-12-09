@@ -1,7 +1,6 @@
 import { common } from '@kit.AbilityKit';
-import { ServerInfo } from '@cxy/webserver';
-
 import { LoggerExample } from './LoggerExample';
+import { socket } from '@kit.NetworkKit';
 
 @Builder
 function loggerBuilder() {
@@ -12,7 +11,7 @@ function loggerBuilder() {
 struct LoggerPage {
   @State title: string = 'Logger示例'
   @State loggerExample: LoggerExample = new LoggerExample()
-  @State serverInfo: ServerInfo | null = null;
+  @State serverInfo: socket.NetAddress | null = null;
   @State port: number = 8085;
   @State errorMessage: string = '';
   @State successMessage: string = '';

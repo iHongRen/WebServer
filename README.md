@@ -226,15 +226,13 @@ await this.server.stopServer();
 
 ## 运行 [demo](https://github.com/iHongRen/WebServer)
 
-|                         未开启服务                         |                          已开启服务                          |
-| :--------------------------------------------------------: | :----------------------------------------------------------: |
+|                           未开启服务                            |                             已开启服务                             |
+|:----------------------------------------------------------:|:-------------------------------------------------------------:|
 | <img src="https://7up.pics/images/2025/11/16/stop.jpeg" /> | <img src="https://7up.pics/images/2025/11/16/started.jpeg" /> |
 
 **浏览器访问：http://192.168.xx.xx:8080**
 
 <img src="https://7up.pics/images/2025/08/20/E4DAB553-8134-44F9-8C00-B97C1C2FEFC4.png" alt="E4DAB553 8134 44F9 8C00 B97C1C2FEFC4" border="0" style="display: inline-block;">
-
-
 
 ## 完整示例
 
@@ -255,8 +253,6 @@ await this.server.stopServer();
 - **Router** - 路由系统
 
 - **Static** - 静态文件服务
-
-  
 
 # WebServer API [文档](https://github.com/iHongRen/WebServer)
 
@@ -287,7 +283,7 @@ Web服务器主类，提供HTTP服务器功能。
 
 #### 服务器控制方法
 
-- `startServer(port: number): Promise<ServerInfo>` - 启动服务器
+- `startServer(port: number): Promise<socket.NetAddress>` - 启动服务器
 - `stopServer(): Promise<void>` - 停止服务器
 
 #### 事件监听方法
@@ -316,7 +312,7 @@ HTTPS服务器类，继承自HttpServer，提供TLS加密的HTTP服务。
 #### 主要方法
 
 - 继承HttpServer的所有方法
-- `startServer(port: number): Promise<ServerInfo>` - 启动HTTPS服务器
+- `startServer(port: number): Promise<socket.NetAddress>` - 启动HTTPS服务器
 - `stopServer(): Promise<void>` - 停止HTTPS服务器
 
 ------
@@ -522,12 +518,6 @@ interface Route {
   handler: RequestHandler | ErrorHandler; // 处理函数
   pathRegex: RegExp | null; // 路径正则表达式
   paramNames: string[]; // 参数名列表
-}
-
-// 服务器信息接口
-interface ServerInfo {
-  address: string; // 服务器地址
-  port: number; // 服务器端口
 }
 
 // 服务器事件接口

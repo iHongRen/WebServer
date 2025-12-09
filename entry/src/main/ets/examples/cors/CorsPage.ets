@@ -1,5 +1,5 @@
-import { ServerInfo } from '@cxy/webserver';
 import { CorsExample } from './CorsExample';
+import { socket } from '@kit.NetworkKit';
 
 @Builder
 function corsBuilder() {
@@ -10,7 +10,7 @@ function corsBuilder() {
 struct CorsPage {
   @State title: string = 'CORS示例'
   @State corsExample: CorsExample = new CorsExample();
-  @State serverInfo: ServerInfo | null = null;
+  @State serverInfo: socket.NetAddress | null = null;
   @State port: number = 8083;
   @State errorMessage: string = '';
   @State successMessage: string = '';

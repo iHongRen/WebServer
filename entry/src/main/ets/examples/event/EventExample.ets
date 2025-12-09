@@ -5,18 +5,10 @@
  * @description : Event示例 - 展示服务器事件系统功能
  */
 
-import { common } from '@kit.AbilityKit';
 import {
-  HttpServer,
-  ErrorHandler,
-  ServerInfo,
-  ServerEventType,
-  ServerErrorType,
-  HttpRequest,
-  HttpResponse,
-  ServerError,
-  ServerEvent,
+  HttpServer, ServerEventType, ServerErrorType, HttpRequest, HttpResponse,
 } from '@cxy/webserver';
+import { socket } from '@kit.NetworkKit';
 
 
 /**
@@ -39,7 +31,7 @@ export class EventExample {
   /**
    * 启动服务器
    */
-  public async start(port: number): Promise<ServerInfo | null> {
+  public async start(port: number): Promise<socket.NetAddress | null> {
     if (!this.server) {
       this.initializeServer();
     }
@@ -180,7 +172,7 @@ export class EventExample {
   /**
    * 打印API端点信息
    */
-  private printApiEndpoints(info: ServerInfo): void {
+  private printApiEndpoints(info: socket.NetAddress): void {
     const baseUrl = `http://${info.address}:${info.port}`;
 
     console.log('\n📡 Event API端点:');

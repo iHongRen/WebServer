@@ -5,10 +5,8 @@
  * @description : Body Parser示例 - 展示各种请求体解析功能
  */
 
-import { BusinessError } from '@kit.BasicServicesKit';
-import { common } from '@kit.AbilityKit';
-import { ServerInfo } from '@cxy/webserver';
 import { BodyParserExample } from './BodyParserExample';
+import { socket } from '@kit.NetworkKit';
 
 @Builder
 function bodyBuilder() {
@@ -19,7 +17,7 @@ function bodyBuilder() {
 struct BodyPage {
   @State title: string = 'Body Parser示例'
   @State bodyParserExample: BodyParserExample = new BodyParserExample()
-  @State serverInfo: ServerInfo | null = null;
+  @State serverInfo: socket.NetAddress | null = null;
   @State port: number = 8082;
   @State errorMessage: string = '';
   @State successMessage: string = '';

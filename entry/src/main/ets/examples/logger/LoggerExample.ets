@@ -10,13 +10,13 @@ import { common } from '@kit.AbilityKit';
 import {
   HttpServer,
   ErrorHandler,
-  ServerInfo,
   ServerEventType,
   HttpRequest,
   HttpResponse,
   NextFunction,
 } from '@cxy/webserver';
 import { util } from '@kit.ArkTS';
+import { socket } from '@kit.NetworkKit';
 
 
 /**
@@ -76,7 +76,7 @@ export class LoggerExample {
   /**
    * 启动服务器
    */
-  public async start(port: number): Promise<ServerInfo | null> {
+  public async start(port: number): Promise<socket.NetAddress | null> {
     if (!this.server) {
       this.initializeServer();
     }
@@ -453,7 +453,7 @@ export class LoggerExample {
   /**
    * 打印API端点信息
    */
-  private printApiEndpoints(info: ServerInfo): void {
+  private printApiEndpoints(info: socket.NetAddress): void {
     const baseUrl = `http://${info.address}:${info.port}`;
 
     console.log('\n📝 Logger API端点:');

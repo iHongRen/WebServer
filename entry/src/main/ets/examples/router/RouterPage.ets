@@ -1,8 +1,5 @@
-import { BusinessError } from '@kit.BasicServicesKit';
-import { common } from '@kit.AbilityKit';
-import { ServerInfo } from '@cxy/webserver';
-
 import { RouterExample } from './RouterExample';
+import { socket } from '@kit.NetworkKit';
 
 @Builder
 function routerBuilder() {
@@ -13,7 +10,7 @@ function routerBuilder() {
 struct RouterPage {
   @State title: string = 'Router示例'
   @State routerExample: RouterExample = new RouterExample()
-  @State serverInfo: ServerInfo | null = null;
+  @State serverInfo: socket.NetAddress | null = null;
   @State port: number = 8086;
   @State errorMessage: string = '';
   @State successMessage: string = '';

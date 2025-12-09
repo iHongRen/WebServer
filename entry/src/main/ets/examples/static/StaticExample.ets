@@ -8,9 +8,10 @@
 import { fileIo } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
 import {
-  HttpServer, ServerInfo, HttpRequest, HttpResponse, NextFunction,
+  HttpServer, HttpRequest, HttpResponse,
 } from '@cxy/webserver';
 import { util } from '@kit.ArkTS';
+import { socket } from '@kit.NetworkKit';
 
 /**
  * 静态文件
@@ -78,7 +79,7 @@ export class StaticExample {
   /**
    * 启动服务器
    */
-  public async start(port: number): Promise<ServerInfo | null> {
+  public async start(port: number): Promise<socket.NetAddress | null> {
     if (!this.server) {
       this.initializeServer();
     }
@@ -325,7 +326,7 @@ Created: ${new Date().toISOString()}`);
   /**
    * 打印API端点信息
    */
-  private printApiEndpoints(info: ServerInfo): void {
+  private printApiEndpoints(info: socket.NetAddress): void {
     const baseUrl = `http://${info.address}:${info.port}`;
 
     console.log('\n📁 Static File Server API端点:');

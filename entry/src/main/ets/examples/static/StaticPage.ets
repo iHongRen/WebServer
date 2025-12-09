@@ -1,8 +1,6 @@
-import { BusinessError } from '@kit.BasicServicesKit';
 import { common } from '@kit.AbilityKit';
-import { ServerInfo } from '@cxy/webserver';
-
 import { StaticExample } from './StaticExample';
+import { socket } from '@kit.NetworkKit';
 
 @Builder
 function staticBuilder() {
@@ -13,7 +11,7 @@ function staticBuilder() {
 struct StaticPage {
   @State title: string = 'Static示例'
   @State staticExample: StaticExample = new StaticExample()
-  @State serverInfo: ServerInfo | null = null;
+  @State serverInfo: socket.NetAddress | null = null;
   @State port: number = 8087;
   @State errorMessage: string = '';
   @State successMessage: string = '';

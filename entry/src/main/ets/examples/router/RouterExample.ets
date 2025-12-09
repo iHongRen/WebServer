@@ -5,17 +5,15 @@
  * @description : Router示例 - 展示路由系统功能
  */
 
-import { fileIo } from '@kit.CoreFileKit';
-import { common } from '@kit.AbilityKit';
 import {
   HttpServer,
   ErrorHandler,
-  ServerInfo,
   ServerEventType,
   HttpRequest,
   HttpResponse,
   NextFunction,
 } from '@cxy/webserver';
+import { socket } from '@kit.NetworkKit';
 
 /**
  * 路由配置接口
@@ -69,7 +67,7 @@ export class RouterExample {
   /**
    * 启动服务器
    */
-  public async start(port: number): Promise<ServerInfo | null> {
+  public async start(port: number): Promise<socket.NetAddress | null> {
     if (!this.server) {
       this.initializeServer();
     }
@@ -476,7 +474,7 @@ export class RouterExample {
   /**
    * 打印API端点信息
    */
-  private printApiEndpoints(info: ServerInfo): void {
+  private printApiEndpoints(info: socket.NetAddress): void {
     const baseUrl = `http://${info.address}:${info.port}`;
 
     console.log('\n🛣️  Router API端点:');
