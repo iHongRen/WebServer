@@ -33,6 +33,28 @@ ohpm install @cxy/webserver
 }
 ```
 
+## 申请权限
+
+- `ohos.permission.INTERNET`：允许应用使用网络
+
+- `ohos.permission.GET_NETWORK_INFO`：用于获取本机的地址
+
+在入口模块的 `entry/src/main/module.json5` 文件中申请权限: 
+
+```json
+// modules.json5 
+"requestPermissions": [
+  {
+    "name": "ohos.permission.INTERNET"
+  },
+  {
+    "name": "ohos.permission.GET_NETWORK_INFO"
+  }
+]
+```
+
+
+
 ## 快速开始
 
 ```typescript

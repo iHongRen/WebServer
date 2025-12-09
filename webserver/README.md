@@ -33,6 +33,27 @@ ohpm install @cxy/webserver
 }
 ```
 
+## 申请权限
+
+- `ohos.permission.INTERNET`：允许应用使用网络
+- `ohos.permission.GET_NETWORK_INFO`：用于获取本机的地址
+
+在入口模块的 `entry/src/main/module.json5` 文件中申请权限: 
+
+```json
+// modules.json5 
+"requestPermissions": [
+  {
+    "name": "ohos.permission.INTERNET"
+  },
+  {
+    "name": "ohos.permission.GET_NETWORK_INFO"
+  }
+]
+```
+
+
+
 ## 快速开始
 
 ```typescript
@@ -226,8 +247,8 @@ await this.server.stopServer();
 
 ## 运行 [demo](https://github.com/iHongRen/WebServer)
 
-|                           未开启服务                            |                             已开启服务                             |
-|:----------------------------------------------------------:|:-------------------------------------------------------------:|
+|                         未开启服务                         |                          已开启服务                          |
+| :--------------------------------------------------------: | :----------------------------------------------------------: |
 | <img src="https://7up.pics/images/2025/11/16/stop.jpeg" /> | <img src="https://7up.pics/images/2025/11/16/started.jpeg" /> |
 
 **浏览器访问：http://192.168.xx.xx:8080**
@@ -239,19 +260,12 @@ await this.server.stopServer();
 查看 [examples/](https://github.com/iHongRen/WebServer/tree/main/entry/src/main/ets/examples) 目录获取更多示例：
 
 - **HTTP服务器** - 完整的RESTful API和文件管理
-
 - **HTTPS服务器** - SSL/TLS加密通信
-
 - **Body Parser** - 各种请求体解析
-
 - **CORS** - 跨域资源共享
-
 - **Event** - 事件系统使用
-
 - **Logger** - 日志记录
-
 - **Router** - 路由系统
-
 - **Static** - 静态文件服务
 
 # WebServer API [文档](https://github.com/iHongRen/WebServer)
@@ -531,6 +545,7 @@ interface ServerError {
   type: ServerErrorType; // 错误类型
   error: any; // 错误对象
 }
+
 ```
 
 ❓如果是使用过程中有什么问题，欢迎提 [issues](https://github.com/iHongRen/WebServer/issues)
