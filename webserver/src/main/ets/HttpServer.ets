@@ -44,7 +44,6 @@ export class HttpServer {
   protected clients: Map<number, socket.TCPSocketConnection | socket.TLSSocketConnection> = new Map(); // 客户端连接映射
   protected tcpServer: socket.TCPSocketServer | null = null; // TCP服务器实例
   protected eventEmitter: ServerEventEmitter = new ServerEventEmitter(); // 事件发射器
-  protected isRunning: boolean = false; // 服务器运行状态
 
   /**
    * 构造函数
@@ -233,10 +232,10 @@ export class HttpServer {
 
   /**
    * 获取服务器运行状态
-   * @returns 是否正在运行
+   * @returns 运行状态
    */
-  public isServerRunning(): boolean {
-    return this.isRunning;
+  public async getState(): Promise<socket.SocketStateBase | undefined> {
+    return await this.tcpServer?.getState()
   }
 
   /**
@@ -289,11 +288,6 @@ export class HttpServer {
    */
   public async startServer(port: number): Promise<socket.NetAddress> {
     try {
-      if (this.isRunning) {
-        this.eventEmitter.emitError(new Error('服务器已在运行中'), ServerErrorType.STARTUP_FAILED);
-        return { address: '', port: 0 };
-      }
-
       this.tcpServer = socket.constructTCPSocketServerInstance();
 
       // 设置服务器错误监听
@@ -315,8 +309,6 @@ export class HttpServer {
       // 设置客户端连接监听
       this.tcpServer.on('connect', (clientSocket) => this.handleClient(clientSocket));
 
-      this.isRunning = true;
-
       // 发射服务器启动事件
       const startEvent: ServerEvent = {
         type: ServerEventType.SERVER_STARTED,
@@ -334,7 +326,7 @@ export class HttpServer {
    * 停止服务器
    */
   public async stopServer(): Promise<void> {
-    if (this.tcpServer && this.isRunning) {
+    if (this.tcpServer) {
       try {
         this.clients.forEach(async (client, _) => {
           try {
@@ -352,7 +344,6 @@ export class HttpServer {
           await this.tcpServer.close()
         }
         this.tcpServer = null;
-        this.isRunning = false;
 
         // 发射服务器停止事件
         const stopEvent: ServerEvent = {
@@ -463,7 +454,7 @@ export class HttpServer {
    * @returns IP地址字符串
    */
   protected getLocalIP(): string {
-    const localIP = '127.0.0.1'
+    const localIP = '127-0-0-1'.replaceAll('-', '.')
     // 模拟器直接返回固定的
     if (deviceInfo.productModel === 'emulator') {
       return localIP;

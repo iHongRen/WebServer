@@ -344,7 +344,7 @@ export class HttpExample {
         await fileIo.write(file.fd, uploadedFile.data);
         await fileIo.close(file.fd);
 
-        console.log(`📁 文件上传成功: ${fileName}`);
+        console.log(`文件上传成功: ${fileName}`);
 
         res.json({
           message: 'File uploaded successfully',
@@ -358,7 +358,7 @@ export class HttpExample {
           } as ESObject
         });
       } catch (error) {
-        console.error('❌ 文件上传失败:', error);
+        console.error('文件上传失败:', error);
         next(error);
       }
     });
@@ -438,16 +438,16 @@ export class HttpExample {
   private printApiEndpoints(info: socket.NetAddress): void {
     const baseUrl = `http://${info.address}:${info.port}`;
 
-    console.log('\n📋 可用的API端点:');
+    console.log('\n 可用的API端点:');
     console.log('='.repeat(50));
 
     // 静态文件
-    console.log('📄 静态文件:');
+    console.log(' 静态文件:');
     console.log(`   GET  ${baseUrl}/                    - 首页`);
     console.log(`   GET  ${baseUrl}/upload.html         - 文件上传页面`);
 
     // 用户管理API
-    console.log('\n👥 用户管理API:');
+    console.log('\n 用户管理API:');
     console.log(`   GET    ${baseUrl}/api/users         - 获取用户列表`);
     console.log(`   GET    ${baseUrl}/api/users/:id     - 获取单个用户`);
     console.log(`   POST   ${baseUrl}/api/users         - 创建用户`);
@@ -455,7 +455,7 @@ export class HttpExample {
     console.log(`   DELETE ${baseUrl}/api/users/:id     - 删除用户`);
 
     // 文件管理API
-    console.log('\n📁 文件管理API:');
+    console.log('\n 文件管理API:');
     console.log(`   POST   ${baseUrl}/api/upload        - 上传文件`);
     console.log(`   GET    ${baseUrl}/api/files         - 获取文件列表`);
 

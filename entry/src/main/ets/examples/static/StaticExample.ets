@@ -329,16 +329,16 @@ Created: ${new Date().toISOString()}`);
   private printApiEndpoints(info: socket.NetAddress): void {
     const baseUrl = `http://${info.address}:${info.port}`;
 
-    console.log('\n📁 Static File Server API端点:');
+    console.log('\n Static File Server API端点:');
     console.log('='.repeat(50));
 
-    console.log('📄 静态文件:');
+    console.log(' 静态文件:');
     console.log(`   GET  ${baseUrl}/                      - 首页`);
     console.log(`   GET  ${baseUrl}/css/style.css         - CSS文件`);
     console.log(`   GET  ${baseUrl}/js/app.js             - JavaScript文件`);
     console.log(`   GET  ${baseUrl}/data.json             - JSON数据`);
 
-    console.log('\n📂 文件管理:');
+    console.log('\n 文件管理:');
     console.log(`   GET    ${baseUrl}/api/files           - 文件浏览器`);
     console.log(`   POST   ${baseUrl}/api/upload          - 文件上传`);
     console.log(`   DELETE ${baseUrl}/api/files/*         - 文件删除`);

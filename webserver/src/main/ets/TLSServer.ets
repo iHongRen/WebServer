@@ -91,6 +91,14 @@ export class TLSServer extends HttpServer {
   }
 
   /**
+   * 获取服务器运行状态
+   * @returns 运行状态
+   */
+  public async getState(): Promise<socket.SocketStateBase | undefined> {
+    return await this.tlsServer?.getState()
+  }
+
+  /**
    * 移除客户端连接
    * @param clientSocket 客户端Socket连接
    * @param error 错误信息（可选）
@@ -120,6 +128,7 @@ export class TLSServer extends HttpServer {
       const completeRequest = this.isRequestComplete(buffer);
       if (completeRequest) {
         // 处理请求
+        data.message = buffer
         const req = new HttpRequest(data);
         const res = new HttpResponse(clientSocket);
         this.router.handle(req, res);

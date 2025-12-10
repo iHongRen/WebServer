@@ -71,8 +71,7 @@ export class EventExample {
       res.json({
         message: 'HTTP服务器运行正常',
         timestamp: new Date().toISOString(),
-        clientCount: server.getClientCount(),
-        serverRunning: server.isServerRunning()
+        clientCount: server.getClientCount()
       });
     });
 
