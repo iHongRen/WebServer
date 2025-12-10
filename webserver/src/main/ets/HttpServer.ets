@@ -431,6 +431,7 @@ export class HttpServer {
         const completeRequest = this.isRequestComplete(buffer);
         if (completeRequest) {
           // 处理请求
+          data.message = buffer
           const req = new HttpRequest(data);
           const res = new HttpResponse(clientSocket);
 
@@ -467,7 +468,7 @@ export class HttpServer {
     if (deviceInfo.productModel === 'emulator') {
       return localIP;
     }
-    
+
     try {
       const netHandle = connection.getDefaultNetSync();
       if (netHandle.netId === 0) {
