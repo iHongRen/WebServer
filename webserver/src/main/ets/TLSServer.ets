@@ -6,12 +6,9 @@
  */
 
 import { socket } from '@kit.NetworkKit';
-import { BusinessError } from '@kit.BasicServicesKit';
 import { HttpServer } from './HttpServer';
-import { HttpRequest } from './HttpRequest';
-import { HttpResponse } from './HttpResponse';
-import { Utils } from './Utils';
 import { deviceInfo } from '@kit.BasicServicesKit';
+import { ServerErrorType, ServerEventType } from './ServerEvents';
 
 
 /**
@@ -19,7 +16,6 @@ import { deviceInfo } from '@kit.BasicServicesKit';
  * HttpServer，提供TLS加密的HTTP服务
  */
 export class TLSServer extends HttpServer {
-  private tlsClients: socket.TLSSocketConnection[] = []; // 客户端连接列表
   private tlsServer: socket.TLSSocketServer | null = null;
   private tlsOptions: socket.TLSSecureOptions;
 
@@ -54,15 +50,16 @@ export class TLSServer extends HttpServer {
       // 启动监听
       await this.tlsServer.listen(tlsConnectOptions)
       // 设置事件监听
-      this.tlsServer.on('connect', (clientSocket) => this.handleTLSClient(clientSocket));
+      this.tlsServer.on('connect', (clientSocket) => this.handleClient(clientSocket));
+      // 设置服务器错误监听
       this.tlsServer.on('error', (error) => {
-        console.error('HTTPS服务器错误:', JSON.stringify(error))
+        this.eventEmitter.emitError(error, ServerErrorType.SOCKET_ERROR);
       });
 
       const info = await this.tlsServer.getLocalAddress()
       return info;
     } catch (error) {
-      console.error('HTTPS服务器启动失败:', error);
+      this.eventEmitter.emitError(new Error('服务器启动失败'), ServerErrorType.STARTUP_FAILED);
       return { address: '', port: 0 };
     }
   }
@@ -70,22 +67,27 @@ export class TLSServer extends HttpServer {
   /**
    * 停止HTTPS服务器
    */
+  /**
+   * 停止服务器
+   */
   public async stopServer(): Promise<void> {
     if (this.tlsServer) {
       try {
-        // 关闭所有客户端连接
-        for (const client of this.tlsClients) {
+        this.clients.forEach(async (client, _) => {
           await client.close();
-        }
-        this.tlsClients = [];
-        this.tlsServer.off('connect')
-        this.tlsServer.off('error')
+        })
+        this.clients.clear();
+        this.tlsServer.off('connect');
+        this.tlsServer.off('error');
+
         if (deviceInfo.sdkApiVersion >= 20) {
           await this.tlsServer.close()
         }
         this.tlsServer = null;
-        console.log('HTTPS服务器已停止');
-      } catch (e) {
+        this.eventEmitter.emit({ type: ServerEventType.SERVER_STOPPED });
+      } catch (error) {
+        this.tlsServer = null;
+        this.eventEmitter.emitError(error, ServerErrorType.UNKNOWN_ERROR);
       }
     }
   }
@@ -96,49 +98,5 @@ export class TLSServer extends HttpServer {
    */
   public async getState(): Promise<socket.SocketStateBase | undefined> {
     return await this.tlsServer?.getState()
-  }
-
-  /**
-   * 移除客户端连接
-   * @param clientSocket 客户端Socket连接
-   * @param error 错误信息（可选）
-   */
-  protected removeTLSClient(clientSocket: socket.TLSSocketConnection, error?: BusinessError) {
-    if (error) {
-      console.error('客户端连接错误:', error);
-    }
-    const index = this.tlsClients.indexOf(clientSocket);
-    if (index > -1) {
-      this.tlsClients.splice(index, 1);
-    }
-  }
-
-  /**
-   * 处理TLS客户端连接
-   * @param clientSocket TLS客户端连接
-   */
-  private handleTLSClient(clientSocket: socket.TLSSocketConnection) {
-    this.tlsClients.push(clientSocket)
-    let buffer = new ArrayBuffer(0);
-    clientSocket.on('message', async (data) => {
-      // 将新数据追加到缓冲区
-      buffer = Utils.mergeArrayBuffers(buffer, data.message);
-
-      // 检查是否有完整的HTTP请求
-      const completeRequest = this.isRequestComplete(buffer);
-      if (completeRequest) {
-        // 处理请求
-        data.message = buffer
-        const req = new HttpRequest(data);
-        const res = new HttpResponse(clientSocket);
-        this.router.handle(req, res);
-
-        // 清空缓冲区
-        buffer = new ArrayBuffer(0);
-      }
-    });
-
-    clientSocket.on('error', (err) => this.removeTLSClient(clientSocket, err));
-    clientSocket.on('close', () => this.removeTLSClient(clientSocket));
   }
 }

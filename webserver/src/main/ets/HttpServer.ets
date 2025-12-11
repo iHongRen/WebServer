@@ -290,11 +290,6 @@ export class HttpServer {
     try {
       this.tcpServer = socket.constructTCPSocketServerInstance();
 
-      // 设置服务器错误监听
-      this.tcpServer.on('error', (error) => {
-        this.eventEmitter.emitError(error, ServerErrorType.SOCKET_ERROR);
-      });
-
       // 尝试监听端口
       const ip = this.getLocalIP()
       try {
@@ -308,6 +303,10 @@ export class HttpServer {
 
       // 设置客户端连接监听
       this.tcpServer.on('connect', (clientSocket) => this.handleClient(clientSocket));
+      // 设置服务器错误监听
+      this.tcpServer.on('error', (error) => {
+        this.eventEmitter.emitError(error, ServerErrorType.SOCKET_ERROR);
+      });
 
       // 发射服务器启动事件
       const startEvent: ServerEvent = {
@@ -329,13 +328,8 @@ export class HttpServer {
     if (this.tcpServer) {
       try {
         this.clients.forEach(async (client, _) => {
-          try {
-            await client.close();
-          } catch (error) {
-            this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
-          }
+          await client.close();
         })
-
         this.clients.clear();
         this.tcpServer.off('connect');
         this.tcpServer.off('error');
@@ -344,13 +338,9 @@ export class HttpServer {
           await this.tcpServer.close()
         }
         this.tcpServer = null;
-
-        // 发射服务器停止事件
-        const stopEvent: ServerEvent = {
-          type: ServerEventType.SERVER_STOPPED,
-        };
-        this.eventEmitter.emit(stopEvent);
+        this.eventEmitter.emit({ type: ServerEventType.SERVER_STOPPED });
       } catch (error) {
+        this.tcpServer = null;
         this.eventEmitter.emitError(error, ServerErrorType.UNKNOWN_ERROR);
       }
     }
@@ -387,12 +377,9 @@ export class HttpServer {
    * @param error 错误信息（可选）
    */
   protected removeClient(clientSocket: socket.TCPSocketConnection | socket.TLSSocketConnection, error?: BusinessError) {
-    if (this.clients.has(clientSocket.clientId)) {
-      this.clients.delete(clientSocket.clientId);
-
-      if (error) {
-        this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
-      }
+    this.clients.delete(clientSocket.clientId);
+    if (error) {
+      this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
     }
   }
 
@@ -401,20 +388,10 @@ export class HttpServer {
    * @param clientSocket 客户端Socket连接
    */
   protected handleClient(clientSocket: socket.TCPSocketConnection | socket.TLSSocketConnection) {
-
     this.clients.set(clientSocket.clientId, clientSocket);
-
     let buffer = new ArrayBuffer(0);
-
     clientSocket.on('message', async (data) => {
       try {
-        // 发射请求接收事件
-        const requestEvent: ServerEvent = {
-          type: ServerEventType.REQUEST_RECEIVED,
-          data: { clientSocket, data }
-        };
-        this.eventEmitter.emit(requestEvent);
-
         // 将新数据追加到缓冲区
         buffer = Utils.mergeArrayBuffers(buffer, data.message);
 
@@ -423,20 +400,25 @@ export class HttpServer {
         if (completeRequest) {
           // 处理请求
           data.message = buffer
+
+          // 发射请求接收事件
+          this.eventEmitter.emit({
+            type: ServerEventType.REQUEST_RECEIVED,
+            data: { clientSocket, data }
+          });
+
           const req = new HttpRequest(data);
           const res = new HttpResponse(clientSocket);
 
           // 添加响应完成回调
           res.onFinish((statusCode, responseSize) => {
-            const responseEvent: ServerEvent = {
+            this.eventEmitter.emit({
               type: ServerEventType.RESPONSE_SENT,
               data: { clientSocket, statusCode, responseSize }
-            };
-            this.eventEmitter.emit(responseEvent);
+            });
           });
 
           this.router.handle(req, res);
-
           // 清空缓冲区
           buffer = new ArrayBuffer(0);
         }
@@ -444,7 +426,6 @@ export class HttpServer {
         this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
       }
     });
-
     clientSocket.on('error', (err) => this.removeClient(clientSocket, err));
     clientSocket.on('close', () => this.removeClient(clientSocket));
   }
