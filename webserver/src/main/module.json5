@@ -6,6 +6,16 @@
       "default",
       "tablet",
       "2in1"
+    ],
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.INTERNET",
+        "reason": "$string:webserver_internet",
+      },
+      {
+        "name": "ohos.permission.GET_NETWORK_INFO",
+        "reason": "$string:webserver_get_network_info"
+      }
     ]
   }
 }

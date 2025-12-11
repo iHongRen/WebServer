@@ -6,7 +6,15 @@
     },
     {
       "name": "agcit_ihongren_cxy_webserver",
-      "value": "2.0.0"
+      "value": "2.0.1"
+    },
+    {
+      "name": "webserver_internet",
+      "value": "允许用户能与本地服务相互通信"
+    },
+    {
+      "name": "webserver_get_network_info",
+      "value": "用于获取本机的IP地址，使得能在应用内开启本地服务"
     }
   ]
 }
