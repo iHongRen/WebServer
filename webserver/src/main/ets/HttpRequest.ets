@@ -219,46 +219,85 @@ export class HttpRequest {
       return;
     }
 
-    const bodyStr = Utils.arrayBufferToStr(body);
-    const parts = bodyStr.split('--' + boundary);
-
+    const data = new Uint8Array(body)
+    const parts = this.splitMultipartData(data, boundary);
     for (const part of parts) {
-      if (part.trim() === '' || part.trim() === '--') {
+      let headersEnd = -1;
+      const CRLF_CRLF = new Uint8Array([0x0D, 0x0A, 0x0D, 0x0A]);
+      for (let i = 0; i <= part.length - CRLF_CRLF.length; i++) {
+        if (part[i] === CRLF_CRLF[0] &&
+          part[i + 1] === CRLF_CRLF[1] &&
+          part[i + 2] === CRLF_CRLF[2] &&
+          part[i + 3] === CRLF_CRLF[3]) {
+          headersEnd = i;
+          break;
+        }
+      }
+
+      if (headersEnd === -1) {
         continue;
       }
 
-      const headerEndIndex = part.indexOf('\r\n\r\n');
-      if (headerEndIndex === -1) {
-        continue;
-      }
-
-      const headerPart = part.substring(0, headerEndIndex).trim();
-      const bodyPartStr = part.substring(headerEndIndex + 4).trim();
-
-      const contentDispositionMatch =
-        headerPart.match(/Content-Disposition: form-data; name=\"([^\"]+)\"(?:; filename=\"([^\"]+)\")?/);
-      if (!contentDispositionMatch) {
-        continue;
-      }
-
-      const fieldName = contentDispositionMatch[1];
-      const fileName = contentDispositionMatch[2];
-
-      if (fileName) {
-        // 文件上传，存储到files中
-        const contentTypeMatch = headerPart.match(/Content-Type: (.+)/);
+      const headers = Utils.uint8ToStr(part.slice(0, headersEnd));
+      const content = part.slice(headersEnd + 4); // Skip CRLF CRLF
+      const dispositionMatch =
+        headers.match(/Content-Disposition: form-data; name=\"([^\"]+)\"(?:; filename=\"([^\"]+)\")?/);
+      if (dispositionMatch) {
+        const name = dispositionMatch[1];
+        const filename = dispositionMatch[2];
+        const contentTypeMatch = headers.match(/Content-Type: ([^\r\n]+)/);
         const contentTypeHeader = contentTypeMatch ? contentTypeMatch[1].trim() : 'application/octet-stream';
-        this.files[fieldName] = {
-          fieldName: fieldName,
-          fileName: fileName,
-          contentType: contentTypeHeader,
-          data: Utils.strToArrayBuffer(bodyPartStr)
-        };
-      } else {
-        // 普通表单字段，存储到body中
-        this.body[fieldName] = bodyPartStr;
+
+        if (filename) {
+          this.files[name] = {
+            fieldName: name,
+            fileName: filename,
+            contentType: contentTypeHeader,
+            data: content.buffer as ArrayBuffer
+          };
+        } else {
+          this.body[name] = Utils.uint8ToStr(content);
+        }
       }
     }
+  }
+
+  private splitMultipartData(data: Uint8Array, boundary: string): Uint8Array[] {
+    const boundaryBytes = Utils.strToUint8Array(`--${boundary}`);
+    const parts: Uint8Array[] = [];
+    let startIndex = 0;
+
+    while (true) {
+      const endIndex = this.findBoundary(data, boundaryBytes, startIndex);
+      if (endIndex === -1) {
+        break;
+      }
+
+      if (endIndex > startIndex) {
+        parts.push(data.slice(startIndex, endIndex));
+      }
+      startIndex = endIndex + boundaryBytes.length + 2; // +2 for CRLF
+    }
+    return parts.filter(part => part.length > 0);
+  }
+
+  private findBoundary(data: Uint8Array, boundary: Uint8Array, start: number): number {
+    for (let i = start; i <= data.length - boundary.length; i++) {
+      let match = true;
+      for (let j = 0; j < boundary.length; j++) {
+        if (data[i + j] !== boundary[j]) {
+          match = false;
+          break;
+        }
+      }
+      if (match) {
+        // Check for CRLF before the boundary, and CRLF after the boundary
+        if (i > 0 && data[i - 1] === 0x0A && data[i - 2] === 0x0D) {
+          return i - 2; // Return start of CRLF before boundary
+        }
+      }
+    }
+    return -1;
   }
 
   /**
