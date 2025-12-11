@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-2.0.0-blue)  ![License](https://img.shields.io/badge/License-Apache%202.0-green.svg) ![GitHub Stars](https://img.shields.io/github/stars/iHongRen/WebServer.svg?style=social)
+![Version](https://img.shields.io/badge/version-2.0.1-blue)  ![License](https://img.shields.io/badge/License-Apache%202.0-green.svg) ![GitHub Stars](https://img.shields.io/github/stars/iHongRen/WebServer.svg?style=social)
 
 # WebServer - 鸿蒙Web服务器框架
 
@@ -28,31 +28,10 @@ ohpm install @cxy/webserver
 ```json
 {
   "dependencies": {
-    "@cxy/webserver": "^2.0.0"
+    "@cxy/webserver": "^2.0.1"
   }
 }
 ```
-
-## 申请权限
-
-- `ohos.permission.INTERNET`：允许应用使用网络
-
-- `ohos.permission.GET_NETWORK_INFO`：用于获取本机的地址
-
-在入口模块的 `entry/src/main/module.json5` 文件中申请权限: 
-
-```json
-// modules.json5 
-"requestPermissions": [
-  {
-    "name": "ohos.permission.INTERNET"
-  },
-  {
-    "name": "ohos.permission.GET_NETWORK_INFO"
-  }
-]
-```
-
 
 
 ## 快速开始
@@ -509,15 +488,39 @@ interface LoggerOptions {
 
 ------
 
+
+
 ## 类型定义
 
 ### 函数类型
 
 ```typescript
-type NextFunction = (err?: Error) => void;
-type RequestHandler = (req: HttpRequest, res: HttpResponse, next: NextFunction) => void;
-type ErrorHandler = (error: Error, req: HttpRequest, res: HttpResponse, next: NextFunction) => void;
-type ResponseFinishCallback = (statusCode: number, responseSize: number) => void;
+/**
+ * 下一步函数类型
+ * 用于中间件链式调用
+ */
+export type NextFunction = (error?: Error) => void;
+
+/**
+ * 请求处理函数类型
+ * 标准的中间件处理函数
+ */
+export type RequestHandler = (req: HttpRequest, res: HttpResponse, next: NextFunction) => void;
+
+/**
+ * 错误处理函数类型
+ * 用于处理中间件中的错误
+ */
+export type ErrorHandler = (error: Error, req: HttpRequest, res: HttpResponse, next: NextFunction) => void;
+
+/**
+ * 响应完成回调函数类型
+ */
+export type ResponseFinishCallback = (statusCode: number, responseSize: number) => void;
+
+/**
+ * 事件监听器类型定义
+ */
 type ErrorEventListener = (error: ServerError) => void;
 type ServerEventListener = (event: ServerEvent) => void;
 ```
@@ -556,13 +559,17 @@ interface ServerError {
 
 ```
 
-❓如果是使用过程中有什么问题，欢迎提 [issues](https://github.com/iHongRen/WebServer/issues)
+
+
+如果是使用过程中有什么问题，欢迎提 [issues](https://github.com/iHongRen/WebServer/issues)
+
+
 
 # 作者
 
 [@仙银](https://github.com/iHongRen)
 
-鸿蒙开源作品，欢迎持续关注 [🌟Star](https://github.com/iHongRen/RefreshList) ，[💖赞助](https://ihongren.github.io/donate.html)
+鸿蒙开源作品，欢迎持续关注 [🌟Star](https://github.com/iHongRen/WebServer) ，[💖赞助](https://ihongren.github.io/donate.html)
 
 1、[hpack](https://github.com/iHongRen/hpack) - 鸿蒙 HarmonyOS 一键打包上传分发测试工具。
 
