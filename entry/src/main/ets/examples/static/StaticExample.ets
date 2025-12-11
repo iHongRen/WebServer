@@ -128,11 +128,10 @@ export class StaticExample {
     <meta charset="utf-8" />
     <link rel="stylesheet" href="/css/style.css">
 </head>
+<script src="/js/app.js"></script>
 <body>
     <h1>静态文件服务器演示</h1>
     <p>这是一个静态HTML文件示例</p>
-    <img src="/images/logo.png" alt="Logo" style="max-width: 200px;">
-    <script src="/js/app.js"></script>
 </body>
 </html>`);
 
