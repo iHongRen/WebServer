@@ -74,7 +74,7 @@ export class TLSServer extends HttpServer {
     if (this.tlsServer) {
       try {
         this.clients.forEach(async (client, _) => {
-          await client.close();
+          client.close();
         })
         this.clients.clear();
         this.tlsServer.off('connect');

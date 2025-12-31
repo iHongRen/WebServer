@@ -50,7 +50,6 @@ struct Index {
     .hideBackButton(true)
     .mode(NavigationMode.Stack)
     .title('WebServer Demo')
-
   }
 
   pushToName(item: string[]) {

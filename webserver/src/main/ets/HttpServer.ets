@@ -290,9 +290,9 @@ export class HttpServer {
     try {
       this.tcpServer = socket.constructTCPSocketServerInstance();
 
-      // 尝试监听端口
       const ip = this.getLocalIP()
       try {
+        // 尝试监听端口
         await this.tcpServer.listen({ address: ip, port: port });
       } catch (listenError) {
         this.eventEmitter.emitError(listenError, ServerErrorType.LISTEN_ERROR);
@@ -328,7 +328,7 @@ export class HttpServer {
     if (this.tcpServer) {
       try {
         this.clients.forEach(async (client, _) => {
-          await client.close();
+          client.close();
         })
         this.clients.clear();
         this.tcpServer.off('connect');
