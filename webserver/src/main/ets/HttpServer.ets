@@ -284,16 +284,18 @@ export class HttpServer {
   /**
    * 启动服务器
    * @param port 监听端口
+   * @param address 地址
    * @returns 服务器信息
    */
-  public async startServer(port: number): Promise<socket.NetAddress> {
+  public async startServer(port: number, address: string = ''): Promise<socket.NetAddress> {
     try {
       this.tcpServer = socket.constructTCPSocketServerInstance();
-
-      const ip = this.getLocalIP()
       try {
         // 尝试监听端口
-        await this.tcpServer.listen({ address: ip, port: port });
+        await this.tcpServer.listen({
+          address: address || this.getLocalIP(),
+          port: port
+        });
       } catch (listenError) {
         this.eventEmitter.emitError(listenError, ServerErrorType.LISTEN_ERROR);
         return { address: '', port: 0 };

@@ -276,7 +276,7 @@ Web服务器主类，提供HTTP服务器功能。
 
 #### 服务器控制方法
 
-- `startServer(port: number): Promise<socket.NetAddress>` - 启动服务器
+- `startServer(port: number, address: string = ''): Promise<socket.NetAddress>` - 启动服务器, 默认使用本机IP
 - `stopServer(): Promise<void>` - 停止服务器
 
 #### 事件监听方法
@@ -305,7 +305,7 @@ HTTPS服务器类，继承自HttpServer，提供TLS加密的HTTP服务。
 #### 主要方法
 
 - 继承HttpServer的所有方法
-- `startServer(port: number): Promise<socket.NetAddress>` - 启动HTTPS服务器
+- `startServer(port: number, address: string = ''): Promise<socket.NetAddress>` - 启动HTTPS服务器，默认使用本机IP
 - `stopServer(): Promise<void>` - 停止HTTPS服务器
 
 ------
@@ -548,6 +548,7 @@ interface ServerError {
   type: ServerErrorType; // 错误类型
   error: any; // 错误对象
 }
+
 
 ```
 

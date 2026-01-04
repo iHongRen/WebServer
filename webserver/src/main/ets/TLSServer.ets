@@ -29,11 +29,12 @@ export class TLSServer extends HttpServer {
   }
 
   /**
-   * 启动HTTPS服务器
+   * 启动服务器
    * @param port 监听端口
+   * @param address 地址
    * @returns 服务器信息
    */
-  public async startServer(port: number): Promise<socket.NetAddress> {
+  public async startServer(port: number, address: string = ''): Promise<socket.NetAddress> {
     try {
       // 创建TLS服务器实例
       this.tlsServer = socket.constructTLSSocketServerInstance();
@@ -41,7 +42,7 @@ export class TLSServer extends HttpServer {
       // 配置TLS选项
       const tlsConnectOptions: socket.TLSConnectOptions = {
         address: {
-          address: this.getLocalIP(),
+          address: address || this.getLocalIP(),
           port: port
         },
         secureOptions: this.tlsOptions
