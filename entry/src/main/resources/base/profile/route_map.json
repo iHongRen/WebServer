@@ -71,6 +71,14 @@
       "data": {
         "description": "page"
       }
+    },
+    {
+      "name": "StreamPage",
+      "pageSourceFile": "src/main/ets/examples/stream/StreamPage.ets",
+      "buildFunction": "streamBuilder",
+      "data": {
+        "description": "page"
+      }
     }
   ]
 }

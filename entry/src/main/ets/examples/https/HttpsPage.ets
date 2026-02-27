@@ -138,6 +138,7 @@ struct HttpsPage {
 
             // 停止按钮
             Button('停止HTTPS服务器')
+              .type(ButtonType.Capsule)
               .width('80%')
               .height(50)
               .backgroundColor(Color.Red)
@@ -184,6 +185,7 @@ struct HttpsPage {
 
             // 启动按钮
             Button('启动HTTPS服务器')
+              .type(ButtonType.Capsule)
               .enabled(this.port > 0)
               .width('80%')
               .height(50)
