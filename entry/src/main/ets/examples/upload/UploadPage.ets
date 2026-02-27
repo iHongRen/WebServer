@@ -19,7 +19,7 @@ struct UploadPage {
   @State title: string = '分片上传示例'
   @State uploadExample: UploadExample = new UploadExample();
   @State serverInfo: socket.NetAddress | null = null;
-  @State port: number = 8085;
+  @State port: number = 8088;
   @State errorMessage: string = '';
   @State successMessage: string = '';
 

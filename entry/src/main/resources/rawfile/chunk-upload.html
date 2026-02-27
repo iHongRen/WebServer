@@ -328,7 +328,7 @@
             <div class="config-section">
                 <div class="config-row">
                     <label>服务器地址:</label>
-                    <input type="text" id="serverUrl" value="http://192.168.2.38:8085" placeholder="http://localhost:8085" />
+                    <input type="text" id="serverUrl" value="http://192.168.2.38:8088" placeholder="http://localhost:8088" />
                 </div>
                 <div class="config-row">
                     <label>分片大小:</label>
@@ -396,7 +396,7 @@
                     this.isPaused = false
                     this.isUploading = false
                     this.concurrency = 3
-                    this.serverUrl = 'http://192.168.2.38:8085'
+                    this.serverUrl = 'http://192.168.2.38:8088'
                     this.startTime = 0
                     this.uploadedSize = 0
 
@@ -507,7 +507,7 @@
                     // 简化版哈希计算：使用文件名、大小和修改时间
                     const str = `${file.name}_${file.size}_${file.lastModified}`
 
-                    // 检查是否支持 crypto.subtle API（兼容部分浏览器的 webkitSubtle）
+                    // 检查是否支持 crypto.subtle API（兼容部分浏览器的 webkitSubtle）, 需要https环境
                     const subtle = (window.crypto && (window.crypto.subtle || window.crypto.webkitSubtle)) || null
                     if (subtle && typeof subtle.digest === 'function') {
                         try {
