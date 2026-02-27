@@ -57,9 +57,8 @@ struct StreamUploadPage {
               Button(this.isRunning ? '停止服务器' : '启动服务器')
                 .type(ButtonType.Capsule)
                 .width(120)
-                .type(ButtonType.Normal)
                 .borderRadius(8)
-                .backgroundColor(this.isRunning ? Color.Blue : Color.Red)
+                .backgroundColor(this.isRunning ? Color.Red : Color.Blue)
                 .onClick(async () => {
                   if (this.isRunning) {
                     await this.stopServer();
