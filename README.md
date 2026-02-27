@@ -4,6 +4,8 @@
 
 这是一个基于 HarmonyOS 的轻量级Web服务器框架，提供了类似 Express.js 的 API 设计，支持路由、中间件、静态文件服务等功能。
 
+**🎉 本组件荣获[HarmonyOS组件开发征集活动](https://developer.huawei.com/consumer/cn/forum/topic/0204206012800831358?fid=0102767778349500527) 质量奖第一名**
+
 ## 特性
 
 - 类 Express.js 的 API 设计
