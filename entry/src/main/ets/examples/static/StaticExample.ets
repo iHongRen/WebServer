@@ -8,7 +8,7 @@
 import { fileIo } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
 import {
-  HttpServer, HttpRequest, HttpResponse,
+  HttpServer, HttpRequest, HttpResponse, NextFunction,
 } from '@cxy/webserver';
 import { util } from '@kit.ArkTS';
 import { socket } from '@kit.NetworkKit';
@@ -22,21 +22,6 @@ interface FileItem {
   isDirectory: boolean,
   size: number,
   mtime: string
-}
-
-/**
- * 文件访问记录接口
- */
-interface FileAccessRecord {
-  id: number;
-  filePath: string;
-  fileSize: number;
-  mimeType: string;
-  clientIP: string;
-  userAgent: string;
-  timestamp: Date;
-  responseTime: number;
-  statusCode: number;
 }
 
 /**
@@ -86,12 +71,12 @@ export class StaticExample {
 
     const info = await this.server?.startServer(port);
     if (info) {
-      console.log('✅ 服务器启动成功!');
-      console.log(`🌐 访问地址: http://${info.address}:${info.port}`);
+      console.log('服务器启动成功!');
+      console.log(`访问地址: http://${info.address}:${info.port}`);
       this.printApiEndpoints(info);
       return info;
     } else {
-      console.error('❌ 启动服务器失败:');
+      console.error('启动服务器失败:');
       return null;
     }
   }
@@ -218,10 +203,17 @@ Created: ${new Date().toISOString()}`);
     this.server.cors();
     this.server.auto();
 
+
     // 配置静态文件服务
     this.server.serveStatic(this.staticRoot, {
       maxAge: 0, //不缓存
     });
+
+    this.server.use((req: HttpRequest, res: HttpResponse, next: NextFunction) => {
+      res.setHeader('Cache-Control', 'no-cache');
+      next(); // 继续执行后续中间件
+    });
+
   }
 
 
