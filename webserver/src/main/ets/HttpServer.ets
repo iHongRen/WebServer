@@ -361,8 +361,16 @@ export class HttpServer {
       return false; // 头部不完整
     }
 
-    // 解析Content-Length
     const headerStr = bufferStr.substring(0, headerEndIndex);
+    
+    // 检查是否使用分块传输编码
+    const transferEncodingMatch = headerStr.match(/Transfer-Encoding:\s*chunked/i);
+    if (transferEncodingMatch) {
+      // 分块传输：检查是否收到结束标记 "0\r\n\r\n"
+      return bufferStr.endsWith('0\r\n\r\n');
+    }
+
+    // 解析Content-Length
     const contentLengthMatch = headerStr.match(/Content-Length:\s*(\d+)/i);
     const contentLength = contentLengthMatch ? parseInt(contentLengthMatch[1]) : 0;
 

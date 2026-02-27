@@ -74,6 +74,13 @@ export class HttpRequest {
    */
   public parseBody(): void {
     const contentType = this.headers.get('content-type');
+    const transferEncoding = this.headers.get('transfer-encoding');
+    
+    // 如果是分块传输，先解码分块数据
+    if (transferEncoding && transferEncoding.toLowerCase().includes('chunked')) {
+      this.rawBody = this.decodeChunkedBody(this.rawBody);
+    }
+    
     if (contentType && this.rawBody.byteLength > 0) {
       if (contentType.includes('application/json')) {
         try {
@@ -105,6 +112,47 @@ export class HttpRequest {
         this.body = this.rawBody
       }
     }
+  }
+
+  /**
+   * 解码分块传输编码的请求体
+   * @param chunkedBody 分块编码的数据
+   * @returns 解码后的完整数据
+   */
+  private decodeChunkedBody(chunkedBody: ArrayBuffer): ArrayBuffer {
+    const bodyStr = Utils.arrayBufferToStr(chunkedBody);
+    const chunks: string[] = [];
+    let offset = 0;
+
+    while (offset < bodyStr.length) {
+      // 查找块大小行的结束位置
+      const crlfIndex = bodyStr.indexOf('\r\n', offset);
+      if (crlfIndex === -1) {
+        break;
+      }
+
+      // 解析块大小（十六进制）
+      const chunkSizeStr = bodyStr.substring(offset, crlfIndex);
+      const chunkSize = parseInt(chunkSizeStr, 16);
+
+      // 如果块大小为0，表示传输结束
+      if (chunkSize === 0) {
+        break;
+      }
+
+      // 提取块数据
+      const chunkStart = crlfIndex + 2; // 跳过 \r\n
+      const chunkEnd = chunkStart + chunkSize;
+      const chunk = bodyStr.substring(chunkStart, chunkEnd);
+      chunks.push(chunk);
+
+      // 移动到下一个块（跳过块数据后的 \r\n）
+      offset = chunkEnd + 2;
+    }
+
+    // 合并所有块
+    const decodedBody = chunks.join('');
+    return Utils.strToArrayBuffer(decodedBody);
   }
 
   /**
