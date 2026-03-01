@@ -7,200 +7,203 @@
 
 import { common } from '@kit.AbilityKit';
 import { HttpsExample } from './HttpsExample';
-import { socket } from '@kit.NetworkKit';
 
 @Builder
 function httpsBuilder() {
   HttpsPage()
 }
 
+@Entry
 @Component
 struct HttpsPage {
-  @State title: string = 'HTTPS服务器示例'
-  @State httpsExample: HttpsExample = new HttpsExample();
-  @State serverInfo: socket.NetAddress | null = null;
+  @State title: string = 'HTTPS服务器示例页面'
+  @State serverStatus: string = '未启动';
+  @State serverInfo: string = '';
   @State port: number = 8443;
-  @State errorMessage: string = '';
-  @State successMessage: string = '';
+  @State isRunning: boolean = false;
+  private httpsExample: HttpsExample = new HttpsExample();
 
-  aboutToAppear() {
-    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    this.httpsExample.init(context);
-    this.startServer();
-  }
-
-  aboutToDisappear() {
-    this.stopServer();
-  }
-
-  /**
-   * 启动服务器
-   */
-  async startServer() {
-    this.errorMessage = '';
-    this.successMessage = '';
-
-    const info = await this.httpsExample.start(this.port);
-    if (info) {
-      this.serverInfo = info;
-      this.successMessage = `🟢服务器运行中`;
-    } else {
-      this.errorMessage = '🛑 服务器启动失败';
-    }
-  }
-
-  /**
-   * 停止服务器
-   */
-  async stopServer() {
-    this.errorMessage = '';
-    this.successMessage = '';
-    await this.httpsExample.stop();
-    this.serverInfo = null;
-    this.successMessage = 'HTTPS服务器已停止';
+  aboutToAppear(): void {
+    this.httpsExample.init(getContext(this) as common.UIAbilityContext);
   }
 
   build() {
     NavDestination() {
-      Column({ space: 20 }) {
-        // 消息显示区域
-        if (this.errorMessage) {
-          Text(this.errorMessage)
-            .fontColor(Color.Red)
-            .fontSize(14)
-            .padding(10)
-            .backgroundColor('#ffebee')
-            .borderRadius(8)
-            .width('90%')
-            .textAlign(TextAlign.Center)
-        } else if (this.successMessage) {
-          Text(this.successMessage)
-            .fontColor(Color.Green)
-            .fontSize(14)
-            .padding(10)
-            .backgroundColor('#e8f5e8')
-            .borderRadius(8)
-            .width('90%')
-            .textAlign(TextAlign.Center)
-        }
+      Scroll() {
+        Column({ space: 16 }) {
+          // 服务器控制区域
+          Column({ space: 12 }) {
+            Text('服务器控制')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
 
-        // 服务器运行状态
-        if (this.serverInfo) {
-          Column({ space: 15 }) {
-            // 服务器信息卡片
-            Column({ space: 10 }) {
-              Row() {
-                Text('HTTPS地址:')
-                  .fontWeight(FontWeight.Medium)
-                  .width(80)
-                  .fontSize(14)
-
-                Text(`https://${this.serverInfo.address}:${this.serverInfo.port}`)
-                  .fontColor(Color.Blue)
-                  .fontSize(16)
-                  .layoutWeight(1)
-              }
-              .width('100%')
-              .justifyContent(FlexAlign.Start)
-            }
-            .padding(15)
-            .backgroundColor('#f0f8ff')
-            .borderRadius(10)
-            .width('90%')
-
-            // API端点信息
-            Column({ space: 8 }) {
-              Text('主要API端点:')
-                .fontWeight(FontWeight.Medium)
-                .fontSize(14)
-
-              Column({ space: 4 }) {
-                Text('• GET /api/secure/users - 安全用户列表')
-                  .fontSize(12)
-                  .fontColor(Color.Gray)
-                Text('• POST /api/secure/login - 安全登录')
-                  .fontSize(12)
-                  .fontColor(Color.Gray)
-                Text('• GET /api/ssl/info - SSL证书信息')
-                  .fontSize(12)
-                  .fontColor(Color.Gray)
-                Text('• POST /api/secure/upload - 安全文件上传')
-                  .fontSize(12)
-                  .fontColor(Color.Gray)
-              }
-              .alignItems(HorizontalAlign.Start)
-            }
-            .padding(15)
-            .backgroundColor('#f5f5f5')
-            .borderRadius(10)
-            .width('90%')
-            .alignItems(HorizontalAlign.Start)
-
-            // 停止按钮
-            Button('停止HTTPS服务器')
-              .type(ButtonType.Capsule)
-              .width('80%')
-              .height(50)
-              .backgroundColor(Color.Red)
-              .onClick(() => {
-                this.stopServer();
-              })
-          }
-          .width('100%')
-        }
-
-        // 服务器未运行状态
-        else {
-          Column({ space: 20 }) {
-            // 配置区域
-            Column({ space: 15 }) {
-              Text('HTTPS服务器配置')
-                .fontWeight(FontWeight.Medium)
+            Row({ space: 12 }) {
+              Text('端口:')
                 .fontSize(16)
-
-              // 端口配置
-              Row() {
-                Text('端口号:')
-                  .fontWeight(FontWeight.Medium)
-                  .width(80)
-                TextInput({
-                  text: this.port.toString(),
-                  placeholder: '请输入端口号 (1-65535)'
+              TextInput({ text: this.port.toString() })
+                .width(100)
+                .type(InputType.Number)
+                .enabled(!this.isRunning)
+                .onChange((value: string) => {
+                  const newPort = parseInt(value);
+                  if (!isNaN(newPort) && newPort > 0 && newPort < 65536) {
+                    this.port = newPort;
+                  }
                 })
-                  .type(InputType.Number)
-                  .layoutWeight(1)
-                  .height(40)
-                  .onChange((value) => {
-                    this.port = parseInt(value) || 8443;
-                  })
-              }
-              .width('100%')
-
             }
-            .padding(15)
-            .backgroundColor('#f5f5f5')
-            .borderRadius(10)
-            .width('90%')
-            .alignItems(HorizontalAlign.Start)
 
-            // 启动按钮
-            Button('启动HTTPS服务器')
-              .type(ButtonType.Capsule)
-              .enabled(this.port > 0)
-              .width('80%')
-              .height(50)
-              .backgroundColor(Color.Blue)
-              .onClick(() => {
-                this.startServer();
-              })
+            Row({ space: 12 }) {
+              Button(this.isRunning ? '停止服务器' : '启动服务器')
+                .type(ButtonType.Capsule)
+                .width(120)
+                .borderRadius(8)
+                .backgroundColor(this.isRunning ? Color.Red : Color.Blue)
+                .onClick(async () => {
+                  if (this.isRunning) {
+                    await this.stopServer();
+                  } else {
+                    await this.startServer();
+                  }
+                })
+
+              Text(this.serverStatus)
+                .fontSize(14)
+                .fontColor(this.isRunning ? '#4CAF50' : '#999')
+            }
+
+            if (this.serverInfo) {
+              Text(this.serverInfo)
+                .fontSize(12)
+                .fontColor('#666')
+                .padding(12)
+                .backgroundColor('#F5F5F5')
+                .borderRadius(8)
+                .width('100%')
+            }
           }
           .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
+
+          // 功能说明
+          Column({ space: 12 }) {
+            Text('功能说明')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+
+            Text('本示例展示WebServer框架的HTTPS/TLS安全连接功能，支持SSL/TLS加密通信。')
+              .fontSize(14)
+              .fontColor('#666')
+
+            Divider()
+
+            Text('支持的安全功能：')
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+
+            Column({ space: 8 }) {
+              this.featureItem('🔒', 'TLS加密', 'SSL/TLS安全连接')
+              this.featureItem('📜', '证书管理', '自签名和CA证书支持')
+              this.featureItem('🔐', '安全API', '加密的数据传输')
+              this.featureItem('🛡️', '身份验证', '客户端证书验证')
+              this.featureItem('📋', '证书信息', '查看SSL证书详情')
+            }
+          }
+          .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
+
+          // API端点
+          Column({ space: 12 }) {
+            Text('API端点')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+
+            Column({ space: 8 }) {
+              this.apiItem('GET', '/api/secure/users', '安全用户列表')
+              this.apiItem('POST', '/api/secure/login', '安全登录')
+              this.apiItem('GET', '/api/ssl/info', 'SSL证书信息')
+              this.apiItem('POST', '/api/secure/upload', '安全文件上传')
+              this.apiItem('GET', '/api/secure/data', '加密数据传输')
+            }
+          }
+          .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
+
+          // 测试说明
+          Column({ space: 12 }) {
+            Text('测试方法')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+
+            Text('使用curl命令测试HTTPS服务器：')
+              .fontSize(14)
+              .fontColor('#666')
+
+            Text('# 忽略证书验证（自签名证书）\ncurl -k https://IP:8443/api/ssl/info')
+              .fontSize(12)
+              .fontFamily('monospace')
+              .fontColor('#333')
+              .padding(12)
+              .backgroundColor('#F5F5F5')
+              .borderRadius(8)
+              .width('100%')
+
+            Text('# 指定CA证书\ncurl --cacert ca.crt https://IP:8443/api/secure/users')
+              .fontSize(12)
+              .fontFamily('monospace')
+              .fontColor('#333')
+              .padding(12)
+              .backgroundColor('#F5F5F5')
+              .borderRadius(8)
+              .width('100%')
+
+            Text('详细测试脚本请查看: test-https-api.sh')
+              .fontSize(12)
+              .fontColor('#999')
+          }
+          .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
+
+          // 证书说明
+          Column({ space: 12 }) {
+            Text('证书生成')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+
+            Text('使用提供的脚本生成SSL证书：')
+              .fontSize(14)
+              .fontColor('#666')
+
+            Text('# 生成开发证书\n./scripts/generate-dev-cert.sh')
+              .fontSize(12)
+              .fontFamily('monospace')
+              .fontColor('#333')
+              .padding(12)
+              .backgroundColor('#F5F5F5')
+              .borderRadius(8)
+              .width('100%')
+
+            Text('详细说明请查看: scripts/HTTPS证书生成脚本使用指南.md')
+              .fontSize(12)
+              .fontColor('#999')
+          }
+          .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
         }
+        .padding(16)
       }
-      .width('100%')
-      .height('100%')
-      .padding(20)
-      .justifyContent(FlexAlign.Start)
+      .layoutWeight(1)
+      .backgroundColor('#F5F5F5')
+      .align(Alignment.TopStart)
     }
     .title(this.title)
     .onReady((ctx) => {
@@ -209,5 +212,87 @@ struct HttpsPage {
       }
     })
   }
-}
 
+  @Builder
+  featureItem(icon: string, title: string, description: string) {
+    Row({ space: 12 }) {
+      Text(icon)
+        .fontSize(24)
+
+      Column({ space: 4 }) {
+        Text(title)
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+        Text(description)
+          .fontSize(12)
+          .fontColor('#999')
+      }
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .padding(12)
+    .backgroundColor('#F9F9F9')
+    .borderRadius(8)
+  }
+
+  @Builder
+  apiItem(method: string, path: string, description: string) {
+    Row({ space: 12 }) {
+      Text(method)
+        .fontSize(12)
+        .fontColor(Color.White)
+        .padding({
+          left: 8,
+          right: 8,
+          top: 4,
+          bottom: 4
+        })
+        .backgroundColor(method === 'GET' ? '#4CAF50' : '#2196F3')
+        .borderRadius(4)
+
+      Column({ space: 4 }) {
+        Text(path)
+          .fontSize(13)
+          .fontFamily('monospace')
+          .fontWeight(FontWeight.Medium)
+        Text(description)
+          .fontSize(11)
+          .fontColor('#999')
+      }
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .padding(10)
+    .backgroundColor('#F9F9F9')
+    .borderRadius(8)
+  }
+
+  private async startServer() {
+    try {
+      this.serverStatus = '启动中...';
+      const info = await this.httpsExample.start(this.port);
+      if (info) {
+        this.isRunning = true;
+        this.serverStatus = '运行中';
+        this.serverInfo = `服务器地址: https://${info.address}:${info.port}`;
+      } else {
+        this.serverStatus = '启动失败';
+        this.serverInfo = '无法启动服务器，请检查端口和证书配置';
+      }
+    } catch (error) {
+      this.serverStatus = '启动失败';
+      this.serverInfo = `错误: ${error.message}`;
+    }
+  }
+
+  private async stopServer() {
+    try {
+      await this.httpsExample.stop();
+      this.isRunning = false;
+      this.serverStatus = '已停止';
+      this.serverInfo = '';
+    } catch (error) {
+      this.serverInfo = `停止失败: ${error.message}`;
+    }
+  }
+}

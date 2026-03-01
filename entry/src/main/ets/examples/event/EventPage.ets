@@ -1,198 +1,175 @@
+/**
+ * @fileName : EventPage.ets
+ * @author : @cxy
+ * @date : 2025/10/29
+ * @description : Event示例页面
+ */
+
 import { EventExample } from './EventExample';
-import { socket } from '@kit.NetworkKit';
 
 @Builder
 function eventBuilder() {
   EventPage()
 }
 
+@Entry
 @Component
 struct EventPage {
-  @State title: string = '事件处理示例'
-  @State eventExample: EventExample = new EventExample();
-  @State serverInfo: socket.NetAddress | null = null;
+  @State title: string = 'Event示例页面'
+  @State serverStatus: string = '未启动';
+  @State serverInfo: string = '';
   @State port: number = 8084;
-  @State errorMessage: string = '';
-  @State successMessage: string = '';
-
-  aboutToAppear() {
-    this.startServer();
-  }
-
-  aboutToDisappear() {
-    this.stopServer();
-  }
-
-  /**
-   * 启动服务器
-   */
-  async startServer() {
-    this.errorMessage = '';
-    this.successMessage = '';
-
-    const info = await this.eventExample.start(this.port);
-    if (info) {
-      this.serverInfo = info;
-      this.successMessage = `🟢服务器运行中`;
-    } else {
-      this.errorMessage = '🛑 服务器启动失败';
-    }
-  }
-
-  /**
-   * 停止服务器
-   */
-  async stopServer() {
-    this.errorMessage = '';
-    this.successMessage = '';
-    await this.eventExample.stop();
-    this.serverInfo = null;
-    this.successMessage = '服务器已停止';
-  }
+  @State isRunning: boolean = false;
+  private eventExample: EventExample = new EventExample();
 
   build() {
     NavDestination() {
-      Column() {
-        // 消息显示区域
-        if (this.errorMessage) {
-          Text(this.errorMessage)
-            .fontColor(Color.Red)
-            .fontSize(14)
-            .margin({ bottom: 10 })
-            .padding(10)
-            .backgroundColor('#ffebee')
-            .borderRadius(8)
-            .width('90%')
-            .textAlign(TextAlign.Center)
-        } else if (this.successMessage) {
-          Text(this.successMessage)
-            .fontColor(Color.Green)
-            .fontSize(14)
-            .margin({ bottom: 10 })
-            .padding(10)
-            .backgroundColor('#e8f5e8')
-            .borderRadius(8)
-            .width('90%')
-            .textAlign(TextAlign.Center)
-        }
+      Scroll() {
+        Column({ space: 16 }) {
+          // 服务器控制区域
+          Column({ space: 12 }) {
+            Text('服务器控制')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
 
-        // 服务器状态区域
-        if (this.serverInfo) {
-          Column({ space: 15 }) {
-            // 服务器信息卡片
-            Column({ space: 10 }) {
-              Row() {
-                Text('服务地址:')
-                  .fontWeight(FontWeight.Medium)
-                  .width(80)
-                Text(`http://${this.serverInfo.address}:${this.serverInfo.port}`)
-                  .fontColor(Color.Blue)
-                  .fontSize(16)
-              }
-              .width('100%')
-              .justifyContent(FlexAlign.Start)
-
-            }
-            .padding(15)
-            .backgroundColor('#f0f8ff')
-            .borderRadius(10)
-            .width('90%')
-
-
-            // 事件系统特性
-            Column({ space: 8 }) {
-              Text('事件系统特性')
-                .fontWeight(FontWeight.Bold)
+            Row({ space: 12 }) {
+              Text('端口:')
                 .fontSize(16)
-                .margin({ bottom: 5 })
-
-              Text('✅ 服务器事件监听')
-                .fontSize(12)
-                .fontColor('#666')
-              Text('✅ 错误事件捕获')
-                .fontSize(12)
-                .fontColor('#666')
-            }
-            .alignItems(HorizontalAlign.Start)
-            .padding(15)
-            .backgroundColor('#fff3e0')
-            .borderRadius(10)
-            .width('90%')
-
-            // 停止按钮
-            Button('停止服务器')
-              .type(ButtonType.Capsule)
-              .width('80%')
-              .height(50)
-              .backgroundColor(Color.Red)
-              .onClick(() => {
-                this.stopServer();
-              })
-          }
-          .width('100%')
-
-        } else {
-          // 服务器未运行状态
-          Column({ space: 20 }) {
-            // 配置区域
-            Row() {
-              Text('端口号:')
-                .fontWeight(FontWeight.Medium)
-                .width(80)
-              TextInput({
-                text: this.port.toString(),
-                placeholder: '请输入端口号 (1-65535)'
-              })
+              TextInput({ text: this.port.toString() })
+                .width(100)
                 .type(InputType.Number)
-                .layoutWeight(1)
-                .height(40)
-                .onChange((value) => {
-                  this.port = parseInt(value);
+                .enabled(!this.isRunning)
+                .onChange((value: string) => {
+                  const newPort = parseInt(value);
+                  if (!isNaN(newPort) && newPort > 0 && newPort < 65536) {
+                    this.port = newPort;
+                  }
                 })
             }
-            .padding(15)
-            .backgroundColor('#f5f5f5')
-            .borderRadius(10)
-            .width('90%')
 
-            // 功能说明
-            Column({ space: 8 }) {
-              Text('事件系统特性')
-                .fontWeight(FontWeight.Bold)
-                .fontSize(16)
-                .margin({ bottom: 5 })
+            Row({ space: 12 }) {
+              Button(this.isRunning ? '停止服务器' : '启动服务器')
+                .type(ButtonType.Capsule)
+                .width(120)
+                .borderRadius(8)
+                .backgroundColor(this.isRunning ? Color.Red : Color.Blue)
+                .onClick(async () => {
+                  if (this.isRunning) {
+                    await this.stopServer();
+                  } else {
+                    await this.startServer();
+                  }
+                })
 
-              Text('事件监听和触发')
+              Text(this.serverStatus)
                 .fontSize(14)
-                .fontColor('#666')
-              Text('错误事件捕获')
-                .fontSize(14)
-                .fontColor('#666')
+                .fontColor(this.isRunning ? '#4CAF50' : '#999')
             }
-            .alignItems(HorizontalAlign.Start)
-            .padding(15)
-            .backgroundColor('#e3f2fd')
-            .borderRadius(10)
-            .width('90%')
 
-            // 启动按钮
-            Button('启动服务器')
-              .type(ButtonType.Capsule)
-              .enabled(this.port > 0)
-              .width('80%')
-              .height(50)
-              .backgroundColor(Color.Blue)
-              .onClick(() => {
-                this.startServer();
-              })
+            if (this.serverInfo) {
+              Text(this.serverInfo)
+                .fontSize(12)
+                .fontColor('#666')
+                .padding(12)
+                .backgroundColor('#F5F5F5')
+                .borderRadius(8)
+                .width('100%')
+            }
           }
           .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
+
+          // 功能说明
+          Column({ space: 12 }) {
+            Text('功能说明')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+
+            Text('本示例展示WebServer框架的事件系统功能，支持服务器生命周期事件和错误事件监听。')
+              .fontSize(14)
+              .fontColor('#666')
+
+            Divider()
+
+            Text('支持的事件类型：')
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+
+            Column({ space: 8 }) {
+              this.featureItem('🚀', '服务器启动', 'SERVER_STARTED')
+              this.featureItem('🛑', '服务器停止', 'SERVER_STOPPED')
+              this.featureItem('🔌', '客户端连接', 'CLIENT_CONNECTED')
+              this.featureItem('❌', '客户端断开', 'CLIENT_DISCONNECTED')
+              this.featureItem('⚠️', '错误事件', 'ERROR事件捕获和处理')
+            }
+          }
+          .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
+
+          // API端点
+          Column({ space: 12 }) {
+            Text('API端点')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+
+            Column({ space: 8 }) {
+              this.apiItem('GET', '/', '服务器状态')
+              this.apiItem('GET', '/status', '详细状态信息')
+              this.apiItem('GET', '/error', '触发错误事件')
+              this.apiItem('POST', '/disconnect/:clientId', '断开客户端连接')
+            }
+          }
+          .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
+
+          // 测试说明
+          Column({ space: 12 }) {
+            Text('测试方法')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+
+            Text('使用curl命令测试事件系统：')
+              .fontSize(14)
+              .fontColor('#666')
+
+            Text('# 获取服务器状态\ncurl http://IP:8084/status')
+              .fontSize(12)
+              .fontFamily('monospace')
+              .fontColor('#333')
+              .padding(12)
+              .backgroundColor('#F5F5F5')
+              .borderRadius(8)
+              .width('100%')
+
+            Text('# 触发错误事件\ncurl http://IP:8084/error')
+              .fontSize(12)
+              .fontFamily('monospace')
+              .fontColor('#333')
+              .padding(12)
+              .backgroundColor('#F5F5F5')
+              .borderRadius(8)
+              .width('100%')
+
+            Text('详细测试脚本请查看: test-event-api.sh')
+              .fontSize(12)
+              .fontColor('#999')
+          }
+          .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
         }
+        .padding(16)
       }
-      .width('100%')
-      .height('100%')
-      .padding(20)
-      .justifyContent(FlexAlign.Start)
+      .layoutWeight(1)
+      .backgroundColor('#F5F5F5')
+      .align(Alignment.TopStart)
     }
     .title(this.title)
     .onReady((ctx) => {
@@ -201,5 +178,87 @@ struct EventPage {
       }
     })
   }
-}
 
+  @Builder
+  featureItem(icon: string, title: string, description: string) {
+    Row({ space: 12 }) {
+      Text(icon)
+        .fontSize(24)
+
+      Column({ space: 4 }) {
+        Text(title)
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+        Text(description)
+          .fontSize(12)
+          .fontColor('#999')
+      }
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .padding(12)
+    .backgroundColor('#F9F9F9')
+    .borderRadius(8)
+  }
+
+  @Builder
+  apiItem(method: string, path: string, description: string) {
+    Row({ space: 12 }) {
+      Text(method)
+        .fontSize(12)
+        .fontColor(Color.White)
+        .padding({
+          left: 8,
+          right: 8,
+          top: 4,
+          bottom: 4
+        })
+        .backgroundColor(method === 'GET' ? '#4CAF50' : '#2196F3')
+        .borderRadius(4)
+
+      Column({ space: 4 }) {
+        Text(path)
+          .fontSize(13)
+          .fontFamily('monospace')
+          .fontWeight(FontWeight.Medium)
+        Text(description)
+          .fontSize(11)
+          .fontColor('#999')
+      }
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .padding(10)
+    .backgroundColor('#F9F9F9')
+    .borderRadius(8)
+  }
+
+  private async startServer() {
+    try {
+      this.serverStatus = '启动中...';
+      const info = await this.eventExample.start(this.port);
+      if (info) {
+        this.isRunning = true;
+        this.serverStatus = '运行中';
+        this.serverInfo = `服务器地址: http://${info.address}:${info.port}`;
+      } else {
+        this.serverStatus = '启动失败';
+        this.serverInfo = '无法启动服务器，请检查端口是否被占用';
+      }
+    } catch (error) {
+      this.serverStatus = '启动失败';
+      this.serverInfo = `错误: ${error.message}`;
+    }
+  }
+
+  private async stopServer() {
+    try {
+      await this.eventExample.stop();
+      this.isRunning = false;
+      this.serverStatus = '已停止';
+      this.serverInfo = '';
+    } catch (error) {
+      this.serverInfo = `停止失败: ${error.message}`;
+    }
+  }
+}

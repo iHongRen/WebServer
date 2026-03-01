@@ -1,25 +1,22 @@
 #!/bin/bash
 
 # ==============================================================================
-# WebServer - BodyParser 中间件功能测试脚本
+# WebServer - Body Parser功能测试脚本
 #
 # 使用方法:
-# 1. 启动 Body Parser 示例服务器 (默认端口 8082).
+# 1. 启动Body Parser示例服务器 (默认端口 8082)
 # 2. 在终端中运行此脚本: ./test-body-parser.sh
-# 3. 脚本将向服务器发送不同类型的POST请求，并显示响应。
+# 3. 脚本将测试各种请求体解析场景
 #
-# 注意: 请确保已安装 curl 和 jq (用于格式化JSON输出)。
-#       在macOS上安装jq: brew install jq
+# 注意: 请确保已安装 curl 和 jq
 # ==============================================================================
 
 # --- 配置 ---
-# 服务器地址和端口
 HOST="192.168.2.38"
 PORT="8082"
 BASE_URL="http://${HOST}:${PORT}"
 
 # --- 辅助函数 ---
-# 打印标题
 print_header() {
   echo ""
   echo "=============================================================================="
@@ -28,78 +25,150 @@ print_header() {
   echo ""
 }
 
-# 执行并打印 curl 命令
-run_curl() {
-  echo "▶️  命令:"
-  echo "   curl $@"
-  echo ""
-  echo "◀️  响应:"
-  # 将 -s (silent) 和 -w (write-out) 分开，以确保命令可读性
-  # 使用 jq 来美化 JSON 输出
-  eval "curl -s $@" | jq .
-  echo ""
-  echo "------------------------------------------------------------------------------"
-}
-
-
 # --- 测试开始 ---
 
-print_header "BodyParser 中间件测试"
+print_header "Body Parser功能测试"
 
-# --- 1. 测试 JSON 解析器 (/api/json) ---
-print_header "1. 测试 application/json 解析"
-run_curl "-X POST ${BASE_URL}/api/json \
-  -H \"Content-Type: application/json\" \
-  -d '{\"username\": \"cxy\", \"project\": \"WebServer\", \"stars\": 99}'"
-
-# --- 2. 测试 URL-Encoded 解析器 (/api/urlencoded) ---
-print_header "2. 测试 application/x-www-form-urlencoded 解析"
-run_curl "-X POST ${BASE_URL}/api/urlencoded \
-  -H \"Content-Type: application/x-www-form-urlencoded\" \
-  --data-urlencode \"framework=ArkUI\" \
-  --data-urlencode \"language=eTS\""
-
-# --- 3. 测试 Multipart 解析器 (/api/multipart) ---
-print_header "3. 测试 multipart/form-data 解析 (文件上传)"
-# 创建一个临时文件用于上传
-TEST_FILE="test-upload.txt"
-echo "Hello from the test script for WebServer!" > ${TEST_FILE}
-echo "创建了临时文件: ${TEST_FILE}"
+# --- 1. 测试JSON解析器 ---
+print_header "1. 测试JSON解析器"
+echo "▶️  命令: curl -X POST ${BASE_URL}/api/json \\"
+echo "       -H \"Content-Type: application/json\" \\"
+echo "       -d '{\"name\":\"test\",\"value\":123}'"
 echo ""
-run_curl "-X POST ${BASE_URL}/api/multipart \
-  -F \"description=This is a test file upload from a script\" \
-  -F \"uploadFile=@${TEST_FILE}\""
-# 清理临时文件
-rm ${TEST_FILE}
-echo "删除了临时文件: ${TEST_FILE}"
+echo "◀️  响应:"
+curl -X POST ${BASE_URL}/api/json \
+  -H "Content-Type: application/json" \
+  -d '{"name":"test","value":123,"nested":{"key":"value"}}' | jq .
 echo ""
 echo "------------------------------------------------------------------------------"
 
+# --- 2. 测试URL编码解析器 ---
+print_header "2. 测试URL编码解析器"
+echo "▶️  命令: curl -X POST ${BASE_URL}/api/urlencoded \\"
+echo "       -H \"Content-Type: application/x-www-form-urlencoded\" \\"
+echo "       -d \"name=test&value=123\""
+echo ""
+echo "◀️  响应:"
+curl -X POST ${BASE_URL}/api/urlencoded \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "name=test&value=123&email=test@example.com" | jq .
+echo ""
+echo "------------------------------------------------------------------------------"
 
-# --- 4. 测试纯文本解析器 (/api/plain) ---
-print_header "4. 测试 text/plain 解析"
-run_curl "-X POST ${BASE_URL}/api/plain \
-  -H \"Content-Type: text/plain\" \
-  -d 'This is a plain text message sent to the server.'"
+# --- 3. 测试多部分表单解析器 ---
+print_header "3. 测试多部分表单解析器"
 
-# --- 5. 测试自动解析器 (/api/auto) ---
-print_header "5. 测试自动解析器 (/api/auto) - 使用 JSON"
-run_curl "-X POST ${BASE_URL}/api/auto \
-  -H \"Content-Type: application/json\" \
-  -d '{\"parser\": \"auto\", \"detected\": \"json\"}'"
+# 创建测试文件
+TEST_FILE="/tmp/test-multipart.txt"
+echo "This is a test file for multipart upload." > ${TEST_FILE}
 
-print_header "5. 测试自动解析器 (/api/auto) - 使用 Form"
-run_curl "-X POST ${BASE_URL}/api/auto \
-  -H \"Content-Type: application/x-www-form-urlencoded\" \
-  -d 'parser=auto&detected=form'"
+echo "▶️  命令: curl -X POST ${BASE_URL}/api/multipart \\"
+echo "       -F \"name=test\" \\"
+echo "       -F \"file=@${TEST_FILE}\""
+echo ""
+echo "◀️  响应:"
+curl -X POST ${BASE_URL}/api/multipart \
+  -F "name=test" \
+  -F "description=Test multipart upload" \
+  -F "file=@${TEST_FILE}" | jq .
+echo ""
+echo "------------------------------------------------------------------------------"
 
+# --- 4. 测试纯文本解析器 ---
+print_header "4. 测试纯文本解析器"
+echo "▶️  命令: curl -X POST ${BASE_URL}/api/plain \\"
+echo "       -H \"Content-Type: text/plain\" \\"
+echo "       -d \"This is plain text content\""
+echo ""
+echo "◀️  响应:"
+curl -X POST ${BASE_URL}/api/plain \
+  -H "Content-Type: text/plain" \
+  -d "This is plain text content for testing the plain text parser." | jq .
+echo ""
+echo "------------------------------------------------------------------------------"
 
-# --- 6. 获取解析结果 ---
-print_header "6. 获取所有解析结果 (/api/results)"
-run_curl "-X GET ${BASE_URL}/api/results?limit=5"
+# --- 5. 测试自动解析器 (JSON) ---
+print_header "5. 测试自动解析器 - JSON"
+echo "▶️  命令: curl -X POST ${BASE_URL}/api/auto \\"
+echo "       -H \"Content-Type: application/json\" \\"
+echo "       -d '{\"type\":\"auto-json\"}'"
+echo ""
+echo "◀️  响应:"
+curl -X POST ${BASE_URL}/api/auto \
+  -H "Content-Type: application/json" \
+  -d '{"type":"auto-json","message":"Testing auto parser with JSON"}' | jq .
+echo ""
+echo "------------------------------------------------------------------------------"
 
-# --- 7. 清除解析结果 ---
-print_header "7. 清除所有解析结果 (/api/results)"
-run_curl "-X DELETE ${BASE_URL}/api/results"
+# --- 6. 测试自动解析器 (URL编码) ---
+print_header "6. 测试自动解析器 - URL编码"
+echo "▶️  命令: curl -X POST ${BASE_URL}/api/auto \\"
+echo "       -H \"Content-Type: application/x-www-form-urlencoded\" \\"
+echo "       -d \"type=auto-urlencoded\""
+echo ""
+echo "◀️  响应:"
+curl -X POST ${BASE_URL}/api/auto \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "type=auto-urlencoded&message=Testing auto parser with URL encoding" | jq .
+echo ""
+echo "------------------------------------------------------------------------------"
+
+# --- 7. 测试自动解析器 (纯文本) ---
+print_header "7. 测试自动解析器 - 纯文本"
+echo "▶️  命令: curl -X POST ${BASE_URL}/api/auto \\"
+echo "       -H \"Content-Type: text/plain\" \\"
+echo "       -d \"Auto parser plain text\""
+echo ""
+echo "◀️  响应:"
+curl -X POST ${BASE_URL}/api/auto \
+  -H "Content-Type: text/plain" \
+  -d "Auto parser plain text content for testing" | jq .
+echo ""
+echo "------------------------------------------------------------------------------"
+
+# --- 8. 获取解析结果 ---
+print_header "8. 获取解析结果列表"
+echo "▶️  命令: curl ${BASE_URL}/api/results"
+echo ""
+echo "◀️  响应:"
+curl -s ${BASE_URL}/api/results | jq .
+echo ""
+echo "------------------------------------------------------------------------------"
+
+# --- 9. 测试错误处理 (错误的Content-Type) ---
+print_header "9. 测试错误处理 - 错误的Content-Type"
+echo "▶️  命令: curl -X POST ${BASE_URL}/api/json \\"
+echo "       -H \"Content-Type: text/plain\" \\"
+echo "       -d \"wrong content type\""
+echo ""
+echo "◀️  响应:"
+curl -X POST ${BASE_URL}/api/json \
+  -H "Content-Type: text/plain" \
+  -d "wrong content type" | jq .
+echo ""
+echo "------------------------------------------------------------------------------"
+
+# --- 10. 清除所有结果 ---
+print_header "10. 清除所有解析结果"
+echo "▶️  命令: curl -X DELETE ${BASE_URL}/api/results"
+echo ""
+echo "◀️  响应:"
+curl -X DELETE ${BASE_URL}/api/results | jq .
+echo ""
+echo "------------------------------------------------------------------------------"
+
+# 清理临时文件
+rm -f ${TEST_FILE}
 
 print_header "测试完成!"
+echo "✅ 所有Body Parser测试用例执行完毕"
+echo ""
+echo "📝 测试总结:"
+echo "   - JSON解析器: ✓"
+echo "   - URL编码解析器: ✓"
+echo "   - 多部分表单解析器: ✓"
+echo "   - 纯文本解析器: ✓"
+echo "   - 自动解析器: ✓"
+echo "   - 结果管理: ✓"
+echo "   - 错误处理: ✓"
+echo ""

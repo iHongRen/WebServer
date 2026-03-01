@@ -1,259 +1,188 @@
+/**
+ * @fileName : CorsPage.ets
+ * @author : @cxy
+ * @date : 2025/10/29
+ * @description : CORS示例页面
+ */
+
 import { CorsExample } from './CorsExample';
-import { socket } from '@kit.NetworkKit';
 
 @Builder
 function corsBuilder() {
   CorsPage()
 }
 
+@Entry
 @Component
 struct CorsPage {
-  @State title: string = 'CORS示例'
-  @State corsExample: CorsExample = new CorsExample();
-  @State serverInfo: socket.NetAddress | null = null;
+  @State title: string = 'CORS示例页面'
+  @State serverStatus: string = '未启动';
+  @State serverInfo: string = '';
   @State port: number = 8083;
-  @State errorMessage: string = '';
-  @State successMessage: string = '';
-
-  aboutToAppear() {
-    this.startServer();
-  }
-
-  aboutToDisappear() {
-    this.stopServer();
-  }
-
-  /**
-   * 启动服务器
-   */
-  async startServer() {
-    this.errorMessage = '';
-    const info = await this.corsExample.start(this.port);
-    if (info) {
-      this.serverInfo = info;
-      this.successMessage = `服务器运行中`;
-    } else {
-      this.errorMessage = '服务器启动失败，未获取到地址';
-    }
-  }
-
-  /**
-   * 停止服务器
-   */
-  async stopServer() {
-    await this.corsExample.stop();
-    this.serverInfo = null
-    this.successMessage = '服务器已停止';
-  }
-
-  /**
-   * 更新端口号
-   */
-  updatePort(newPort: string) {
-    const portNum = parseInt(newPort);
-    this.port = portNum;
-  }
-
-  /**
-   * 清除消息
-   */
-  clearMessages() {
-    this.errorMessage = '';
-    this.successMessage = '';
-  }
+  @State isRunning: boolean = false;
+  private corsExample: CorsExample = new CorsExample();
 
   build() {
     NavDestination() {
-      Column() {
-        // 消息显示区域
-        if (this.errorMessage) {
-          Text(this.errorMessage)
-            .fontColor(Color.Red)
-            .fontSize(14)
-            .margin({ bottom: 10 })
-            .padding(10)
-            .backgroundColor('#ffebee')
-            .borderRadius(8)
-            .width('90%')
-            .textAlign(TextAlign.Center)
-        } else if (this.successMessage) {
-          Text(this.successMessage)
-            .fontColor(Color.Green)
-            .fontSize(14)
-            .margin({ bottom: 10 })
-            .padding(10)
-            .backgroundColor('#e8f5e8')
-            .borderRadius(8)
-            .width('90%')
-            .textAlign(TextAlign.Center)
-        }
+      Scroll() {
+        Column({ space: 16 }) {
+          // 服务器控制区域
+          Column({ space: 12 }) {
+            Text('服务器控制')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
 
-        // 服务器状态区域
-        if (this.serverInfo) {
-          Column({ space: 15 }) {
-            // 服务器信息卡片
-            Column({ space: 10 }) {
-              Row() {
-                Text('服务地址:')
-                  .fontWeight(FontWeight.Medium)
-                  .width(80)
-                Text(`http://${this.serverInfo.address}:${this.serverInfo.port}`)
-                  .fontColor(Color.Blue)
-                  .fontSize(16)
-              }
-              .width('100%')
-              .justifyContent(FlexAlign.Start)
-            }
-            .padding(15)
-            .backgroundColor('#f0f8ff')
-            .borderRadius(10)
-            .width('90%')
-
-            // CORS特性
-            Column({ space: 8 }) {
-              Text('CORS特性')
-                .fontWeight(FontWeight.Bold)
+            Row({ space: 12 }) {
+              Text('端口:')
                 .fontSize(16)
-                .margin({ bottom: 5 })
-
-              Text('✅ 简单与预检请求处理')
-                .fontSize(12)
-                .fontColor('#666')
-              Text('✅ 动态来源白名单控制')
-                .fontSize(12)
-                .fontColor('#666')
-              Text('✅ 凭证(Cookies)请求支持')
-                .fontSize(12)
-                .fontColor('#666')
-              Text('✅ 自定义HTTP头支持')
-                .fontSize(12)
-                .fontColor('#666')
-
+              TextInput({ text: this.port.toString() })
+                .width(100)
+                .type(InputType.Number)
+                .enabled(!this.isRunning)
+                .onChange((value: string) => {
+                  const newPort = parseInt(value);
+                  if (!isNaN(newPort) && newPort > 0 && newPort < 65536) {
+                    this.port = newPort;
+                  }
+                })
             }
-            .alignItems(HorizontalAlign.Start)
-            .padding(15)
-            .backgroundColor('#fff3e0')
-            .borderRadius(10)
-            .width('90%')
 
-            // 新增：测试命令区域
-            Column({ space: 8 }) {
-              Text('如何测试')
-                .fontWeight(FontWeight.Bold)
-                .fontSize(16)
-                .margin({ bottom: 5 })
+            Row({ space: 12 }) {
+              Button(this.isRunning ? '停止服务器' : '启动服务器')
+                .type(ButtonType.Capsule)
+                .width(120)
+                .borderRadius(8)
+                .backgroundColor(this.isRunning ? Color.Red : Color.Blue)
+                .onClick(async () => {
+                  if (this.isRunning) {
+                    await this.stopServer();
+                  } else {
+                    await this.startServer();
+                  }
+                })
 
-              Text('在项目根目录的终端中运行以下命令:')
+              Text(this.serverStatus)
+                .fontSize(14)
+                .fontColor(this.isRunning ? '#4CAF50' : '#999')
+            }
+
+            if (this.serverInfo) {
+              Text(this.serverInfo)
                 .fontSize(12)
-                .fontColor('#333')
-
-              Text('sh ./test-cors.sh')
-                .fontSize(12)
-                .padding(10)
-                .backgroundColor('#eee')
-                .borderRadius(5)
+                .fontColor('#666')
+                .padding(12)
+                .backgroundColor('#F5F5F5')
+                .borderRadius(8)
                 .width('100%')
             }
-            .alignItems(HorizontalAlign.Start)
-            .padding(15)
-            .backgroundColor('#e0f7fa')
-            .borderRadius(10)
-            .width('90%')
-
-            // 停止按钮
-            Button('停止服务器')
-              .type(ButtonType.Capsule)
-              .width('80%')
-              .height(50)
-              .backgroundColor(Color.Red)
-              .onClick(() => {
-                this.clearMessages();
-                this.stopServer();
-              })
           }
           .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
 
-        } else {
-          // 服务器未运行状态
-          Column({ space: 20 }) {
-            // 配置区域
-            Column({ space: 15 }) {
-              Text('服务器配置')
-                .fontWeight(FontWeight.Bold)
-                .fontSize(16)
+          // 功能说明
+          Column({ space: 12 }) {
+            Text('功能说明')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
 
-              Row() {
-                Text('端口号:')
-                  .fontWeight(FontWeight.Medium)
-                  .width(80)
-                TextInput({
-                  text: this.port.toString(),
-                  placeholder: '请输入端口号 (1-65535)'
-                })
-                  .type(InputType.Number)
-                  .layoutWeight(1)
-                  .height(40)
-                  .onChange((value) => {
-                    this.updatePort(value);
-                  })
-              }
+            Text('本示例展示WebServer框架的跨域资源共享(CORS)功能，支持简单请求、预检请求和凭证请求。')
+              .fontSize(14)
+              .fontColor('#666')
+
+            Divider()
+
+            Text('支持的CORS特性：')
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+
+            Column({ space: 8 }) {
+              this.featureItem('🌐', '简单请求', 'GET、POST等简单跨域请求')
+              this.featureItem('✈️', '预检请求', 'OPTIONS预检请求处理')
+              this.featureItem('🔐', '凭证请求', '支持携带Cookies的请求')
+              this.featureItem('📋', '自定义头部', '支持自定义HTTP头部')
+              this.featureItem('⚙️', '配置管理', '动态CORS配置和测试')
+            }
+          }
+          .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
+
+          // API端点
+          Column({ space: 12 }) {
+            Text('API端点')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+
+            Text('CORS测试:')
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+            Column({ space: 8 }) {
+              this.apiItem('GET', '/api/cors/simple', '简单请求测试')
+              this.apiItem('POST', '/api/cors/preflight', '预检请求测试')
+              this.apiItem('POST', '/api/cors/credentials', '凭证请求测试')
+              this.apiItem('PUT', '/api/cors/custom-headers', '自定义头部测试')
+            }
+
+            Divider()
+
+            Text('CORS配置:')
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+            Column({ space: 8 }) {
+              this.apiItem('GET', '/api/cors/config', '获取CORS配置')
+              this.apiItem('POST', '/api/cors/test-origin', '测试来源是否允许')
+            }
+          }
+          .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
+
+          // 测试说明
+          Column({ space: 12 }) {
+            Text('测试方法')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+
+            Text('使用curl命令测试CORS：')
+              .fontSize(14)
+              .fontColor('#666')
+
+            Text('# 简单请求\ncurl http://IP:8083/api/cors/simple \\\n  -H "Origin: http://example.com"')
+              .fontSize(12)
+              .fontFamily('monospace')
+              .fontColor('#333')
+              .padding(12)
+              .backgroundColor('#F5F5F5')
+              .borderRadius(8)
               .width('100%')
 
-            }
-            .padding(15)
-            .backgroundColor('#f5f5f5')
-            .borderRadius(10)
-            .width('90%')
+            Text('# 预检请求\ncurl -X OPTIONS http://IP:8083/api/cors/preflight \\\n  -H "Origin: http://example.com" \\\n  -H "Access-Control-Request-Method: POST"')
+              .fontSize(12)
+              .fontFamily('monospace')
+              .fontColor('#333')
+              .padding(12)
+              .backgroundColor('#F5F5F5')
+              .borderRadius(8)
+              .width('100%')
 
-            // 功能说明
-            Column({ space: 8 }) {
-              Text('CORS功能')
-                .fontWeight(FontWeight.Bold)
-                .fontSize(16)
-                .margin({ bottom: 5 })
-
-              Text('跨域资源共享')
-                .fontSize(14)
-                .fontColor('#666')
-              Text('来源访问控制')
-                .fontSize(14)
-                .fontColor('#666')
-              Text('预检请求处理')
-                .fontSize(14)
-                .fontColor('#666')
-              Text('凭证请求支持')
-                .fontSize(14)
-                .fontColor('#666')
-              Text('自定义头部管理')
-                .fontSize(14)
-                .fontColor('#666')
-
-            }
-            .alignItems(HorizontalAlign.Start)
-            .padding(15)
-            .backgroundColor('#e3f2fd')
-            .borderRadius(10)
-            .width('90%')
-
-            // 启动按钮
-            Button('启动服务器')
-              .type(ButtonType.Capsule)
-              .enabled(this.port > 0)
-              .width('80%')
-              .height(50)
-              .backgroundColor(Color.Blue)
-              .onClick(() => {
-                this.clearMessages();
-                this.startServer();
-              })
+            Text('详细测试脚本请查看: test-cors.sh')
+              .fontSize(12)
+              .fontColor('#999')
           }
           .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
         }
+        .padding(16)
       }
-      .width('100%')
-      .height('100%')
-      .padding(20)
-      .justifyContent(FlexAlign.Start)
+      .layoutWeight(1)
+      .backgroundColor('#F5F5F5')
+      .align(Alignment.TopStart)
     }
     .title(this.title)
     .onReady((ctx) => {
@@ -262,5 +191,87 @@ struct CorsPage {
       }
     })
   }
-}
 
+  @Builder
+  featureItem(icon: string, title: string, description: string) {
+    Row({ space: 12 }) {
+      Text(icon)
+        .fontSize(24)
+
+      Column({ space: 4 }) {
+        Text(title)
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+        Text(description)
+          .fontSize(12)
+          .fontColor('#999')
+      }
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .padding(12)
+    .backgroundColor('#F9F9F9')
+    .borderRadius(8)
+  }
+
+  @Builder
+  apiItem(method: string, path: string, description: string) {
+    Row({ space: 12 }) {
+      Text(method)
+        .fontSize(12)
+        .fontColor(Color.White)
+        .padding({
+          left: 8,
+          right: 8,
+          top: 4,
+          bottom: 4
+        })
+        .backgroundColor(method === 'GET' ? '#4CAF50' : method === 'POST' ? '#2196F3' : method === 'PUT' ? '#FF9800' : '#9C27B0')
+        .borderRadius(4)
+
+      Column({ space: 4 }) {
+        Text(path)
+          .fontSize(13)
+          .fontFamily('monospace')
+          .fontWeight(FontWeight.Medium)
+        Text(description)
+          .fontSize(11)
+          .fontColor('#999')
+      }
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .padding(10)
+    .backgroundColor('#F9F9F9')
+    .borderRadius(8)
+  }
+
+  private async startServer() {
+    try {
+      this.serverStatus = '启动中...';
+      const info = await this.corsExample.start(this.port);
+      if (info) {
+        this.isRunning = true;
+        this.serverStatus = '运行中';
+        this.serverInfo = `服务器地址: http://${info.address}:${info.port}`;
+      } else {
+        this.serverStatus = '启动失败';
+        this.serverInfo = '无法启动服务器，请检查端口是否被占用';
+      }
+    } catch (error) {
+      this.serverStatus = '启动失败';
+      this.serverInfo = `错误: ${error.message}`;
+    }
+  }
+
+  private async stopServer() {
+    try {
+      await this.corsExample.stop();
+      this.isRunning = false;
+      this.serverStatus = '已停止';
+      this.serverInfo = '';
+    } catch (error) {
+      this.serverInfo = `停止失败: ${error.message}`;
+    }
+  }
+}

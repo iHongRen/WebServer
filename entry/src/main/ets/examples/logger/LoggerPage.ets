@@ -1,257 +1,193 @@
+/**
+ * @fileName : LoggerPage.ets
+ * @author : @cxy
+ * @date : 2025/10/29
+ * @description : Logger示例页面
+ */
+
 import { common } from '@kit.AbilityKit';
 import { LoggerExample } from './LoggerExample';
-import { socket } from '@kit.NetworkKit';
 
 @Builder
 function loggerBuilder() {
   LoggerPage()
 }
 
+@Entry
 @Component
 struct LoggerPage {
-  @State title: string = 'Logger示例'
-  @State loggerExample: LoggerExample = new LoggerExample()
-  @State serverInfo: socket.NetAddress | null = null;
+  @State title: string = 'Logger示例页面'
+  @State serverStatus: string = '未启动';
+  @State serverInfo: string = '';
   @State port: number = 8085;
-  @State errorMessage: string = '';
-  @State successMessage: string = '';
+  @State isRunning: boolean = false;
+  private loggerExample: LoggerExample = new LoggerExample();
 
-  aboutToAppear() {
-    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    this.loggerExample.init(context)
-    this.startServer();
-  }
-
-  aboutToDisappear() {
-    this.stopServer();
-  }
-
-  /**
-   * 启动服务器
-   */
-  async startServer() {
-    this.errorMessage = '';
-    this.successMessage = '';
-
-    const info = await this.loggerExample.start(this.port);
-    if (info) {
-      this.serverInfo = info;
-      this.successMessage = `🟢服务器运行中`;
-    } else {
-      this.errorMessage = '🛑 服务器启动失败';
-    }
-  }
-
-  /**
-   * 停止服务器
-   */
-  async stopServer() {
-    this.errorMessage = '';
-    this.successMessage = '';
-    await this.loggerExample.stop();
-    this.serverInfo = null;
-    this.successMessage = '服务器已停止';
+  aboutToAppear(): void {
+    this.loggerExample.init(getContext(this) as common.UIAbilityContext);
   }
 
   build() {
     NavDestination() {
-      Column() {
-        // 消息显示区域
-        if (this.errorMessage) {
-          Text(this.errorMessage)
-            .fontColor(Color.Red)
-            .fontSize(14)
-            .margin({ bottom: 10 })
-            .padding(10)
-            .backgroundColor('#ffebee')
-            .borderRadius(8)
-            .width('90%')
-            .textAlign(TextAlign.Center)
-        } else if (this.successMessage) {
-          Text(this.successMessage)
-            .fontColor(Color.Green)
-            .fontSize(14)
-            .margin({ bottom: 10 })
-            .padding(10)
-            .backgroundColor('#e8f5e8')
-            .borderRadius(8)
-            .width('90%')
-            .textAlign(TextAlign.Center)
-        }
+      Scroll() {
+        Column({ space: 16 }) {
+          // 服务器控制区域
+          Column({ space: 12 }) {
+            Text('服务器控制')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
 
-        // 服务器状态区域
-        if (this.serverInfo) {
-          Column({ space: 15 }) {
-            // 服务器信息卡片
-            Column({ space: 10 }) {
-              Row() {
-                Text('服务地址:')
-                  .fontWeight(FontWeight.Medium)
-                  .width(80)
-                Text(`http://${this.serverInfo.address}:${this.serverInfo.port}`)
-                  .fontColor(Color.Blue)
-                  .fontSize(16)
-              }
-              .width('100%')
-              .justifyContent(FlexAlign.Start)
-
-              Row() {
-                Text('日志格式:')
-                  .fontWeight(FontWeight.Medium)
-                  .width(80)
-                Text(this.loggerExample.logFormat.toUpperCase())
-                  .fontSize(14)
-                  .fontColor(Color.Green)
-              }
-              .width('100%')
-              .justifyContent(FlexAlign.Start)
-
-              Row() {
-                Text('日志级别:')
-                  .fontWeight(FontWeight.Medium)
-                  .width(80)
-                Text(this.loggerExample.logLevel.toUpperCase())
-                  .fontSize(14)
-                  .fontColor(Color.Orange)
-              }
-              .width('100%')
-              .justifyContent(FlexAlign.Start)
-            }
-            .padding(15)
-            .backgroundColor('#f0f8ff')
-            .borderRadius(10)
-            .width('90%')
-
-            // 日志统计
-            Column({ space: 10 }) {
-              Text('📊 日志统计')
-                .fontWeight(FontWeight.Bold)
+            Row({ space: 12 }) {
+              Text('端口:')
                 .fontSize(16)
-                .margin({ bottom: 5 })
-
-              Row() {
-                Text('日志条数:')
-                  .fontWeight(FontWeight.Medium)
-                  .width(80)
-                Text(this.loggerExample.logRecords.length.toString())
-                  .fontSize(16)
-                  .fontColor(Color.Blue)
-              }
-              .width('100%')
-              .justifyContent(FlexAlign.Start)
-            }
-            .padding(15)
-            .backgroundColor('#f0fff0')
-            .borderRadius(10)
-            .width('90%')
-
-            // 日志特性
-            Column({ space: 8 }) {
-              Text('Logger特性')
-                .fontWeight(FontWeight.Bold)
-                .fontSize(16)
-                .margin({ bottom: 5 })
-
-              Text('✅ 多格式日志记录')
-                .fontSize(12)
-                .fontColor('#666')
-              Text('✅ 日志级别控制')
-                .fontSize(12)
-                .fontColor('#666')
-              Text('✅ 文件日志存储')
-                .fontSize(12)
-                .fontColor('#666')
-            }
-            .alignItems(HorizontalAlign.Start)
-            .padding(15)
-            .backgroundColor('#fff3e0')
-            .borderRadius(10)
-            .width('90%')
-
-            // 停止按钮
-            Button('停止服务器')
-              .type(ButtonType.Capsule)
-              .width('80%')
-              .height(50)
-              .backgroundColor(Color.Red)
-              .onClick(() => {
-                this.stopServer();
-              })
-          }
-          .width('100%')
-
-        } else {
-          // 服务器未运行状态
-          Column({ space: 20 }) {
-            // 配置区域
-            Column({ space: 15 }) {
-              Text('Logger服务器配置')
-                .fontWeight(FontWeight.Bold)
-                .fontSize(16)
-
-              Row() {
-                Text('端口号:')
-                  .fontWeight(FontWeight.Medium)
-                  .width(80)
-                TextInput({
-                  text: this.port.toString(),
-                  placeholder: '请输入端口号 (1-65535)'
+              TextInput({ text: this.port.toString() })
+                .width(100)
+                .type(InputType.Number)
+                .enabled(!this.isRunning)
+                .onChange((value: string) => {
+                  const newPort = parseInt(value);
+                  if (!isNaN(newPort) && newPort > 0 && newPort < 65536) {
+                    this.port = newPort;
+                  }
                 })
-                  .type(InputType.Number)
-                  .layoutWeight(1)
-                  .height(40)
-                  .onChange((value) => {
-                    this.port = parseInt(value)
-                  })
-              }
-              .width('100%')
             }
-            .padding(15)
-            .backgroundColor('#f5f5f5')
-            .borderRadius(10)
-            .width('90%')
 
-            // 功能说明
-            Column({ space: 8 }) {
-              Text('Logger功能')
-                .fontWeight(FontWeight.Bold)
-                .fontSize(16)
-                .margin({ bottom: 5 })
+            Row({ space: 12 }) {
+              Button(this.isRunning ? '停止服务器' : '启动服务器')
+                .type(ButtonType.Capsule)
+                .width(120)
+                .borderRadius(8)
+                .backgroundColor(this.isRunning ? Color.Red : Color.Blue)
+                .onClick(async () => {
+                  if (this.isRunning) {
+                    await this.stopServer();
+                  } else {
+                    await this.startServer();
+                  }
+                })
 
-              Text('多格式日志记录')
+              Text(this.serverStatus)
                 .fontSize(14)
-                .fontColor('#666')
-              Text('日志级别过滤')
-                .fontSize(14)
-                .fontColor('#666')
-              Text('文件日志存储')
-                .fontSize(14)
-                .fontColor('#666')
+                .fontColor(this.isRunning ? '#4CAF50' : '#999')
             }
-            .alignItems(HorizontalAlign.Start)
-            .padding(15)
-            .backgroundColor('#e3f2fd')
-            .borderRadius(10)
-            .width('90%')
 
-            // 启动按钮
-            Button('启动服务器')
-              .type(ButtonType.Capsule)
-              .enabled(this.port > 0)
-              .width('80%')
-              .height(50)
-              .backgroundColor(Color.Blue)
-              .onClick(() => {
-                this.startServer();
-              })
+            if (this.serverInfo) {
+              Text(this.serverInfo)
+                .fontSize(12)
+                .fontColor('#666')
+                .padding(12)
+                .backgroundColor('#F5F5F5')
+                .borderRadius(8)
+                .width('100%')
+            }
           }
           .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
+
+          // 功能说明
+          Column({ space: 12 }) {
+            Text('功能说明')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+
+            Text('本示例展示WebServer框架的日志记录功能，支持多种日志格式和级别控制。')
+              .fontSize(14)
+              .fontColor('#666')
+
+            Divider()
+
+            Text('支持的日志功能：')
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+
+            Column({ space: 8 }) {
+              this.featureItem('📝', '多格式日志', 'dev, combined, common, short, tiny')
+              this.featureItem('🎚️', '日志级别', 'debug, info, warn, error')
+              this.featureItem('💾', '文件存储', '自动保存到文件系统')
+              this.featureItem('📊', '日志统计', '按级别、方法、状态码统计')
+              this.featureItem('⏱️', '响应时间', '记录每个请求的响应时间')
+            }
+          }
+          .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
+
+          // API端点
+          Column({ space: 12 }) {
+            Text('API端点')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+
+            Text('日志查询:')
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+            Column({ space: 8 }) {
+              this.apiItem('GET', '/api/logs', '获取日志记录')
+              this.apiItem('GET', '/api/logs/stats', '获取日志统计')
+              this.apiItem('DELETE', '/api/logs', '清除日志记录')
+            }
+
+            Divider()
+
+            Text('日志测试:')
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+            Column({ space: 8 }) {
+              this.apiItem('POST', '/api/logs/test/:level', '测试日志级别')
+              this.apiItem('GET', '/api/test/slow', '慢请求测试')
+              this.apiItem('GET', '/api/test/error/:code', '错误请求测试')
+            }
+          }
+          .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
+
+          // 测试说明
+          Column({ space: 12 }) {
+            Text('测试方法')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+
+            Text('使用curl命令测试日志功能：')
+              .fontSize(14)
+              .fontColor('#666')
+
+            Text('# 获取日志记录\ncurl http://IP:8085/api/logs')
+              .fontSize(12)
+              .fontFamily('monospace')
+              .fontColor('#333')
+              .padding(12)
+              .backgroundColor('#F5F5F5')
+              .borderRadius(8)
+              .width('100%')
+
+            Text('# 测试错误日志\ncurl -X POST http://IP:8085/api/logs/test/error \\\n  -H "Content-Type: application/json" \\\n  -d \'{"message":"Test error"}\'')
+              .fontSize(12)
+              .fontFamily('monospace')
+              .fontColor('#333')
+              .padding(12)
+              .backgroundColor('#F5F5F5')
+              .borderRadius(8)
+              .width('100%')
+
+            Text('详细测试脚本请查看: test-logger-api.sh')
+              .fontSize(12)
+              .fontColor('#999')
+          }
+          .width('100%')
+          .padding(16)
+          .backgroundColor(Color.White)
+          .borderRadius(12)
         }
+        .padding(16)
       }
-      .width('100%')
-      .height('100%')
-      .padding(20)
-      .justifyContent(FlexAlign.Start)
+      .layoutWeight(1)
+      .backgroundColor('#F5F5F5')
+      .align(Alignment.TopStart)
     }
     .title(this.title)
     .onReady((ctx) => {
@@ -260,5 +196,87 @@ struct LoggerPage {
       }
     })
   }
-}
 
+  @Builder
+  featureItem(icon: string, title: string, description: string) {
+    Row({ space: 12 }) {
+      Text(icon)
+        .fontSize(24)
+
+      Column({ space: 4 }) {
+        Text(title)
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+        Text(description)
+          .fontSize(12)
+          .fontColor('#999')
+      }
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .padding(12)
+    .backgroundColor('#F9F9F9')
+    .borderRadius(8)
+  }
+
+  @Builder
+  apiItem(method: string, path: string, description: string) {
+    Row({ space: 12 }) {
+      Text(method)
+        .fontSize(12)
+        .fontColor(Color.White)
+        .padding({
+          left: 8,
+          right: 8,
+          top: 4,
+          bottom: 4
+        })
+        .backgroundColor(method === 'GET' ? '#4CAF50' : method === 'POST' ? '#2196F3' : '#F44336')
+        .borderRadius(4)
+
+      Column({ space: 4 }) {
+        Text(path)
+          .fontSize(13)
+          .fontFamily('monospace')
+          .fontWeight(FontWeight.Medium)
+        Text(description)
+          .fontSize(11)
+          .fontColor('#999')
+      }
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .padding(10)
+    .backgroundColor('#F9F9F9')
+    .borderRadius(8)
+  }
+
+  private async startServer() {
+    try {
+      this.serverStatus = '启动中...';
+      const info = await this.loggerExample.start(this.port);
+      if (info) {
+        this.isRunning = true;
+        this.serverStatus = '运行中';
+        this.serverInfo = `服务器地址: http://${info.address}:${info.port}`;
+      } else {
+        this.serverStatus = '启动失败';
+        this.serverInfo = '无法启动服务器，请检查端口是否被占用';
+      }
+    } catch (error) {
+      this.serverStatus = '启动失败';
+      this.serverInfo = `错误: ${error.message}`;
+    }
+  }
+
+  private async stopServer() {
+    try {
+      await this.loggerExample.stop();
+      this.isRunning = false;
+      this.serverStatus = '已停止';
+      this.serverInfo = '';
+    } catch (error) {
+      this.serverInfo = `停止失败: ${error.message}`;
+    }
+  }
+}
