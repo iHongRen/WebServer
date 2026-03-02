@@ -233,10 +233,10 @@ await this.server.stopServer();
 
 <table>
 <tr>
-<td style="vertical-align: top; text-align: center;">
+<td valign="top" align="center">
 <img src="https://7up.pics/images/2026/03/02/webserver-demo.jpg" alt="webserver demo" border="0">
 </td>
-<td style="vertical-align: top; text-align: center;">
+<td valign="top" align="center">
 <img src="https://7up.pics/images/2026/03/02/http.jpg" alt="http" border="0">
 </td>
 </tr>
