@@ -328,7 +328,7 @@
             <div class="config-section">
                 <div class="config-row">
                     <label>服务器地址:</label>
-                    <input type="text" id="serverUrl" value="http://192.168.2.38:8088" placeholder="http://localhost:8088" />
+                    <input type="text" id="serverUrl" placeholder="自动检测当前服务器地址" />
                 </div>
                 <div class="config-row">
                     <label>分片大小:</label>
@@ -396,12 +396,14 @@
                     this.isPaused = false
                     this.isUploading = false
                     this.concurrency = 3
-                    this.serverUrl = 'http://192.168.2.38:8088'
+                    // 自动使用当前页面的服务器地址
+                    this.serverUrl = `${window.location.protocol}//${window.location.hostname}:${window.location.port}`
                     this.startTime = 0
                     this.uploadedSize = 0
 
                     this.initElements()
                     this.bindEvents()
+                    this.initServerUrl()
                 }
 
                 initElements() {
@@ -419,6 +421,12 @@
                     this.serverUrlInput = document.getElementById('serverUrl')
                     this.chunkSizeInput = document.getElementById('chunkSize')
                     this.concurrencyInput = document.getElementById('concurrency')
+                }
+
+                initServerUrl() {
+                    // 设置服务器地址输入框的值为当前服务器地址
+                    this.serverUrlInput.value = this.serverUrl
+                    this.log('info', `服务器地址: ${this.serverUrl}`)
                 }
 
                 bindEvents() {
