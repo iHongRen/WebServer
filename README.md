@@ -233,7 +233,7 @@ await this.server.stopServer();
 
 | demo示例列表 | http示例 |
 |:--- |:--- |
-| <img src="https://7up.pics/images/2026/03/02/webserver-demo.jpg" alt="webserver demo" border="0" style="vertical-align: top;"> | <img src="https://7up.pics/images/2026/03/02/http.jpg" alt="http" border="0" style="vertical-align: top;"> |
+| <img src="https://7up.pics/images/2026/03/02/webserver-demo.jpg" alt="webserver demo" border="0" style="vertical-align:top"> | <img src="https://7up.pics/images/2026/03/02/http.jpg" alt="http" border="0" style="vertical-align:top"> |
 
 **浏览器访问：http://192.168.xx.xx:8080**
 
