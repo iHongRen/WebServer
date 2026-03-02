@@ -231,9 +231,7 @@ await this.server.stopServer();
 
 ## 运行 [demo](https://github.com/iHongRen/WebServer)
 
-|                           未开启服务                            |                             已开启服务                             |
-|:----------------------------------------------------------:|:-------------------------------------------------------------:|
-| <img src="https://7up.pics/images/2025/11/16/stop.jpeg" /> | <img src="https://7up.pics/images/2025/11/16/started.jpeg" /> |
+<img src="https://7up.pics/images/2026/03/02/http.jpg" alt="http" border="0">
 
 **浏览器访问：http://192.168.xx.xx:8080**
 
