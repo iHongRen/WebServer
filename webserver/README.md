@@ -4,6 +4,8 @@
 
 这是一个基于 HarmonyOS 的轻量级Web服务器框架，提供了类似 Express.js 的 API 设计，支持路由、中间件、静态文件服务等功能。
 
+**🎉 本组件荣获[HarmonyOS组件开发征集活动](https://developer.huawei.com/consumer/cn/forum/topic/0204206012800831358?fid=0102767778349500527) 质量奖第一名**
+
 ## 特性
 
 - 类 Express.js 的 API 设计
@@ -12,6 +14,8 @@
 - CORS 跨域支持
 - 静态文件服务
 - 文件上传支持
+- 流式传输支持（响应流和请求流）
+- 分块传输编码（Transfer-Encoding: chunked）
 - 缓存控制
 - 错误处理
 - 中间件系统
@@ -32,6 +36,7 @@ ohpm install @cxy/webserver
   }
 }
 ```
+
 
 ## 快速开始
 
@@ -226,9 +231,16 @@ await this.server.stopServer();
 
 ## 运行 [demo](https://github.com/iHongRen/WebServer)
 
-|                         未开启服务                         |                          已开启服务                          |
-| :--------------------------------------------------------: | :----------------------------------------------------------: |
-| <img src="https://7up.pics/images/2025/11/16/stop.jpeg" /> | <img src="https://7up.pics/images/2025/11/16/started.jpeg" /> |
+<table>
+<tr>
+<td style="vertical-align: top; text-align: center;">
+<img src="https://7up.pics/images/2026/03/02/webserver-demo.jpg" alt="webserver demo" border="0">
+</td>
+<td style="vertical-align: top; text-align: center;">
+<img src="https://7up.pics/images/2026/03/02/http.jpg" alt="http" border="0">
+</td>
+</tr>
+</table>
 
 **浏览器访问：http://192.168.xx.xx:8080**
 
@@ -239,13 +251,26 @@ await this.server.stopServer();
 查看 [examples/](https://github.com/iHongRen/WebServer/tree/main/entry/src/main/ets/examples) 目录获取更多示例：
 
 - **HTTP服务器** - 完整的RESTful API和文件管理
+
 - **HTTPS服务器** - SSL/TLS加密通信
+
 - **Body Parser** - 各种请求体解析
+
 - **CORS** - 跨域资源共享
+
 - **Event** - 事件系统使用
+
 - **Logger** - 日志记录
+
 - **Router** - 路由系统
+
 - **Static** - 静态文件服务
+
+- **Upload** - 分片上传最佳实践
+
+- **Stream** - 流式传输（服务器响应流）
+
+- **Stream Upload** - 流式上传（客户端请求流，支持Transfer-Encoding: chunked）
 
 # WebServer API [文档](https://github.com/iHongRen/WebServer)
 
@@ -322,15 +347,15 @@ HTTP请求解析类，包含请求的所有信息。
 - `version: string` - HTTP版本
 - `ip: string` - 客户端IP地址
 - `headers: Map<string, string>` - 请求头集合
-- `body: ESObject` - 解析后的请求体数据
+- `body: ESObject` - 解析后的请求体数据（自动解码分块传输）
 - `query: Map<string, string>` - 查询字符串参数
 - `params: Record<string, string>` - 路由参数
 - `files: Record<string, File>` - 上传的文件
 
 #### 主要方法
 
-- `parseBody(): void` - 解析请求体数据
-- `getRawBody(): ArrayBuffer` - 获取原始请求体数据
+- `parseBody(): void` - 解析请求体数据（自动处理分块传输编码）
+- `getRawBody(): ArrayBuffer` - 获取原始请求体数据（已解码分块）
 - `get(headerName: string): string | undefined` - 获取请求头
 - `is(type: string): boolean` - 检查Content-Type
 
@@ -339,6 +364,35 @@ HTTP请求解析类，包含请求的所有信息。
 - `get userAgent(): string` - 获取User-Agent
 - `get referer(): string` - 获取Referer
 - `get contentLength(): number` - 获取Content-Length
+
+#### 流式上传支持
+
+框架自动支持客户端使用 `Transfer-Encoding: chunked` 的流式上传：
+
+```typescript
+// 服务器端自动处理分块传输
+server.post('/upload', (req, res) => {
+  // 检查是否使用了分块传输
+  const isChunked = req.get('transfer-encoding')?.includes('chunked');
+  
+  // 获取解码后的完整数据（框架自动解码分块）
+  const data = req.body;
+  const rawData = req.getRawBody();
+  
+  res.json({ 
+    success: true, 
+    isChunked: isChunked,
+    size: rawData.byteLength 
+  });
+});
+```
+
+客户端使用curl测试：
+```bash
+curl -X POST http://IP:8087/upload \
+  -H "Transfer-Encoding: chunked" \
+  --data-binary @file.txt
+```
 
 ------
 
@@ -351,11 +405,32 @@ HTTP响应构建类，用于构建和发送响应。
 - `status(code: number): HttpResponse` - 设置HTTP状态码（支持链式调用）
 - `setHeader(name: string, value: string): HttpResponse` - 设置响应头（支持链式调用）
 - `getHeader(name: string): string | undefined` - 获取响应头
-- `send(body?: string | ArrayBuffer): Promise<void>` - 发送响应数据
+- `removeHeader(name: string): HttpResponse` - 移除响应头（支持链式调用）
+- `send(body?: string | ArrayBuffer): Promise<void>` - 发送响应数据（一次性发送）
 - `json(data: ESObject): Promise<void>` - 发送JSON响应
+- `write(chunk: string | ArrayBuffer, encoding?: string): Promise<boolean>` - 写入数据块（流式传输）
+- `end(chunk?: string | ArrayBuffer, encoding?: string): Promise<void>` - 结束响应（流式传输）
 - `isHeadersSent(): boolean` - 检查响应头是否已发送
+- `isFinished(): boolean` - 检查响应是否已完成
 - `getStatusCode(): number` - 获取当前状态码
 - `onFinish(callback: ResponseFinishCallback): void` - 添加响应完成回调
+
+#### 流式传输示例
+
+```typescript
+// 流式发送数据
+server.get('/stream', async (req, res) => {
+  res.setHeader('Content-Type', 'text/plain');
+  res.setHeader('Transfer-Encoding', 'chunked');
+  
+  for (let i = 1; i <= 10; i++) {
+    await res.write(`数据块 ${i}\n`);
+    await sleep(500); // 模拟延迟
+  }
+  
+  await res.end('传输完成\n');
+});
+```
 
 ------
 
@@ -548,7 +623,6 @@ interface ServerError {
   type: ServerErrorType; // 错误类型
   error: any; // 错误对象
 }
-
 
 ```
 
