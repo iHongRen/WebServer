@@ -336,19 +336,19 @@ export class HttpsExample {
   private printHttpsFeatures(info: socket.NetAddress): void {
     const baseUrl = `https://${info.address}:${info.port}`;
 
-    console.log('\n� H用TTPS安全特性演示端点:');
+    console.log('\n🔒 HTTPS安全特性演示端点:');
     console.log('='.repeat(70));
 
     // HTTPS核心特性
-    console.log('� SSL/TLS加密特性:');
+    console.log('🔐 SSL/TLS加密特性:');
     console.log(`   GET  ${baseUrl}/                           - HTTPS安全首页`);
     console.log(`   GET  ${baseUrl}/api/ssl/info               - SSL证书和加密信息`);
     console.log(`   GET  ${baseUrl}/api/security/headers       - 安全头部展示`);
 
     // 安全数据传输
     console.log('\n📡 加密数据传输演示:');
-    console.log(`   GET  ${baseUrl}/api/secure/token           - 安全Token获取`);
-    console.log(`   GET  ${baseUrl}/api/secure/verify/secure_daffsfsfdsfdsa   - Token安全验证`);
+    console.log(`   GET  ${baseUrl}/api/secure/token           - 安全Token获取 (需要认证)`);
+    console.log(`   GET  ${baseUrl}/api/secure/verify/:token   - Token安全验证`);
 
     console.log('\n🛡️ HTTPS安全特性:');
     console.log('   ✅ SSL/TLS端到端加密');
@@ -361,6 +361,6 @@ export class HttpsExample {
     console.log('='.repeat(70));
     console.log('⚠️  开发证书提示: 浏览器会显示安全警告，点击"高级"→"继续访问"');
     console.log('🔧 测试脚本: ./test-https-api.sh');
-    console.log('� 证 书生成: ./scripts/generate-dev-cert.sh');
+    console.log('📜 证书生成: ./scripts/generate-dev-cert.sh');
   }
 }

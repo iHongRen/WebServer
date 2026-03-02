@@ -121,12 +121,23 @@ struct HttpsPage {
               .fontSize(18)
               .fontWeight(FontWeight.Bold)
 
+            Text('SSL/TLS加密特性:')
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
             Column({ space: 8 }) {
-              this.apiItem('GET', '/api/secure/users', '安全用户列表')
-              this.apiItem('POST', '/api/secure/login', '安全登录')
-              this.apiItem('GET', '/api/ssl/info', 'SSL证书信息')
-              this.apiItem('POST', '/api/secure/upload', '安全文件上传')
-              this.apiItem('GET', '/api/secure/data', '加密数据传输')
+              this.apiItem('GET', '/', 'HTTPS安全首页')
+              this.apiItem('GET', '/api/ssl/info', 'SSL证书和加密信息')
+              this.apiItem('GET', '/api/security/headers', '安全头部展示')
+            }
+
+            Divider()
+
+            Text('加密数据传输:')
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+            Column({ space: 8 }) {
+              this.apiItem('GET', '/api/secure/token', '安全Token获取')
+              this.apiItem('GET', '/api/secure/verify/:token', 'Token安全验证')
             }
           }
           .width('100%')
@@ -153,7 +164,7 @@ struct HttpsPage {
               .borderRadius(8)
               .width('100%')
 
-            Text('# 指定CA证书\ncurl --cacert ca.crt https://IP:8443/api/secure/users')
+            Text('# 获取安全Token（需要认证）\ncurl -k -H "Authorization: Basic ZGVtbzpzZWN1cmU=" \\\n  https://IP:8443/api/secure/token')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')
