@@ -6,16 +6,21 @@
  */
 import { Utils } from "./Utils";
 import { socket } from '@kit.NetworkKit';
+import { UploadedFile } from "./middleware/fileUpload";
 
 /**
- * 上传文件接口定义
+ * 上传文件接口定义（基础）
  */
 export interface File {
   fieldName: string; // 表单字段名
   fileName: string; // 文件名
   contentType: string; // 文件类型
   data: ArrayBuffer; // 文件数据
+  name?: string; // 兼容 UploadedFile
+  size?: number; // 兼容 UploadedFile
+  mimetype?: string; // 兼容 UploadedFile
 }
+
 
 /**
  * HTTP请求类
@@ -31,7 +36,7 @@ export class HttpRequest {
   public body: ESObject = {}; // 解析后的请求体数据
   public query: Map<string, string> = new Map(); // 查询字符串参数
   public params: Record<string, string> = {}; // 路由参数
-  public files: Record<string, File> = {}; // 上传的文件
+  public files: Record<string, File | UploadedFile> = {}; // 上传的文件（支持两种类型）
   private rawBody: ArrayBuffer = new ArrayBuffer(0); // 原始请求体数据
 
   /**
@@ -75,12 +80,12 @@ export class HttpRequest {
   public parseBody(): void {
     const contentType = this.headers.get('content-type');
     const transferEncoding = this.headers.get('transfer-encoding');
-    
+
     // 如果是分块传输，先解码分块数据
     if (transferEncoding && transferEncoding.toLowerCase().includes('chunked')) {
       this.rawBody = this.decodeChunkedBody(this.rawBody);
     }
-    
+
     if (contentType && this.rawBody.byteLength > 0) {
       if (contentType.includes('application/json')) {
         try {
@@ -112,6 +117,33 @@ export class HttpRequest {
         this.body = this.rawBody
       }
     }
+  }
+
+  /**
+   * 获取原始请求体数据
+   * @returns 原始ArrayBuffer数据
+   */
+  public getRawBody(): ArrayBuffer {
+    return this.rawBody;
+  }
+
+  /**
+   * 获取请求头
+   * @param headerName 请求头名称
+   * @returns 请求头值
+   */
+  public get(headerName: string): string | undefined {
+    return this.headers.get(headerName.toLowerCase());
+  }
+
+  /**
+   * 检查是否为指定的Content-Type
+   * @param type 要检查的内容类型
+   * @returns 是否匹配
+   */
+  public is(type: string): boolean {
+    const contentType = this.get('content-type');
+    return contentType ? contentType.includes(type) : false;
   }
 
   /**
@@ -153,33 +185,6 @@ export class HttpRequest {
     // 合并所有块
     const decodedBody = chunks.join('');
     return Utils.strToArrayBuffer(decodedBody);
-  }
-
-  /**
-   * 获取原始请求体数据
-   * @returns 原始ArrayBuffer数据
-   */
-  public getRawBody(): ArrayBuffer {
-    return this.rawBody;
-  }
-
-  /**
-   * 获取请求头
-   * @param headerName 请求头名称
-   * @returns 请求头值
-   */
-  public get(headerName: string): string | undefined {
-    return this.headers.get(headerName.toLowerCase());
-  }
-
-  /**
-   * 检查是否为指定的Content-Type
-   * @param type 要检查的内容类型
-   * @returns 是否匹配
-   */
-  public is(type: string): boolean {
-    const contentType = this.get('content-type');
-    return contentType ? contentType.includes(type) : false;
   }
 
   /**

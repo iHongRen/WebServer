@@ -4,7 +4,7 @@ export { TLSServer } from './src/main/ets/TLSServer'
 
 export { CertManager } from './src/main/ets/CertManager'
 
-export { HttpRequest } from './src/main/ets/HttpRequest'
+export { HttpRequest, File } from './src/main/ets/HttpRequest'
 
 export { HttpResponse } from './src/main/ets/HttpResponse'
 

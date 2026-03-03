@@ -4,7 +4,7 @@
 # WebServer - Body Parser功能测试脚本
 #
 # 使用方法:
-# 1. 启动Body Parser示例服务器 (默认端口 8082)
+# 1. 启动Body Parser示例服务器 (默认端口 8080)
 # 2. 在终端中运行此脚本: ./test-body-parser.sh
 # 3. 脚本将测试各种请求体解析场景
 #
@@ -13,7 +13,7 @@
 
 # --- 配置 ---
 HOST="192.168.2.38"
-PORT="8082"
+PORT="8080"
 BASE_URL="http://${HOST}:${PORT}"
 
 # --- 辅助函数 ---

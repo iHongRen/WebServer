@@ -19,7 +19,7 @@ struct StreamPage {
   @State title: string = '流式传输示例页面'
   @State serverStatus: string = '未启动';
   @State serverInfo: string = '';
-  @State port: number = 8089;
+  @State port: number = 8080;
   @State isRunning: boolean = false;
   private streamExample: StreamExample = new StreamExample();
 
@@ -146,7 +146,7 @@ struct StreamPage {
               .fontSize(14)
               .fontColor('#666')
 
-            Text('# 流式文本\ncurl http://IP:8089/api/stream/text')
+            Text('# 流式文本\ncurl http://IP:8080/api/stream/text')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')
@@ -155,7 +155,7 @@ struct StreamPage {
               .borderRadius(8)
               .width('100%')
 
-            Text('# Server-Sent Events\ncurl http://IP:8089/api/stream/events')
+            Text('# Server-Sent Events\ncurl http://IP:8080/api/stream/events')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')

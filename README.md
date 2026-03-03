@@ -389,7 +389,7 @@ server.post('/upload', (req, res) => {
 
 客户端使用curl测试：
 ```bash
-curl -X POST http://IP:8087/upload \
+curl -X POST http://IP:8080/upload \
   -H "Transfer-Encoding: chunked" \
   --data-binary @file.txt
 ```

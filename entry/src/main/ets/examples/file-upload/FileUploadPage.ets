@@ -1,37 +1,98 @@
 /**
- * @fileName : StreamUploadPage.ets
+ * @fileName : FileUploadPage.ets
  * @author : @cxy
- * @date : 2025/12/31
- * @description : 流式上传示例页面
+ * @date : 2025/3/3
+ * @description : 文件上传示例页面
  */
 
-import { StreamUploadExample } from './StreamUploadExample';
-import { router } from '@kit.ArkUI';
+import { FileUploadExample } from './FileUploadExample';
+import { socket } from '@kit.NetworkKit';
 import { common } from '@kit.AbilityKit';
 
 @Builder
-function streamUploadBuilder() {
-  StreamUploadPage()
+function fileUploadBuilder() {
+  FileUploadPage()
 }
 
 @Entry
 @Component
-struct StreamUploadPage {
-  @State title: string = '流式上传示例页面'
+struct FileUploadPage {
+  @State title: string = '文件上传示例页面'
   @State serverStatus: string = '未启动';
   @State serverInfo: string = '';
-  @State port: number = 8087;
+  @State port: number = 8080;
   @State isRunning: boolean = false;
-  private streamUploadExample: StreamUploadExample = new StreamUploadExample();
+  private example: FileUploadExample = new FileUploadExample();
+  private serverAddress: socket.NetAddress | null = null;
 
-  aboutToAppear(): void {
-    this.streamUploadExample.init(getContext(this) as common.UIAbilityContext);
+  aboutToAppear() {
+    this.example.init(this.getUIContext().getHostContext() as common.UIAbilityContext);
+  }
+
+  async aboutToDisappear() {
+    if (this.isRunning) {
+      await this.stopServer();
+    }
+  }
+
+  @Builder
+  featureItem(icon: string, title: string, description: string) {
+    Row({ space: 12 }) {
+      Text(icon)
+        .fontSize(24)
+
+      Column({ space: 4 }) {
+        Text(title)
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+        Text(description)
+          .fontSize(12)
+          .fontColor('#999')
+      }
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .padding(12)
+    .backgroundColor('#F9F9F9')
+    .borderRadius(8)
+  }
+
+  @Builder
+  apiItem(method: string, path: string, description: string) {
+    Row({ space: 12 }) {
+      Text(method)
+        .fontSize(12)
+        .fontColor(Color.White)
+        .padding({
+          left: 8,
+          right: 8,
+          top: 4,
+          bottom: 4
+        })
+        .backgroundColor(method === 'GET' ? '#4CAF50' : method === 'POST' ? '#2196F3' : '#F44336')
+        .borderRadius(4)
+
+      Column({ space: 4 }) {
+        Text(path)
+          .fontSize(13)
+          .fontFamily('monospace')
+          .fontWeight(FontWeight.Medium)
+        Text(description)
+          .fontSize(11)
+          .fontColor('#999')
+      }
+      .alignItems(HorizontalAlign.Start)
+    }
+    .width('100%')
+    .padding(10)
+    .backgroundColor('#F9F9F9')
+    .borderRadius(8)
   }
 
   build() {
     NavDestination() {
       Scroll() {
-        Column({ space: 16 }) {
+        Column({ space: 20 }) {
           // 服务器控制区域
           Column({ space: 12 }) {
             Text('服务器控制')
@@ -89,26 +150,18 @@ struct StreamUploadPage {
 
           // 功能说明
           Column({ space: 12 }) {
-            Text('功能说明')
+            Text('功能特性')
               .fontSize(18)
               .fontWeight(FontWeight.Bold)
 
-            Text('本示例展示如何接收客户端使用 Transfer-Encoding: chunked 的流式上传数据。')
-              .fontSize(14)
-              .fontColor('#666')
-
-            Divider()
-
-            Text('支持的上传类型：')
-              .fontSize(16)
-              .fontWeight(FontWeight.Medium)
-
             Column({ space: 8 }) {
-              this.featureItem('📝', '流式文本上传', '接收分块传输的文本数据')
-              this.featureItem('📊', '流式JSON上传', '接收分块传输的JSON数据')
-              this.featureItem('📁', '流式文件上传', '接收并保存流式上传的文件')
-              this.featureItem('📦', '大文件上传', '支持大文件的流式上传')
-              this.featureItem('📋', '文件列表', '查看已上传的文件')
+              this.featureItem('📄', '基本上传', 'multipart/form-data 支持')
+              this.featureItem('🌊', '流式处理', '文件使用流方式写入')
+              this.featureItem('📁', '多文件', '一次可上传多个文件')
+              this.featureItem('🔒', '安全文件名', '自动清理名字避免注入')
+              this.featureItem('📏', '大小/数量限制', '可配置最大值')
+              this.featureItem('🗃️', '临时文件管理', '自动清理临时缓存')
+              this.featureItem('🔀', 'mv() 移动方法', '方便移动到目标目录')
             }
           }
           .width('100%')
@@ -123,11 +176,12 @@ struct StreamUploadPage {
               .fontWeight(FontWeight.Bold)
 
             Column({ space: 8 }) {
-              this.apiItem('POST', '/api/upload/stream-text', '流式文本上传')
-              this.apiItem('POST', '/api/upload/stream-json', '流式JSON上传')
-              this.apiItem('POST', '/api/upload/stream-file', '流式文件上传')
-              this.apiItem('POST', '/api/upload/stream-large', '大文件流式上传')
-              this.apiItem('GET', '/api/upload/files', '获取文件列表')
+              this.apiItem('POST', '/api/upload/basic', '基本上传')
+              this.apiItem('POST', '/api/upload/stream', '流式上传')
+              this.apiItem('POST', '/api/upload/multiple', '多文件')
+              this.apiItem('POST', '/api/upload/safe', '安全文件名')
+              this.apiItem('POST', '/api/upload/limited', '限制大小')
+              this.apiItem('GET', '/api/upload/files', '文件列表')
             }
           }
           .width('100%')
@@ -135,17 +189,19 @@ struct StreamUploadPage {
           .backgroundColor(Color.White)
           .borderRadius(12)
 
-          // 测试说明
+
+          // 测试方法
           Column({ space: 12 }) {
             Text('测试方法')
               .fontSize(18)
               .fontWeight(FontWeight.Bold)
 
-            Text('使用curl命令测试流式上传：')
+            Text('使用 curl 命令测试常见接口：')
               .fontSize(14)
               .fontColor('#666')
 
-            Text('# 流式文本上传\ncurl -X POST http://IP:8087/api/upload/stream-text \\\n  -H "Transfer-Encoding: chunked" \\\n  -d "Hello, Streaming!"')
+            Text('# 基本上传\ncurl -X POST http://IP:8080/api/upload/basic \
+  -F "uploadFile=@/path/to/file.txt"')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')
@@ -154,7 +210,9 @@ struct StreamUploadPage {
               .borderRadius(8)
               .width('100%')
 
-            Text('# 流式JSON上传\ncurl -X POST http://IP:8087/api/upload/stream-json \\\n  -H "Transfer-Encoding: chunked" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"name":"test","data":"value"}\'')
+            Text('# 流式上传\ncurl -X POST http://IP:8080/api/upload/stream \
+  -H "Transfer-Encoding: chunked" \
+  --data-binary @largefile.bin')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')
@@ -163,20 +221,24 @@ struct StreamUploadPage {
               .borderRadius(8)
               .width('100%')
 
-            Text('详细测试脚本请查看: test-stream-upload.sh')
-              .fontSize(12)
-              .fontColor('#999')
+            if (this.isRunning && this.serverAddress) {
+              Text(`浏览器访问: http://${this.serverAddress.address}:${this.serverAddress.port}/file-upload.html`)
+                .fontSize(12)
+                .fontColor('#2196F3')
+            }
           }
           .width('100%')
           .padding(16)
           .backgroundColor(Color.White)
           .borderRadius(12)
         }
-        .padding(16)
+        .width('100%')
+        .padding(20)
       }
       .layoutWeight(1)
       .backgroundColor('#F5F5F5')
       .align(Alignment.TopStart)
+
     }
     .title(this.title)
     .onReady((ctx) => {
@@ -184,70 +246,21 @@ struct StreamUploadPage {
         this.title = ctx.pathInfo.param as string;
       }
     })
-  }
 
-  @Builder
-  featureItem(icon: string, title: string, description: string) {
-    Row({ space: 12 }) {
-      Text(icon)
-        .fontSize(24)
-
-      Column({ space: 4 }) {
-        Text(title)
-          .fontSize(14)
-          .fontWeight(FontWeight.Medium)
-        Text(description)
-          .fontSize(12)
-          .fontColor('#999')
-      }
-      .alignItems(HorizontalAlign.Start)
-    }
-    .width('100%')
-    .padding(12)
-    .backgroundColor('#F9F9F9')
-    .borderRadius(8)
-  }
-
-  @Builder
-  apiItem(method: string, path: string, description: string) {
-    Row({ space: 12 }) {
-      Text(method)
-        .fontSize(12)
-        .fontColor(Color.White)
-        .padding({
-          left: 8,
-          right: 8,
-          top: 4,
-          bottom: 4
-        })
-        .backgroundColor(method === 'GET' ? '#4CAF50' : '#2196F3')
-        .borderRadius(4)
-
-      Column({ space: 4 }) {
-        Text(path)
-          .fontSize(13)
-          .fontFamily('monospace')
-          .fontWeight(FontWeight.Medium)
-        Text(description)
-          .fontSize(11)
-          .fontColor('#999')
-      }
-      .alignItems(HorizontalAlign.Start)
-    }
-    .width('100%')
-    .padding(10)
-    .backgroundColor('#F9F9F9')
-    .borderRadius(8)
   }
 
   private async startServer() {
     try {
       this.serverStatus = '启动中...';
-      const info = await this.streamUploadExample.start(this.port);
+      const info = await this.example.start(this.port);
       if (info) {
         this.isRunning = true;
         this.serverStatus = '运行中';
         this.serverInfo = `服务器地址: http://${info.address}:${info.port}`;
+        if (info.address && info.port) {
+          this.serverInfo += `\nWeb界面: http://${info.address}:${info.port}/upload.html`;
+        }
+        this.serverAddress = info;
       } else {
         this.serverStatus = '启动失败';
         this.serverInfo = '无法启动服务器，请检查端口是否被占用';
@@ -260,13 +273,13 @@ struct StreamUploadPage {
 
   private async stopServer() {
     try {
-      await this.streamUploadExample.stop();
+      await this.example.stop();
       this.isRunning = false;
       this.serverStatus = '已停止';
       this.serverInfo = '';
+      this.serverAddress = null;
     } catch (error) {
       this.serverInfo = `停止失败: ${error.message}`;
     }
   }
 }
-

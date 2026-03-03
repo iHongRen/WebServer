@@ -18,7 +18,7 @@ struct CorsPage {
   @State title: string = 'CORS示例页面'
   @State serverStatus: string = '未启动';
   @State serverInfo: string = '';
-  @State port: number = 8083;
+  @State port: number = 8080;
   @State isRunning: boolean = false;
   private corsExample: CorsExample = new CorsExample();
 
@@ -151,7 +151,7 @@ struct CorsPage {
               .fontSize(14)
               .fontColor('#666')
 
-            Text('# 简单请求\ncurl http://IP:8083/api/cors/simple \\\n  -H "Origin: http://example.com"')
+            Text('# 简单请求\ncurl http://IP:8080/api/cors/simple \\\n  -H "Origin: http://example.com"')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')
@@ -160,7 +160,7 @@ struct CorsPage {
               .borderRadius(8)
               .width('100%')
 
-            Text('# 预检请求\ncurl -X OPTIONS http://IP:8083/api/cors/preflight \\\n  -H "Origin: http://example.com" \\\n  -H "Access-Control-Request-Method: POST"')
+            Text('# 预检请求\ncurl -X OPTIONS http://IP:8080/api/cors/preflight \\\n  -H "Origin: http://example.com" \\\n  -H "Access-Control-Request-Method: POST"')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')

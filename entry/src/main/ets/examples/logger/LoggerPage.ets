@@ -19,7 +19,7 @@ struct LoggerPage {
   @State title: string = 'Logger示例页面'
   @State serverStatus: string = '未启动';
   @State serverInfo: string = '';
-  @State port: number = 8085;
+  @State port: number = 8080;
   @State isRunning: boolean = false;
   private loggerExample: LoggerExample = new LoggerExample();
 
@@ -156,7 +156,7 @@ struct LoggerPage {
               .fontSize(14)
               .fontColor('#666')
 
-            Text('# 获取日志记录\ncurl http://IP:8085/api/logs')
+            Text('# 获取日志记录\ncurl http://IP:8080/api/logs')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')
@@ -165,7 +165,7 @@ struct LoggerPage {
               .borderRadius(8)
               .width('100%')
 
-            Text('# 测试错误日志\ncurl -X POST http://IP:8085/api/logs/test/error \\\n  -H "Content-Type: application/json" \\\n  -d \'{"message":"Test error"}\'')
+            Text('# 测试错误日志\ncurl -X POST http://IP:8080/api/logs/test/error \\\n  -H "Content-Type: application/json" \\\n  -d \'{"message":"Test error"}\'')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')

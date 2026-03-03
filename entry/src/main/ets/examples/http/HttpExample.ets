@@ -8,7 +8,7 @@
 import { fileIo } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
 import {
-  HttpServer, ErrorHandler, ServerEventType, HttpRequest, HttpResponse,
+  HttpServer, ErrorHandler, ServerEventType, HttpRequest, HttpResponse, File,
 } from '@cxy/webserver';
 import { socket } from '@kit.NetworkKit';
 
@@ -333,15 +333,17 @@ export class HttpExample {
           });
         }
 
+        const uploadedFileObj = uploadedFile as File;
+
         // 生成唯一文件名
         const timestamp = Date.now();
-        const fileName = `${timestamp}_${uploadedFile.fileName}`;
+        const fileName = `${timestamp}_${uploadedFileObj.fileName}`;
         const filePath = `${this.context?.filesDir}/${fileName}`;
 
         // 保存文件
         const file = await fileIo.open(filePath,
           fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);
-        await fileIo.write(file.fd, uploadedFile.data);
+        await fileIo.write(file.fd, uploadedFileObj.data);
         await fileIo.close(file.fd);
 
         console.log(`文件上传成功: ${fileName}`);
@@ -349,10 +351,10 @@ export class HttpExample {
         res.json({
           message: 'File uploaded successfully',
           file: {
-            originalName: uploadedFile.fileName,
+            originalName: uploadedFileObj.fileName,
             savedName: fileName,
-            size: uploadedFile.data.byteLength,
-            contentType: uploadedFile.contentType,
+            size: uploadedFileObj.data.byteLength,
+            contentType: uploadedFileObj.contentType,
             uploadTime: new Date().toISOString(),
             path: filePath
           } as ESObject

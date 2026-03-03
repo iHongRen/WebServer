@@ -20,23 +20,23 @@ This example demonstrates the WebServer framework's automatic request body parsi
 
 Run the BodyPage in your HarmonyOS app and click "启动服务器" (Start Server).
 
-Default port: `8082`
+Default port: `8080`
 
 ### 2. Test with curl
 
 ```bash
 # JSON parsing
-curl -X POST http://192.168.2.38:8082/api/json \
+curl -X POST http://192.168.2.38:8080/api/json \
   -H "Content-Type: application/json" \
   -d '{"name":"test","value":123}'
 
 # URL-encoded parsing
-curl -X POST http://192.168.2.38:8082/api/urlencoded \
+curl -X POST http://192.168.2.38:8080/api/urlencoded \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "name=test&value=123"
 
 # Multipart form parsing
-curl -X POST http://192.168.2.38:8082/api/multipart \
+curl -X POST http://192.168.2.38:8080/api/multipart \
   -F "name=test" \
   -F "file=@test.txt"
 ```
@@ -68,7 +68,7 @@ chmod +x test-body-parser.sh
 Parses `application/json` content type.
 
 ```bash
-curl -X POST http://IP:8082/api/json \
+curl -X POST http://IP:8080/api/json \
   -H "Content-Type: application/json" \
   -d '{"name":"John","age":30,"email":"john@example.com"}'
 ```
@@ -96,7 +96,7 @@ Response:
 Parses `application/x-www-form-urlencoded` content type.
 
 ```bash
-curl -X POST http://IP:8082/api/urlencoded \
+curl -X POST http://IP:8080/api/urlencoded \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "name=John&age=30&email=john@example.com"
 ```
@@ -124,7 +124,7 @@ Response:
 Parses `multipart/form-data` content type (commonly used for file uploads).
 
 ```bash
-curl -X POST http://IP:8082/api/multipart \
+curl -X POST http://IP:8080/api/multipart \
   -F "name=John" \
   -F "description=Test upload" \
   -F "file=@document.pdf"
@@ -162,7 +162,7 @@ Response:
 Parses `text/plain` content type.
 
 ```bash
-curl -X POST http://IP:8082/api/plain \
+curl -X POST http://IP:8080/api/plain \
   -H "Content-Type: text/plain" \
   -d "This is plain text content"
 ```
@@ -184,12 +184,12 @@ Automatically detects Content-Type and selects the appropriate parser.
 
 ```bash
 # Auto-parse JSON
-curl -X POST http://IP:8082/api/auto \
+curl -X POST http://IP:8080/api/auto \
   -H "Content-Type: application/json" \
   -d '{"type":"auto-test"}'
 
 # Auto-parse URL-encoded
-curl -X POST http://IP:8082/api/auto \
+curl -X POST http://IP:8080/api/auto \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "type=auto-test"
 ```
@@ -211,7 +211,7 @@ Response:
 ### Get All Results
 
 ```bash
-curl http://IP:8082/api/results
+curl http://IP:8080/api/results
 ```
 
 Response:
@@ -235,13 +235,13 @@ Response:
 ### Get Specific Result
 
 ```bash
-curl http://IP:8082/api/results/1
+curl http://IP:8080/api/results/1
 ```
 
 ### Clear All Results
 
 ```bash
-curl -X DELETE http://IP:8082/api/results
+curl -X DELETE http://IP:8080/api/results
 ```
 
 ## Code Example
@@ -281,7 +281,7 @@ server.post('/api/data', (req: HttpRequest, res: HttpResponse) => {
   });
 });
 
-await server.startServer(8082);
+await server.startServer(8080);
 ```
 
 ## Error Handling
@@ -290,7 +290,7 @@ The server validates Content-Type headers and returns appropriate error messages
 
 ```bash
 # Wrong Content-Type for JSON endpoint
-curl -X POST http://IP:8082/api/json \
+curl -X POST http://IP:8080/api/json \
   -H "Content-Type: text/plain" \
   -d "wrong type"
 ```

@@ -17,5 +17,9 @@ export { StaticFiles } from './staticFiles';
 // 导出日志中间件
 export { Logger, LogFormat } from './logger';
 
+// 导出文件上传中间件
+export { FileUpload } from './fileUpload';
+export type { FileUploadOptions, UploadedFile, FileLimits, ParseResult, PartResult } from './fileUpload';
+
 // 导出所有类型定义
 export * from './types';

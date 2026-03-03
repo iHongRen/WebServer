@@ -2,9 +2,9 @@
 
 # Router API 测试脚本
 # 使用方法: ./test-router-api.sh [server_url]
-# 默认服务器地址: http://localhost:8086
+# 默认服务器地址: http://localhost:8080
 
-SERVER_URL=${1:-"http://localhost:8086"}
+SERVER_URL=${1:-"http://localhost:8080"}
 echo "🧪 测试 Router API"
 echo "📍 服务器地址: $SERVER_URL"
 echo "=" | tr '=' '=' | head -c 50; echo

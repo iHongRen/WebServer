@@ -18,7 +18,7 @@ struct BodyPage {
   @State title: string = 'Body Parser示例页面'
   @State serverStatus: string = '未启动';
   @State serverInfo: string = '';
-  @State port: number = 8082;
+  @State port: number = 8080;
   @State isRunning: boolean = false;
   private bodyParserExample: BodyParserExample = new BodyParserExample();
 
@@ -141,7 +141,7 @@ struct BodyPage {
               .fontSize(14)
               .fontColor('#666')
 
-            Text('# JSON解析\ncurl -X POST http://IP:8082/api/json \\\n  -H "Content-Type: application/json" \\\n  -d \'{"name":"test","value":123}\'')
+            Text('# JSON解析\ncurl -X POST http://IP:8080/api/json \\\n  -H "Content-Type: application/json" \\\n  -d \'{"name":"test","value":123}\'')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')
@@ -150,7 +150,7 @@ struct BodyPage {
               .borderRadius(8)
               .width('100%')
 
-            Text('# URL编码解析\ncurl -X POST http://IP:8082/api/urlencoded \\\n  -H "Content-Type: application/x-www-form-urlencoded" \\\n  -d "name=test&value=123"')
+            Text('# URL编码解析\ncurl -X POST http://IP:8080/api/urlencoded \\\n  -H "Content-Type: application/x-www-form-urlencoded" \\\n  -d "name=test&value=123"')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')

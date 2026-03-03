@@ -18,7 +18,7 @@ struct RouterPage {
   @State title: string = 'Router示例页面'
   @State serverStatus: string = '未启动';
   @State serverInfo: string = '';
-  @State port: number = 8086;
+  @State port: number = 8080;
   @State isRunning: boolean = false;
   private routerExample: RouterExample = new RouterExample();
 
@@ -164,7 +164,7 @@ struct RouterPage {
               .fontSize(14)
               .fontColor('#666')
 
-            Text('# 参数路由\ncurl http://IP:8086/api/users/123')
+            Text('# 参数路由\ncurl http://IP:8080/api/users/123')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')
@@ -173,7 +173,7 @@ struct RouterPage {
               .borderRadius(8)
               .width('100%')
 
-            Text('# 添加动态路由\ncurl -X POST http://IP:8086/api/routes \\\n  -H "Content-Type: application/json" \\\n  -d \'{"method":"GET","path":"/test","response":{"msg":"ok"}}\'')
+            Text('# 添加动态路由\ncurl -X POST http://IP:8080/api/routes \\\n  -H "Content-Type: application/json" \\\n  -d \'{"method":"GET","path":"/test","response":{"msg":"ok"}}\'')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')

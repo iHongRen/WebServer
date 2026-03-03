@@ -19,7 +19,7 @@ struct StaticPage {
   @State title: string = 'Static示例页面'
   @State serverStatus: string = '未启动';
   @State serverInfo: string = '';
-  @State port: number = 8087;
+  @State port: number = 8080;
   @State isRunning: boolean = false;
   private staticExample: StaticExample = new StaticExample();
 
@@ -157,7 +157,7 @@ struct StaticPage {
               .fontSize(14)
               .fontColor('#666')
 
-            Text('# 访问首页\ncurl http://IP:8087/')
+            Text('# 访问首页\ncurl http://IP:8080/')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')
@@ -166,7 +166,7 @@ struct StaticPage {
               .borderRadius(8)
               .width('100%')
 
-            Text('# 上传文件\ncurl -X POST http://IP:8087/api/upload \\\n  -F "file=@test.txt"')
+            Text('# 上传文件\ncurl -X POST http://IP:8080/api/upload \\\n  -F "file=@test.txt"')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')

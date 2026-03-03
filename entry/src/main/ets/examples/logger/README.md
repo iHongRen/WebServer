@@ -20,19 +20,19 @@ This example demonstrates the WebServer framework's comprehensive logging capabi
 
 Run the LoggerPage in your HarmonyOS app and click "启动服务器" (Start Server).
 
-Default port: `8085`
+Default port: `8080`
 
 ### 2. Test with curl
 
 ```bash
 # Get log records
-curl http://192.168.2.38:8085/api/logs
+curl http://192.168.2.38:8080/api/logs
 
 # Get log statistics
-curl http://192.168.2.38:8085/api/logs/stats
+curl http://192.168.2.38:8080/api/logs/stats
 
 # Test error log
-curl -X POST http://192.168.2.38:8085/api/logs/test/error \
+curl -X POST http://192.168.2.38:8080/api/logs/test/error \
   -H "Content-Type: application/json" \
   -d '{"message":"Test error"}'
 ```
@@ -106,7 +106,7 @@ GET /api/users 200 1024 - 15ms
 Detailed information for debugging:
 
 ```bash
-curl -X POST http://IP:8085/api/logs/test/debug \
+curl -X POST http://IP:8080/api/logs/test/debug \
   -H "Content-Type: application/json" \
   -d '{"message":"Debug information"}'
 ```
@@ -116,7 +116,7 @@ curl -X POST http://IP:8085/api/logs/test/debug \
 General informational messages:
 
 ```bash
-curl -X POST http://IP:8085/api/logs/test/info \
+curl -X POST http://IP:8080/api/logs/test/info \
   -H "Content-Type: application/json" \
   -d '{"message":"Operation completed"}'
 ```
@@ -126,7 +126,7 @@ curl -X POST http://IP:8085/api/logs/test/info \
 Warning messages for potential issues:
 
 ```bash
-curl -X POST http://IP:8085/api/logs/test/warn \
+curl -X POST http://IP:8080/api/logs/test/warn \
   -H "Content-Type: application/json" \
   -d '{"message":"Deprecated API used"}'
 ```
@@ -136,7 +136,7 @@ curl -X POST http://IP:8085/api/logs/test/warn \
 Error messages for failures:
 
 ```bash
-curl -X POST http://IP:8085/api/logs/test/error \
+curl -X POST http://IP:8080/api/logs/test/error \
   -H "Content-Type: application/json" \
   -d '{"message":"Operation failed"}'
 ```
@@ -146,7 +146,7 @@ curl -X POST http://IP:8085/api/logs/test/error \
 ### Get All Logs
 
 ```bash
-curl http://IP:8085/api/logs
+curl http://IP:8080/api/logs
 ```
 
 Response:
@@ -162,19 +162,19 @@ Response:
 ### Filter by Level
 
 ```bash
-curl "http://IP:8085/api/logs?level=error"
+curl "http://IP:8080/api/logs?level=error"
 ```
 
 ### Filter by Method
 
 ```bash
-curl "http://IP:8085/api/logs?method=POST"
+curl "http://IP:8080/api/logs?method=POST"
 ```
 
 ### Pagination
 
 ```bash
-curl "http://IP:8085/api/logs?limit=20&offset=40"
+curl "http://IP:8080/api/logs?limit=20&offset=40"
 ```
 
 ## Log Statistics
@@ -182,7 +182,7 @@ curl "http://IP:8085/api/logs?limit=20&offset=40"
 Get comprehensive statistics about logged requests:
 
 ```bash
-curl http://IP:8085/api/logs/stats
+curl http://IP:8080/api/logs/stats
 ```
 
 Response:
@@ -220,10 +220,10 @@ Test logging of slow requests:
 
 ```bash
 # 1 second delay
-curl "http://IP:8085/api/test/slow?delay=1000"
+curl "http://IP:8080/api/test/slow?delay=1000"
 
 # 3 second delay
-curl "http://IP:8085/api/test/slow?delay=3000"
+curl "http://IP:8080/api/test/slow?delay=3000"
 ```
 
 ### Error Status Code Test
@@ -232,13 +232,13 @@ Test logging of different error codes:
 
 ```bash
 # 400 Bad Request
-curl http://IP:8085/api/test/error/400
+curl http://IP:8080/api/test/error/400
 
 # 404 Not Found
-curl http://IP:8085/api/test/error/404
+curl http://IP:8080/api/test/error/404
 
 # 500 Internal Server Error
-curl http://IP:8085/api/test/error/500
+curl http://IP:8080/api/test/error/500
 ```
 
 ## File Storage
@@ -270,7 +270,7 @@ server.get('/api/data', (req: HttpRequest, res: HttpResponse) => {
   res.json({ data: 'example' });
 });
 
-await server.startServer(8085);
+await server.startServer(8080);
 ```
 
 ## Advanced Usage

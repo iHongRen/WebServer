@@ -18,7 +18,7 @@ struct EventPage {
   @State title: string = 'Event示例页面'
   @State serverStatus: string = '未启动';
   @State serverInfo: string = '';
-  @State port: number = 8084;
+  @State port: number = 8080;
   @State isRunning: boolean = false;
   private eventExample: EventExample = new EventExample();
 
@@ -138,7 +138,7 @@ struct EventPage {
               .fontSize(14)
               .fontColor('#666')
 
-            Text('# 获取服务器状态\ncurl http://IP:8084/status')
+            Text('# 获取服务器状态\ncurl http://IP:8080/status')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')
@@ -147,7 +147,7 @@ struct EventPage {
               .borderRadius(8)
               .width('100%')
 
-            Text('# 触发错误事件\ncurl http://IP:8084/error')
+            Text('# 触发错误事件\ncurl http://IP:8080/error')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')

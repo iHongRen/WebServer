@@ -78,12 +78,12 @@ server.startServer(8080);
 
 ## 4. API 测试示例 (`curl`)
 
-以下是使用 `curl` 测试 `BodyParser` 功能的示例。请将 `http://your-ip:8082` 替换为你的服务器实际地址和端口。
+以下是使用 `curl` 测试 `BodyParser` 功能的示例。请将 `http://your-ip:8080` 替换为你的服务器实际地址和端口。
 
 ### 4.1. 测试 JSON 解析 (`/api/json`)
 
 ```bash
-curl -X POST http://your-ip:8082/api/json \
+curl -X POST http://your-ip:8080/api/json \
   -H "Content-Type: application/json" \
   -d '{"username": "cxy", "level": 99}'
 ```
@@ -110,7 +110,7 @@ curl -X POST http://your-ip:8082/api/json \
 ### 4.2. 测试 URL-Encoded 解析 (`/api/urlencoded`)
 
 ```bash
-curl -X POST http://your-ip:8082/api/urlencoded \
+curl -X POST http://your-ip:8080/api/urlencoded \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d 'product=WebServer&version=1.0'
 ```
@@ -141,7 +141,7 @@ curl -X POST http://your-ip:8082/api/urlencoded \
 echo "This is a test file for upload." > test.txt
 
 # 2. 发送 multipart/form-data 请求
-curl -X POST http://your-ip:8082/api/multipart \
+curl -X POST http://your-ip:8080/api/multipart \
   -F "description=This is a file upload test" \
   -F "testFile=@test.txt"
 ```
@@ -177,7 +177,7 @@ curl -X POST http://your-ip:8082/api/multipart \
 ### 4.4. 测试纯文本解析 (`/api/plain`)
 
 ```bash
-curl -X POST http://your-ip:8082/api/plain \
+curl -X POST http://your-ip:8080/api/plain \
   -H "Content-Type: text/plain" \
   -d 'Hello, WebServer!'
 ```

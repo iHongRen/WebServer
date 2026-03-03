@@ -273,24 +273,26 @@ Created: ${new Date().toISOString()}`);
         const uploadedFile = req.files?.['file'];
 
         if (!uploadedFile) {
-          return res.status(400).json({ error: 'No file uploaded' });
+          return res.status(400).json({ error: 'No file uploaded' } as ESObject);
         }
 
-        const fileName = uploadedFile.fileName;
+        const file = uploadedFile;
+        const fileName = file.name;
         const filePath = `${this.staticRoot}/${fileName}`;
 
-        const file = await fileIo.open(filePath,
+        const fileHandle = await fileIo.open(filePath,
           fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
-        await fileIo.write(file.fd, uploadedFile.data);
-        await fileIo.close(file.fd);
+        await fileIo.write(fileHandle.fd, file.data);
+        await fileIo.close(fileHandle.fd);
 
         res.json({
           message: 'File uploaded successfully',
           fileName,
           size: uploadedFile.data.byteLength,
           url: `/${fileName}`
-        });
-      } catch (error) {
+        } as ESObject);
+      } catch (e) {
+        const error = e as Error;
         res.status(500).json({ error: 'Upload failed' });
       }
     });

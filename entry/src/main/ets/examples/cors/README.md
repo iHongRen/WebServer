@@ -19,23 +19,23 @@ This example demonstrates Cross-Origin Resource Sharing (CORS) functionality in 
 
 Run the CorsPage in your HarmonyOS app and click "启动服务器" (Start Server).
 
-Default port: `8083`
+Default port: `8080`
 
 ### 2. Test with curl
 
 ```bash
 # Simple CORS request
-curl -X GET http://192.168.2.38:8083/api/cors/simple \
+curl -X GET http://192.168.2.38:8080/api/cors/simple \
   -H "Origin: http://example.com"
 
 # Preflight request
-curl -X OPTIONS http://192.168.2.38:8083/api/cors/preflight \
+curl -X OPTIONS http://192.168.2.38:8080/api/cors/preflight \
   -H "Origin: http://example.com" \
   -H "Access-Control-Request-Method: POST" \
   -H "Access-Control-Request-Headers: Content-Type"
 
 # Request with credentials
-curl -X POST http://192.168.2.38:8083/api/cors/credentials \
+curl -X POST http://192.168.2.38:8080/api/cors/credentials \
   -H "Origin: http://example.com" \
   -H "Content-Type: application/json" \
   --cookie "session=abc123" \
@@ -107,7 +107,7 @@ The example uses the following default CORS configuration:
 ### 1. Test Simple Request
 
 ```bash
-curl -X GET http://IP:8083/api/cors/simple \
+curl -X GET http://IP:8080/api/cors/simple \
   -H "Origin: http://localhost:3000" \
   -v
 ```
@@ -115,7 +115,7 @@ curl -X GET http://IP:8083/api/cors/simple \
 ### 2. Test Preflight Request
 
 ```bash
-curl -X POST http://IP:8083/api/cors/preflight \
+curl -X POST http://IP:8080/api/cors/preflight \
   -H "Origin: http://localhost:3000" \
   -H "Content-Type: application/json" \
   -d '{"message":"test"}' \
@@ -125,7 +125,7 @@ curl -X POST http://IP:8083/api/cors/preflight \
 ### 3. Test with Credentials
 
 ```bash
-curl -X POST http://IP:8083/api/cors/credentials \
+curl -X POST http://IP:8080/api/cors/credentials \
   -H "Origin: http://localhost:3000" \
   -H "Content-Type: application/json" \
   --cookie "session=test123" \
@@ -136,7 +136,7 @@ curl -X POST http://IP:8083/api/cors/credentials \
 ### 4. Test Custom Headers
 
 ```bash
-curl -X PUT http://IP:8083/api/cors/custom-headers \
+curl -X PUT http://IP:8080/api/cors/custom-headers \
   -H "Origin: http://localhost:3000" \
   -H "X-Custom-Header: custom-value" \
   -H "Authorization: Bearer token123" \

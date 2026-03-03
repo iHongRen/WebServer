@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+        <title>文件上传测试台</title>
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family: system-ui, sans-serif;
+                background: #f4f5f9;
+                color: #1a1d2e;
+                min-height: 100vh;
+            }
+            header {
+                background: #fff;
+                border-bottom: 1px solid #e2e6f0;
+                padding: 0 24px;
+                height: 52px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                position: sticky;
+                top: 0;
+                z-index: 10;
+            }
+            .logo {
+                font-weight: 700;
+                font-size: 16px;
+                color: #5b6af0;
+            }
+            .layout {
+                display: grid;
+                grid-template-columns: 180px 1fr;
+            }
+            nav {
+                background: #fff;
+                border-right: 1px solid #e2e6f0;
+                padding: 12px 8px;
+                height: calc(100vh - 52px);
+                position: sticky;
+                top: 52px;
+            }
+            .na {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 10px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 13px;
+                color: #6b7280;
+                margin-bottom: 2px;
+            }
+            .na:hover {
+                background: #f4f5f9;
+            }
+            .na.on {
+                background: #eef0fd;
+                color: #5b6af0;
+                font-weight: 600;
+            }
+            .badge {
+                margin-left: auto;
+                font-size: 10px;
+                background: #eef0fd;
+                color: #5b6af0;
+                padding: 1px 6px;
+                border-radius: 20px;
+            }
+            .na.on .badge {
+                background: #5b6af0;
+                color: #fff;
+            }
+            hr {
+                border: none;
+                border-top: 1px solid #e2e6f0;
+                margin: 8px 0;
+            }
+            main {
+                padding: 24px 28px;
+                max-width: 780px;
+            }
+            .sec {
+                display: none;
+            }
+            .sec.on {
+                display: block;
+            }
+            h2 {
+                font-size: 18px;
+                font-weight: 700;
+                margin-bottom: 4px;
+            }
+            p.desc {
+                font-size: 13px;
+                color: #6b7280;
+                margin-bottom: 16px;
+            }
+            .card {
+                background: #fff;
+                border: 1px solid #e2e6f0;
+                border-radius: 12px;
+                padding: 20px;
+                margin-bottom: 16px;
+            }
+            .dz {
+                border: 2px dashed #e2e6f0;
+                border-radius: 10px;
+                padding: 28px;
+                text-align: center;
+                cursor: pointer;
+                position: relative;
+                transition: 0.15s;
+            }
+            .dz:hover,
+            .dz.over {
+                border-color: #5b6af0;
+                background: #eef0fd;
+            }
+            .dz input {
+                position: absolute;
+                inset: 0;
+                opacity: 0;
+                cursor: pointer;
+                width: 100%;
+                height: 100%;
+            }
+            .dz-icon {
+                font-size: 28px;
+                margin-bottom: 6px;
+            }
+            .dz small {
+                font-size: 12px;
+                color: #6b7280;
+            }
+            .flist {
+                margin-top: 10px;
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+            .fi {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                background: #f4f5f9;
+                border-radius: 8px;
+                padding: 7px 10px;
+                font-size: 12px;
+            }
+            .fi-n {
+                flex: 1;
+                font-weight: 600;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .fi-s {
+                color: #6b7280;
+                white-space: nowrap;
+            }
+            .fi-rm {
+                background: none;
+                border: none;
+                cursor: pointer;
+                color: #6b7280;
+                font-size: 13px;
+                padding: 0 4px;
+            }
+            .fi-rm:hover {
+                color: #f05b5b;
+            }
+            label {
+                display: block;
+                font-size: 11px;
+                font-weight: 600;
+                color: #6b7280;
+                margin: 12px 0 4px;
+            }
+            input.txt {
+                width: 100%;
+                padding: 8px 10px;
+                background: #f4f5f9;
+                border: 1px solid #e2e6f0;
+                border-radius: 8px;
+                color: #1a1d2e;
+                font-size: 13px;
+                outline: none;
+            }
+            input.txt:focus {
+                border-color: #5b6af0;
+            }
+            .btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                width: 100%;
+                margin-top: 12px;
+                padding: 9px;
+                border-radius: 8px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                border: none;
+                background: #5b6af0;
+                color: #fff;
+                transition: 0.15s;
+            }
+            .btn:hover {
+                background: #4453e0;
+            }
+            .btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            .btn-sm {
+                width: auto;
+                margin: 0;
+                padding: 5px 12px;
+                font-size: 12px;
+            }
+            .btn-d {
+                background: #f05b5b;
+            }
+            .btn-d:hover {
+                background: #d94444;
+            }
+            .btn-o {
+                background: transparent;
+                color: #5b6af0;
+                border: 1px solid #5b6af0;
+            }
+            .btn-o:hover {
+                background: #eef0fd;
+            }
+            .prog {
+                margin-top: 10px;
+                display: none;
+            }
+            .prog.on {
+                display: block;
+            }
+            .prog-bar {
+                height: 4px;
+                background: #e2e6f0;
+                border-radius: 99px;
+                overflow: hidden;
+                margin-top: 4px;
+            }
+            .prog-fill {
+                height: 100%;
+                background: #5b6af0;
+                border-radius: 99px;
+                transition: width 0.3s;
+                width: 0;
+            }
+            .res {
+                margin-top: 12px;
+                display: none;
+            }
+            .res.on {
+                display: block;
+            }
+            .res-hdr {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                font-size: 11px;
+                font-weight: 700;
+                color: #6b7280;
+                text-transform: uppercase;
+                margin-bottom: 5px;
+            }
+            .st {
+                font-size: 11px;
+                font-weight: 700;
+                padding: 2px 8px;
+                border-radius: 20px;
+            }
+            .st-ok {
+                background: #e8f8ef;
+                color: #27ae60;
+            }
+            .st-err {
+                background: #fdeaea;
+                color: #f05b5b;
+            }
+            pre {
+                background: #f4f5f9;
+                border: 1px solid #e2e6f0;
+                border-radius: 8px;
+                padding: 10px;
+                font-size: 11px;
+                line-height: 1.6;
+                white-space: pre-wrap;
+                word-break: break-all;
+                max-height: 220px;
+                overflow-y: auto;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13px;
+            }
+            th {
+                background: #f4f5f9;
+                padding: 8px 12px;
+                text-align: left;
+                font-size: 11px;
+                font-weight: 700;
+                color: #6b7280;
+                border-bottom: 1px solid #e2e6f0;
+                text-transform: uppercase;
+            }
+            td {
+                padding: 9px 12px;
+                border-bottom: 1px solid #e2e6f0;
+            }
+            tr:last-child td {
+                border: none;
+            }
+            .empty td {
+                text-align: center;
+                color: #6b7280;
+                padding: 24px;
+            }
+            #toast {
+                position: fixed;
+                top: 64px;
+                right: 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                z-index: 999;
+            }
+            .t {
+                background: #fff;
+                border: 1px solid #e2e6f0;
+                border-radius: 8px;
+                padding: 9px 14px;
+                font-size: 13px;
+                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+                animation: si 0.25s ease;
+            }
+            .t-ok {
+                border-left: 3px solid #27ae60;
+            }
+            .t-err {
+                border-left: 3px solid #f05b5b;
+            }
+            @keyframes si {
+                from {
+                    opacity: 0;
+                    transform: translateX(16px);
+                }
+                to {
+                    opacity: 1;
+                    transform: none;
+                }
+            }
+            @media (max-width: 600px) {
+                .layout {
+                    grid-template-columns: 1fr;
+                }
+                nav {
+                    display: none;
+                }
+                main {
+                    padding: 16px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <div class="logo">📦 FileUpload Tester</div>
+            <small style="color: #6b7280; font-size: 12px" id="srv-url"></small>
+        </header>
+
+        <div class="layout">
+            <nav>
+                <div class="na on" onclick="go('basic', this)">📄 基本上传 <span class="badge">POST</span></div>
+                <div class="na" onclick="go('stream', this)">🌊 流式上传 <span class="badge">POST</span></div>
+                <div class="na" onclick="go('multiple', this)">📂 多文件 <span class="badge">POST</span></div>
+                <div class="na" onclick="go('safe', this)">🔒 安全文件名 <span class="badge">POST</span></div>
+                <div class="na" onclick="go('limited', this)">⚖️ 限制大小 <span class="badge">POST</span></div>
+                <hr />
+                <div class="na" onclick="go('manager', this)">🗂️ 文件管理 <span class="badge">GET</span></div>
+            </nav>
+
+            <main>
+                <div class="sec on" id="sec-basic">
+                    <h2>基本文件上传</h2>
+                    <p class="desc">multipart/form-data，支持附加字段。<code>POST /api/upload/basic</code></p>
+                    <div class="card">
+                        <div class="dz">
+                            <input type="file" id="f-basic" multiple onchange="preview('f-basic', 'pl-basic')" />
+                            <div class="dz-icon">📁</div>
+                            <small>拖拽或点击选择文件</small>
+                        </div>
+                        <div class="flist" id="pl-basic"></div>
+                        <label>description</label>
+                        <input class="txt" id="b-desc" placeholder="可选描述" />
+                        <label>author</label>
+                        <input class="txt" id="b-author" placeholder="作者名" />
+                        <button class="btn" onclick="uploadForm('f-basic', '/api/upload/basic', 'basic', { description: 'b-desc', author: 'b-author' })">🚀 开始上传</button>
+                        <div class="prog" id="prog-basic">
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #6b7280"><span>上传中</span><span id="pct-basic">0%</span></div>
+                            <div class="prog-bar"><div class="prog-fill" id="fill-basic"></div></div>
+                        </div>
+                        <div class="res" id="res-basic">
+                            <div class="res-hdr">Response <span class="st" id="st-basic"></span></div>
+                            <pre id="pre-basic"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sec" id="sec-stream">
+                    <h2>单文件流式上传</h2>
+                    <p class="desc">application/octet-stream 二进制流。<code>POST /api/upload/stream</code></p>
+                    <div class="card">
+                        <div class="dz">
+                            <input type="file" id="f-stream" onchange="preview('f-stream', 'pl-stream')" />
+                            <div class="dz-icon">🌊</div>
+                            <small>拖拽或点击选择单个文件</small>
+                        </div>
+                        <div class="flist" id="pl-stream"></div>
+                        <button class="btn" onclick="uploadStream()">🌊 流式上传</button>
+                        <div class="prog" id="prog-stream">
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #6b7280"><span>上传中</span><span id="pct-stream">0%</span></div>
+                            <div class="prog-bar"><div class="prog-fill" id="fill-stream"></div></div>
+                        </div>
+                        <div class="res" id="res-stream">
+                            <div class="res-hdr">Response <span class="st" id="st-stream"></span></div>
+                            <pre id="pre-stream"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sec" id="sec-multiple">
+                    <h2>多文件上传</h2>
+                    <p class="desc">一次上传多个文件，返回汇总信息。<code>POST /api/upload/multiple</code></p>
+                    <div class="card">
+                        <div class="dz">
+                            <input type="file" id="f-multiple" multiple onchange="preview('f-multiple', 'pl-multiple')" />
+                            <div class="dz-icon">📂</div>
+                            <small>最多 10 个文件</small>
+                        </div>
+                        <div class="flist" id="pl-multiple"></div>
+                        <button class="btn" onclick="uploadForm('f-multiple', '/api/upload/multiple', 'multiple')">📤 批量上传</button>
+                        <div class="prog" id="prog-multiple">
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #6b7280"><span>上传中</span><span id="pct-multiple">0%</span></div>
+                            <div class="prog-bar"><div class="prog-fill" id="fill-multiple"></div></div>
+                        </div>
+                        <div class="res" id="res-multiple">
+                            <div class="res-hdr">Response <span class="st" id="st-multiple"></span></div>
+                            <pre id="pre-multiple"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sec" id="sec-safe">
+                    <h2>安全文件名上传</h2>
+                    <p class="desc">服务端清理文件名特殊字符。<code>POST /api/upload/safe</code></p>
+                    <div class="card">
+                        <div class="dz">
+                            <input type="file" id="f-safe" multiple onchange="preview('f-safe', 'pl-safe')" />
+                            <div class="dz-icon">🛡️</div>
+                            <small>可尝试含特殊字符的文件名</small>
+                        </div>
+                        <div class="flist" id="pl-safe"></div>
+                        <button class="btn" onclick="uploadForm('f-safe', '/api/upload/safe', 'safe')">🔒 安全上传</button>
+                        <div class="prog" id="prog-safe">
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #6b7280"><span>上传中</span><span id="pct-safe">0%</span></div>
+                            <div class="prog-bar"><div class="prog-fill" id="fill-safe"></div></div>
+                        </div>
+                        <div class="res" id="res-safe">
+                            <div class="res-hdr">Response <span class="st" id="st-safe"></span></div>
+                            <pre id="pre-safe"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sec" id="sec-limited">
+                    <h2>限制大小上传</h2>
+                    <p class="desc">服务端返回 <code>truncated</code> 标识截断状态。<code>POST /api/upload/limited</code></p>
+                    <div class="card">
+                        <div class="dz">
+                            <input type="file" id="f-limited" multiple onchange="preview('f-limited', 'pl-limited')" />
+                            <div class="dz-icon">⚖️</div>
+                            <small>全局限制 100MB / 文件</small>
+                        </div>
+                        <div class="flist" id="pl-limited"></div>
+                        <button class="btn" onclick="uploadForm('f-limited', '/api/upload/limited', 'limited')">⚖️ 上传</button>
+                        <div class="prog" id="prog-limited">
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #6b7280"><span>上传中</span><span id="pct-limited">0%</span></div>
+                            <div class="prog-bar"><div class="prog-fill" id="fill-limited"></div></div>
+                        </div>
+                        <div class="res" id="res-limited">
+                            <div class="res-hdr">Response <span class="st" id="st-limited"></span></div>
+                            <pre id="pre-limited"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sec" id="sec-manager">
+                    <h2>文件管理</h2>
+                    <p class="desc"><code>GET /api/upload/files</code> &nbsp;|&nbsp; <code>DELETE /api/upload/files/:filename</code></p>
+                    <div class="card">
+                        <div style="display: flex; justify-content: flex-end; margin-bottom: 12px">
+                            <button class="btn btn-o btn-sm" onclick="loadFiles()">🔄 刷新列表</button>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>文件名</th>
+                                    <th>大小</th>
+                                    <th>修改时间</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="ftbody">
+                                <tr class="empty">
+                                    <td colspan="4">点击刷新加载</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="res" id="res-manager">
+                            <div class="res-hdr">Response <span class="st" id="st-manager"></span></div>
+                            <pre id="pre-manager"></pre>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <div id="toast"></div>
+
+        <script>
+            var BASE = location.origin
+            document.getElementById('srv-url').textContent = BASE
+
+            function gel(id) {
+                return document.getElementById(id)
+            }
+
+            function toast(msg, type) {
+                var el = document.createElement('div')
+                el.className = 't ' + (type === 'err' ? 't-err' : 't-ok')
+                el.textContent = (type === 'err' ? '❌ ' : '✅ ') + msg
+                gel('toast').appendChild(el)
+                setTimeout(function () {
+                    el.remove()
+                }, 3000)
+            }
+
+            function go(name, el) {
+                document.querySelectorAll('.sec').forEach(function (s) {
+                    s.classList.remove('on')
+                })
+                document.querySelectorAll('.na').forEach(function (n) {
+                    n.classList.remove('on')
+                })
+                gel('sec-' + name).classList.add('on')
+                el.classList.add('on')
+                if (name === 'manager') loadFiles()
+            }
+
+            function fsize(b) {
+                if (b < 1024) return b + ' B'
+                if (b < 1048576) return (b / 1024).toFixed(1) + ' KB'
+                return (b / 1048576).toFixed(2) + ' MB'
+            }
+
+            function preview(inputId, listId) {
+                var files = Array.from(gel(inputId).files)
+                var html = ''
+                files.forEach(function (f, i) {
+                    html +=
+                        '<div class="fi">' +
+                        '<span class="fi-n">' +
+                        f.name +
+                        '</span>' +
+                        '<span class="fi-s">' +
+                        fsize(f.size) +
+                        '</span>' +
+                        '<button class="fi-rm" onclick="rmFile(\'' +
+                        inputId +
+                        "','" +
+                        listId +
+                        "'," +
+                        i +
+                        ')">✕</button>' +
+                        '</div>'
+                })
+                gel(listId).innerHTML = html
+            }
+
+            function rmFile(inputId, listId, idx) {
+                var dt = new DataTransfer()
+                Array.from(gel(inputId).files).forEach(function (f, i) {
+                    if (i !== idx) dt.items.add(f)
+                })
+                gel(inputId).files = dt.files
+                preview(inputId, listId)
+            }
+
+            document.querySelectorAll('.dz').forEach(function (z) {
+                z.addEventListener('dragover', function (e) {
+                    e.preventDefault()
+                    z.classList.add('over')
+                })
+                z.addEventListener('dragleave', function () {
+                    z.classList.remove('over')
+                })
+                z.addEventListener('drop', function (e) {
+                    e.preventDefault()
+                    z.classList.remove('over')
+                    var inp = z.querySelector('input')
+                    var dt = new DataTransfer()
+                    Array.from(e.dataTransfer.files).forEach(function (f) {
+                        dt.items.add(f)
+                    })
+                    inp.files = dt.files
+                    inp.dispatchEvent(new Event('change'))
+                })
+            })
+
+            function showRes(id, status, data) {
+                var ok = status >= 200 && status < 300
+                gel('res-' + id).classList.add('on')
+                gel('st-' + id).textContent = ok ? status + ' OK' : status + ' Error'
+                gel('st-' + id).className = 'st ' + (ok ? 'st-ok' : 'st-err')
+                gel('pre-' + id).textContent = JSON.stringify(data, null, 2)
+            }
+
+            function xhrUp(path, payload, isForm, id) {
+                return new Promise(function (resolve) {
+                    var btn = gel('btn-' + id)
+                    var origText = btn ? btn.textContent : ''
+                    if (btn) {
+                        btn.disabled = true
+                        btn.textContent = '上传中...'
+                    }
+
+                    var progEl = gel('prog-' + id)
+                    var fillEl = gel('fill-' + id)
+                    var pctEl = gel('pct-' + id)
+                    progEl.classList.add('on')
+                    fillEl.style.width = '0%'
+                    pctEl.textContent = '0%'
+
+                    var xhr = new XMLHttpRequest()
+                    xhr.open('POST', BASE + path)
+                    if (!isForm) xhr.setRequestHeader('Content-Type', 'application/octet-stream')
+
+                    xhr.upload.onprogress = function (e) {
+                        if (e.lengthComputable) {
+                            var p = Math.round((e.loaded / e.total) * 100)
+                            fillEl.style.width = p + '%'
+                            pctEl.textContent = p + '%'
+                        }
+                    }
+
+                    xhr.onload = function () {
+                        if (btn) {
+                            btn.disabled = false
+                            btn.textContent = origText
+                        }
+                        fillEl.style.width = '100%'
+                        pctEl.textContent = '100%'
+                        setTimeout(function () {
+                            progEl.classList.remove('on')
+                        }, 1000)
+                        var d
+                        try {
+                            d = JSON.parse(xhr.responseText)
+                        } catch (e) {
+                            d = xhr.responseText
+                        }
+                        showRes(id, xhr.status, d)
+                        if (xhr.status < 300) {
+                            toast('上传成功')
+                        } else {
+                            toast(d && d.error ? d.error : '上传失败', 'err')
+                        }
+                        resolve(d)
+                    }
+
+                    xhr.onerror = function () {
+                        if (btn) {
+                            btn.disabled = false
+                            btn.textContent = origText
+                        }
+                        progEl.classList.remove('on')
+                        showRes(id, 0, '无法连接到服务器')
+                        toast('网络错误', 'err')
+                        resolve(null)
+                    }
+
+                    xhr.send(payload)
+                })
+            }
+
+            function uploadForm(inputId, path, id, extras) {
+                var files = gel(inputId).files
+                if (!files.length) {
+                    toast('请先选择文件', 'err')
+                    return
+                }
+                var fd = new FormData()
+                Array.from(files).forEach(function (f, i) {
+                    fd.append('file' + i, f)
+                })
+                if (extras) {
+                    Object.keys(extras).forEach(function (k) {
+                        var v = gel(extras[k]).value
+                        if (v) fd.append(k, v)
+                    })
+                }
+                xhrUp(path, fd, true, id)
+            }
+
+            function uploadStream() {
+                var files = gel('f-stream').files
+                if (!files.length) {
+                    toast('请先选择文件', 'err')
+                    return
+                }
+                xhrUp('/api/upload/stream', files[0], false, 'stream')
+            }
+
+            function loadFiles() {
+                var tb = gel('ftbody')
+                tb.innerHTML = '<tr class="empty"><td colspan="4">加载中...</td></tr>'
+                fetch(BASE + '/api/upload/files')
+                    .then(function (r) {
+                        return r.json().then(function (d) {
+                            return { status: r.status, data: d }
+                        })
+                    })
+                    .then(function (res) {
+                        showRes('manager', res.status, res.data)
+                        var files = res.data.files
+                        if (!files || !files.length) {
+                            tb.innerHTML = '<tr class="empty"><td colspan="4">暂无文件</td></tr>'
+                            return
+                        }
+                        var html = ''
+                        files.forEach(function (f) {
+                            var mt = f.modifiedTime ? new Date(f.modifiedTime).toLocaleString() : '-'
+                            html +=
+                                '<tr>' +
+                                '<td><b>' +
+                                f.name +
+                                '</b></td>' +
+                                '<td style="color:#6b7280">' +
+                                fsize(f.size) +
+                                '</td>' +
+                                '<td style="color:#6b7280;font-size:12px">' +
+                                mt +
+                                '</td>' +
+                                '<td><button class="btn btn-d btn-sm" onclick="delFile(\'' +
+                                f.name +
+                                '\',this)">🗑️ 删除</button></td>' +
+                                '</tr>'
+                        })
+                        tb.innerHTML = html
+                    })
+                    .catch(function () {
+                        tb.innerHTML = '<tr class="empty"><td colspan="4">❌ 请求失败</td></tr>'
+                        toast('获取列表失败', 'err')
+                    })
+            }
+
+            function delFile(name, btn) {
+                if (!confirm('确定删除「' + name + '」？')) return
+                btn.disabled = true
+                btn.textContent = '删除中...'
+                fetch(BASE + '/api/upload/files/' + encodeURIComponent(name), { method: 'DELETE' })
+                    .then(function (r) {
+                        return r.json().then(function (d) {
+                            return { status: r.status, data: d }
+                        })
+                    })
+                    .then(function (res) {
+                        showRes('manager', res.status, res.data)
+                        if (res.status < 300) {
+                            toast('已删除「' + name + '」')
+                            loadFiles()
+                        } else {
+                            toast('删除失败', 'err')
+                            btn.disabled = false
+                            btn.textContent = '删除'
+                        }
+                    })
+                    .catch(function () {
+                        toast('网络错误', 'err')
+                        btn.disabled = false
+                        btn.textContent = '删除'
+                    })
+            }
+        </script>
+    </body>
+</html>

@@ -19,7 +19,7 @@ struct UploadPage {
   @State title: string = '分片上传示例页面'
   @State serverStatus: string = '未启动';
   @State serverInfo: string = '';
-  @State port: number = 8088;
+  @State port: number = 8080;
   @State isRunning: boolean = false;
   private uploadExample: UploadExample = new UploadExample();
 
@@ -146,7 +146,7 @@ struct UploadPage {
               .fontSize(14)
               .fontColor('#666')
 
-            Text('# 检查上传状态\ncurl -X POST http://IP:8088/api/upload/check \\\n  -H "Content-Type: application/json" \\\n  -d \'{"hash":"file-hash","fileName":"test.zip"}\'')
+            Text('# 检查上传状态\ncurl -X POST http://IP:8080/api/upload/check \\\n  -H "Content-Type: application/json" \\\n  -d \'{"hash":"file-hash","fileName":"test.zip"}\'')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')
@@ -155,7 +155,7 @@ struct UploadPage {
               .borderRadius(8)
               .width('100%')
 
-            Text('# 上传分片\ncurl -X POST http://IP:8088/api/upload/chunk \\\n  -F "hash=file-hash" \\\n  -F "chunkIndex=0" \\\n  -F "chunk=@chunk-0.bin"')
+            Text('# 上传分片\ncurl -X POST http://IP:8080/api/upload/chunk \\\n  -F "hash=file-hash" \\\n  -F "chunkIndex=0" \\\n  -F "chunk=@chunk-0.bin"')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')
@@ -183,7 +183,7 @@ struct UploadPage {
               .fontSize(14)
               .fontColor('#666')
 
-            Text('http://IP:8088/chunk-upload.html')
+            Text('http://IP:8080/chunk-upload.html')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor(Color.Blue)

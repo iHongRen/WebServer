@@ -19,16 +19,16 @@ This example demonstrates the WebServer framework's comprehensive event system. 
 
 Run the EventPage in your HarmonyOS app and click "启动服务器" (Start Server).
 
-Default port: `8084`
+Default port: `8080`
 
 ### 2. Test with curl
 
 ```bash
 # Get server status
-curl http://192.168.2.38:8084/status
+curl http://192.168.2.38:8080/status
 
 # Trigger error event
-curl http://192.168.2.38:8084/error
+curl http://192.168.2.38:8080/error
 ```
 
 ### 3. Run Test Script
@@ -64,7 +64,7 @@ Event Data:
 ```json
 {
   "address": "192.168.2.38",
-  "port": 8084
+  "port": 8080
 }
 ```
 
@@ -155,7 +155,7 @@ server.onError((error) => {
 ### Get Server Status
 
 ```bash
-curl http://IP:8084/
+curl http://IP:8080/
 ```
 
 Response:
@@ -170,7 +170,7 @@ Response:
 ### Get Detailed Status
 
 ```bash
-curl http://IP:8084/status
+curl http://IP:8080/status
 ```
 
 Response:
@@ -186,7 +186,7 @@ Response:
 ### Trigger Error Event
 
 ```bash
-curl http://IP:8084/error
+curl http://IP:8080/error
 ```
 
 This endpoint intentionally throws an error to test error handling.
@@ -194,7 +194,7 @@ This endpoint intentionally throws an error to test error handling.
 ### Disconnect Client
 
 ```bash
-curl -X POST http://IP:8084/disconnect/12345
+curl -X POST http://IP:8080/disconnect/12345
 ```
 
 Response:
@@ -242,7 +242,7 @@ server.get('/status', (req, res) => {
   });
 });
 
-await server.startServer(8084);
+await server.startServer(8080);
 ```
 
 ## Advanced Usage
@@ -273,7 +273,7 @@ server.onError((error) => {
   if (error.type === ServerErrorType.LISTEN_ERROR) {
     // Try alternative port
     console.log('Port busy, trying alternative port...');
-    server.startServer(8085);
+    server.startServer(8080);
   }
 });
 ```
@@ -315,7 +315,7 @@ Monitor server events in real-time by watching the console output:
 ```bash
 # In one terminal, start the server
 # In another terminal, run:
-watch -n 1 'curl -s http://IP:8084/status | jq .'
+watch -n 1 'curl -s http://IP:8080/status | jq .'
 ```
 
 ### Event Logging

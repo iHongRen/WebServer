@@ -6,7 +6,7 @@
  */
 
 import {
-  HttpServer, HttpRequest, HttpResponse,
+  HttpServer, HttpRequest, HttpResponse, File,
 } from '@cxy/webserver';
 import { socket } from '@kit.NetworkKit';
 
@@ -215,13 +215,15 @@ export class BodyParserExample {
         contentType,
         data: {
           body: req.body, // 表单中的文本字段在 req.body
-          files: Object.keys(req.files).map(key => ({
-            // 上传的文件在 req.files
-            'fieldName': key,
-            'fileName': req.files?.[key]?.fileName,
-            'size': req.files?.[key]?.data.byteLength,
-            'contentType': req.files?.[key]?.contentType
-          } as Record<string, Object>))
+          files: Object.keys(req.files).map(key => {
+            const file = req.files?.[key] as File;
+            return {
+              'fieldName': key,
+              'fileName': file?.fileName,
+              'size': file?.data.byteLength,
+              'contentType': file?.contentType
+            } as Record<string, Object>;
+          })
         },
         timestamp: new Date()
       };

@@ -19,19 +19,19 @@ This example demonstrates the WebServer framework's powerful routing system. The
 
 Run the RouterPage in your HarmonyOS app and click "启动服务器" (Start Server).
 
-Default port: `8086`
+Default port: `8080`
 
 ### 2. Test with curl
 
 ```bash
 # Basic route
-curl http://192.168.2.38:8086/
+curl http://192.168.2.38:8080/
 
 # Parameterized route
-curl http://192.168.2.38:8086/api/users/123
+curl http://192.168.2.38:8080/api/users/123
 
 # Route statistics
-curl http://192.168.2.38:8086/api/routes/stats
+curl http://192.168.2.38:8080/api/routes/stats
 ```
 
 ### 3. Run Test Script
@@ -78,13 +78,13 @@ Simple routes with fixed paths:
 
 ```bash
 # Homepage
-curl http://IP:8086/
+curl http://IP:8080/
 
 # About page
-curl http://IP:8086/about
+curl http://IP:8080/about
 
 # Contact page
-curl http://IP:8086/contact
+curl http://IP:8080/contact
 ```
 
 Response:
@@ -102,7 +102,7 @@ Response:
 Routes with one parameter:
 
 ```bash
-curl http://IP:8086/api/users/123
+curl http://IP:8080/api/users/123
 ```
 
 Response:
@@ -123,7 +123,7 @@ Response:
 Routes with multiple parameters:
 
 ```bash
-curl http://IP:8086/api/products/electronics/456
+curl http://IP:8080/api/products/electronics/456
 ```
 
 Response:
@@ -147,10 +147,10 @@ Routes that support query parameters:
 
 ```bash
 # JSON format (default)
-curl http://IP:8086/api/posts/789?format=json
+curl http://IP:8080/api/posts/789?format=json
 
 # XML format
-curl http://IP:8086/api/posts/789?format=xml
+curl http://IP:8080/api/posts/789?format=xml
 ```
 
 JSON Response:
@@ -183,7 +183,7 @@ XML Response:
 Create routes at runtime:
 
 ```bash
-curl -X POST http://IP:8086/api/routes \
+curl -X POST http://IP:8080/api/routes \
   -H "Content-Type: application/json" \
   -d '{
     "method": "GET",
@@ -207,7 +207,7 @@ Response:
 ### Access Dynamic Route
 
 ```bash
-curl http://IP:8086/api/custom
+curl http://IP:8080/api/custom
 ```
 
 Response:
@@ -228,7 +228,7 @@ Response:
 ### List Dynamic Routes
 
 ```bash
-curl http://IP:8086/api/routes/dynamic
+curl http://IP:8080/api/routes/dynamic
 ```
 
 Response:
@@ -245,7 +245,7 @@ Response:
 ### Delete Dynamic Route
 
 ```bash
-curl -X DELETE http://IP:8086/api/routes/GET/api/custom
+curl -X DELETE http://IP:8080/api/routes/GET/api/custom
 ```
 
 Response:
@@ -263,7 +263,7 @@ Response:
 Get comprehensive statistics about route usage:
 
 ```bash
-curl http://IP:8086/api/routes/stats
+curl http://IP:8080/api/routes/stats
 ```
 
 Response:
@@ -296,7 +296,7 @@ Response:
 ### Get All Records
 
 ```bash
-curl http://IP:8086/api/routes/records
+curl http://IP:8080/api/routes/records
 ```
 
 Response:
@@ -324,19 +324,19 @@ Response:
 ### Filter by Method
 
 ```bash
-curl "http://IP:8086/api/routes/records?method=POST"
+curl "http://IP:8080/api/routes/records?method=POST"
 ```
 
 ### Pagination
 
 ```bash
-curl "http://IP:8086/api/routes/records?limit=20&offset=40"
+curl "http://IP:8080/api/routes/records?limit=20&offset=40"
 ```
 
 ### Clear Records
 
 ```bash
-curl -X DELETE http://IP:8086/api/routes/records
+curl -X DELETE http://IP:8080/api/routes/records
 ```
 
 ## Code Example
@@ -370,7 +370,7 @@ server.get('/search', (req: HttpRequest, res: HttpResponse) => {
   res.json({ query, page });
 });
 
-await server.startServer(8086);
+await server.startServer(8080);
 ```
 
 ## Advanced Usage

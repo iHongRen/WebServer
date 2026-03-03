@@ -81,9 +81,9 @@
       }
     },
     {
-      "name": "StreamUploadPage",
-      "pageSourceFile": "src/main/ets/examples/stream-upload/StreamUploadPage.ets",
-      "buildFunction": "streamUploadBuilder",
+      "name": "FileUploadPage",
+      "pageSourceFile": "src/main/ets/examples/file-upload/FileUploadPage.ets",
+      "buildFunction": "fileUploadBuilder",
       "data": {
         "description": "page"
       }
