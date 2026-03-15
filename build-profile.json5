@@ -1,11 +1,38 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/Users/cxy/.ohos/config/default_WebServer_McImdhYPCOD0hX1XwiyErXW509EtgJW-9KcKyy_Ybk8=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001A6304DF87C790B1E2C907DC5812F191A39058BF8F9B7B9B457832350E09EFBBBAA743BC832ACA",
+          "profile": "/Users/cxy/.ohos/config/default_WebServer_McImdhYPCOD0hX1XwiyErXW509EtgJW-9KcKyy_Ybk8=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/cxy/.ohos/config/default_WebServer_McImdhYPCOD0hX1XwiyErXW509EtgJW-9KcKyy_Ybk8=.p12",
+          "storePassword": "0000001AF8FC92386BE0E9F9696C581D0CEFF87C0C5436B1C104947DE65ED12BF78A2EA6A605C9014D9F"
+        }
+      },
+      {
+        "name": "release",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/Users/cxy/Desktop/oh-cert/cxy_release.cer",
+          "keyAlias": "54ihongren",
+          "keyPassword": "0000001A2C2AC310717B9A5C438CB1450404DE0A125D4E6F466DE83D43B63386C6F28BE022CC075FA9AC",
+          "profile": "/Users/cxy/Desktop/oh-cert/webserverRelease.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/cxy/Desktop/oh-cert/cxy.p12",
+          "storePassword": "0000001AF2A059A8ED7637FE62404BA4203F027BD93D6FE48D9309AE2E4104FD9C567E4C519C5E0F12BC"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",
         "signingConfig": "default",
-        "targetSdkVersion": "5.0.5(17)",
+        "targetSdkVersion": "6.0.1(21)",
         "compatibleSdkVersion": "5.0.0(12)",
         "runtimeOS": "HarmonyOS",
         "buildOption": {
