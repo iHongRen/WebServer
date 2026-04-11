@@ -37,7 +37,7 @@ ohpm install @cxy/webserver
 ```json
 {
   "dependencies": {
-    "@cxy/webserver": "^2.0.2"
+    "@cxy/webserver": "^2.1.0"
   }
 }
 ```
