@@ -24,9 +24,15 @@ struct StaticPage {
   private staticExample: StaticExample = new StaticExample();
 
   aboutToAppear(): void {
-    this.staticExample.init(getContext(this) as common.UIAbilityContext);
+    this.staticExample.init(this.getUIContext().getHostContext() as common.UIAbilityContext);
   }
 
+  aboutToDisappear(): void {
+    if (this.isRunning) {
+      this.stopServer()
+    }
+  }
+  
   build() {
     NavDestination() {
       Scroll() {

@@ -24,9 +24,15 @@ struct LoggerPage {
   private loggerExample: LoggerExample = new LoggerExample();
 
   aboutToAppear(): void {
-    this.loggerExample.init(getContext(this) as common.UIAbilityContext);
+    this.loggerExample.init(this.getUIContext().getHostContext() as common.UIAbilityContext);
   }
 
+  aboutToDisappear(): void {
+    if (this.isRunning) {
+      this.stopServer()
+    }
+  }
+  
   build() {
     NavDestination() {
       Scroll() {

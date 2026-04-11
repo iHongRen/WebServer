@@ -24,7 +24,13 @@ struct UploadPage {
   private uploadExample: UploadExample = new UploadExample();
 
   aboutToAppear(): void {
-    this.uploadExample.init(getContext(this) as common.UIAbilityContext);
+    this.uploadExample.init(this.getUIContext().getHostContext() as common.UIAbilityContext);
+  }
+
+  aboutToDisappear(): void {
+    if (this.isRunning) {
+      this.stopServer()
+    }
   }
 
   build() {
@@ -276,7 +282,8 @@ struct UploadPage {
       if (info) {
         this.isRunning = true;
         this.serverStatus = '运行中';
-        this.serverInfo = `服务器地址: http://${info.address}:${info.port}\nWeb界面: http://${info.address}:${info.port}/chunk-upload.html`;
+        this.serverInfo =
+          `服务器地址: http://${info.address}:${info.port}\nWeb界面: http://${info.address}:${info.port}/chunk-upload.html`;
       } else {
         this.serverStatus = '启动失败';
         this.serverInfo = '无法启动服务器，请检查端口是否被占用';

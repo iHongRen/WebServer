@@ -24,9 +24,15 @@ struct HttpsPage {
   private httpsExample: HttpsExample = new HttpsExample();
 
   aboutToAppear(): void {
-    this.httpsExample.init(getContext(this) as common.UIAbilityContext);
+    this.httpsExample.init(this.getUIContext().getHostContext() as common.UIAbilityContext);
   }
 
+  aboutToDisappear(): void {
+    if (this.isRunning) {
+      this.stopServer()
+    }
+  }
+  
   build() {
     NavDestination() {
       Scroll() {

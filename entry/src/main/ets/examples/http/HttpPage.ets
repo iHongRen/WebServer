@@ -24,7 +24,13 @@ struct HttpPage {
   private httpExample: HttpExample = new HttpExample();
 
   aboutToAppear(): void {
-    this.httpExample.init(getContext(this) as common.UIAbilityContext);
+    this.httpExample.init(this.getUIContext().getHostContext() as common.UIAbilityContext);
+  }
+
+  aboutToDisappear(): void {
+    if (this.isRunning) {
+      this.stopServer()
+    }
   }
 
   build() {
@@ -232,7 +238,8 @@ struct HttpPage {
           top: 4,
           bottom: 4
         })
-        .backgroundColor(method === 'GET' ? '#4CAF50' : method === 'POST' ? '#2196F3' : method === 'PUT' ? '#FF9800' : '#F44336')
+        .backgroundColor(method === 'GET' ? '#4CAF50' :
+          method === 'POST' ? '#2196F3' : method === 'PUT' ? '#FF9800' : '#F44336')
         .borderRadius(4)
 
       Column({ space: 4 }) {

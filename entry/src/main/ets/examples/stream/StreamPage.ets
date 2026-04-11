@@ -24,9 +24,15 @@ struct StreamPage {
   private streamExample: StreamExample = new StreamExample();
 
   aboutToAppear(): void {
-    this.streamExample.init(getContext(this) as common.UIAbilityContext);
+    this.streamExample.init(this.getUIContext().getHostContext() as common.UIAbilityContext);
   }
 
+  aboutToDisappear(): void {
+    if (this.isRunning) {
+      this.stopServer()
+    }
+  }
+  
   build() {
     NavDestination() {
       Scroll() {

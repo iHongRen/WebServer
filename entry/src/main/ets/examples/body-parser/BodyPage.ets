@@ -22,6 +22,12 @@ struct BodyPage {
   @State isRunning: boolean = false;
   private bodyParserExample: BodyParserExample = new BodyParserExample();
 
+  aboutToDisappear(): void {
+    if (this.isRunning) {
+      this.stopServer()
+    }
+  }
+
   build() {
     NavDestination() {
       Scroll() {

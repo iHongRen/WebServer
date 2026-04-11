@@ -22,6 +22,12 @@ struct RouterPage {
   @State isRunning: boolean = false;
   private routerExample: RouterExample = new RouterExample();
 
+  aboutToDisappear(): void {
+    if (this.isRunning) {
+      this.stopServer()
+    }
+  }
+  
   build() {
     NavDestination() {
       Scroll() {

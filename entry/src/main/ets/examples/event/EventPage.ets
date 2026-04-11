@@ -22,6 +22,12 @@ struct EventPage {
   @State isRunning: boolean = false;
   private eventExample: EventExample = new EventExample();
 
+  aboutToDisappear(): void {
+    if (this.isRunning) {
+      this.stopServer()
+    }
+  }
+  
   build() {
     NavDestination() {
       Scroll() {

@@ -115,6 +115,23 @@ export class ConnectionPool {
   }
 
   /**
+   * 停止清理并关闭所有连接
+   */
+  public async destroy(): Promise<void> {
+    if (this.cleanupTimer !== null) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
+    const closePromises: Promise<void>[] = [];
+    this.connections.forEach((conn) => {
+      closePromises.push(conn.socket.close().catch(() => {
+      }));
+    });
+    await Promise.all(closePromises);
+    this.connections.clear();
+  }
+
+  /**
    * 清理过期连接
    */
   private async cleanup(): Promise<void> {
@@ -150,23 +167,5 @@ export class ConnectionPool {
     this.cleanupTimer = setInterval(() => {
       this.cleanup();
     }, this.config.cleanupInterval);
-  }
-
-  /**
-   * 停止清理并关闭所有连接
-   */
-  public async destroy(): Promise<void> {
-    if (this.cleanupTimer !== null) {
-      clearInterval(this.cleanupTimer);
-      this.cleanupTimer = null;
-    }
-
-    const closePromises: Promise<void>[] = [];
-    this.connections.forEach((conn) => {
-      closePromises.push(conn.socket.close().catch(() => {}));
-    });
-
-    await Promise.all(closePromises);
-    this.connections.clear();
   }
 }

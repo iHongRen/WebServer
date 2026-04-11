@@ -22,6 +22,12 @@ struct CorsPage {
   @State isRunning: boolean = false;
   private corsExample: CorsExample = new CorsExample();
 
+  aboutToDisappear(): void {
+    if (this.isRunning) {
+      this.stopServer()
+    }
+  }
+
   build() {
     NavDestination() {
       Scroll() {
@@ -226,7 +232,8 @@ struct CorsPage {
           top: 4,
           bottom: 4
         })
-        .backgroundColor(method === 'GET' ? '#4CAF50' : method === 'POST' ? '#2196F3' : method === 'PUT' ? '#FF9800' : '#9C27B0')
+        .backgroundColor(method === 'GET' ? '#4CAF50' :
+          method === 'POST' ? '#2196F3' : method === 'PUT' ? '#FF9800' : '#9C27B0')
         .borderRadius(4)
 
       Column({ space: 4 }) {
