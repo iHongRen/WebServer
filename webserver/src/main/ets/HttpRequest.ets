@@ -3,6 +3,7 @@
  * @author : @cxy
  * @date : 2025/8/15
  * @description : HTTP 请求解析类
+ * https://github.com/iHongRen/WebServer
  */
 import { Utils } from "./Utils";
 import { socket } from '@kit.NetworkKit';

@@ -3,6 +3,7 @@
  * @author : @cxy
  * @date : 2025/8/15
  * @description : Http服务器
+ * https://github.com/iHongRen/WebServer
  */
 
 import { connection, socket } from '@kit.NetworkKit';
@@ -398,7 +399,7 @@ export class HttpServer {
       try {
         // 清理连接池
         await this.connectionPool.destroy();
-        
+
         this.clients.clear();
         this.requestBuffers.clear();
         this.tcpServer.off('connect');
@@ -434,7 +435,7 @@ export class HttpServer {
     this.connectionPool.remove(clientSocket.clientId);
     this.clients.delete(clientSocket.clientId);
     this.requestBuffers.delete(clientSocket.clientId);
-    
+
     if (error) {
       this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
     }
@@ -462,7 +463,7 @@ export class HttpServer {
 
         // 获取或创建缓冲区
         let buffer = this.requestBuffers.get(clientId) || new ArrayBuffer(0);
-        
+
         // 将新数据追加到缓冲区
         buffer = Utils.mergeArrayBuffers(buffer, data.message);
         this.requestBuffers.set(clientId, buffer);
@@ -497,28 +498,6 @@ export class HttpServer {
   }
 
   /**
-   * 异步处理单个请求
-   */
-  private async processRequest(
-    clientSocket: socket.TCPSocketConnection | socket.TLSSocketConnection,
-    data: socket.SocketMessageInfo
-  ): Promise<void> {
-    const req = new HttpRequest(data);
-    const res = new HttpResponse(clientSocket);
-
-    // 添加响应完成回调
-    res.onFinish((statusCode, responseSize) => {
-      this.eventEmitter.emit({
-        type: ServerEventType.RESPONSE_SENT,
-        data: { clientSocket, statusCode, responseSize }
-      });
-    });
-
-    // 执行路由处理
-    this.router.handle(req, res);
-  }
-
-  /**
    * 获取本地IP地址
    * @returns IP地址字符串
    */
@@ -540,5 +519,27 @@ export class HttpServer {
     } catch (e) {
       return localIP;
     }
+  }
+
+  /**
+   * 异步处理单个请求
+   */
+  private async processRequest(
+    clientSocket: socket.TCPSocketConnection | socket.TLSSocketConnection,
+    data: socket.SocketMessageInfo
+  ): Promise<void> {
+    const req = new HttpRequest(data);
+    const res = new HttpResponse(clientSocket);
+
+    // 添加响应完成回调
+    res.onFinish((statusCode, responseSize) => {
+      this.eventEmitter.emit({
+        type: ServerEventType.RESPONSE_SENT,
+        data: { clientSocket, statusCode, responseSize }
+      });
+    });
+
+    // 执行路由处理
+    this.router.handle(req, res);
   }
 }

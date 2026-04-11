@@ -3,6 +3,7 @@
  * @author : @cxy
  * @date : 2025/4/11
  * @description : 高性能HTTP请求解析器
+ * https://github.com/iHongRen/WebServer
  */
 
 import { Utils } from './Utils';
@@ -128,7 +129,9 @@ export class RequestParser {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      if (!line) continue;
+      if (!line) {
+        continue;
+      }
 
       const colonIndex = line.indexOf(': ');
       if (colonIndex !== -1) {
@@ -163,7 +166,9 @@ export class RequestParser {
    */
   private static hasChunkEnd(view: Uint8Array): boolean {
     const len = view.length;
-    if (len < 5) return false;
+    if (len < 5) {
+      return false;
+    }
 
     // 查找 "0\r\n\r\n"
     for (let i = len - 5; i >= 0; i--) {
