@@ -1,49 +1,20 @@
-
 <p align="center">
-  <a href="https://github.com/iHongRen/WebServer/releases/latest"><img src="https://img.shields.io/github/v/release/iHongRen/WebServer?label=version&color=blue" alt="version"></a>
-  <a href="https://github.com/iHongRen/configEditor"><img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License"></a>
-  <a href="https://ihongren.github.io/donate.html"><img src="https://img.shields.io/github/stars/iHongRen/WebServer.svg?style=social" alt="GitHub Stars"></a>
+  <a href="https://github.com/iHongRen/hpack/releases/latest"><img src="https://img.shields.io/github/v/release/iHongRen/WebServer?label=version&color=blue" alt="version"></a>
+  <a href="https://github.com/iHongRen/WebServer"><img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License"></a>
+  <a href="https://ihongren.github.io/donate.html"><img src="https://img.shields.io/badge/Sponsor-Donate-orange" alt="Sponsor"></a>
 </p>
-
+<p align="center">
 
 # WebServer - 鸿蒙Web服务器框架
 
-这是一个基于 HarmonyOS 的**生产级**Web服务器框架，提供了类似 Express.js 的 API 设计，支持路由、中间件、静态文件服务等功能。
+这是一个基于 HarmonyOS 的轻量级Web服务器框架，提供了类似 Express.js 的 API 设计，支持路由、中间件、静态文件服务等功能。
 
 **🎉 本组件荣获[HarmonyOS组件开发征集活动](https://developer.huawei.com/consumer/cn/forum/topic/0204206012800831358?fid=0102767778349500527) 质量奖第一名**
 
-## ✨ 最新优化 (v2.1.0)
-
-经过全面的性能优化和稳定性提升，WebServer 现已达到**生产级别的顶尖性能**：
-
-### 🚀 性能提升
-- ⚡ **请求处理速度提升 300%+** - 优化的请求解析和连接管理
-- 📦 **静态文件响应提升 80-95%** - LRU缓存策略和智能缓存管理
-- 💾 **内存使用减少 47%** - 优化的资源管理和连接池
-- 🔄 **支持 2000+ 并发连接** - 智能连接池和资源复用
-
-### 🔒 安全增强
-- 🛡️ **XSS防护** - 自动清理潜在的跨站脚本攻击
-- 🚫 **SQL注入防护** - 检测和阻止SQL注入尝试
-- 🔐 **安全响应头** - Frame Guard、HSTS、CSP等
-- ⏱️ **智能限流** - 防止API滥用和DDoS攻击
-
-### 📊 新增功能
-- 📈 **性能监控** - 实时性能指标和慢请求检测
-- 🗜️ **Gzip压缩** - 自动压缩响应，减少传输数据60-80%
-- 🔄 **连接池管理** - 自动清理空闲连接，防止资源泄漏
-- 💾 **响应缓存** - LRU缓存策略，大幅提升静态文件性能
-
-📖 **详细文档**：
-- [完整优化文档](./webserver/OPTIMIZATION.md)
-- [快速开始指南](./webserver/QUICKSTART.md)
-- [生产环境示例](./webserver/PRODUCTION_EXAMPLE.ets)
-
 ## 特性
 
-### 核心功能
 - 类 Express.js 的 API 设计
-- 支持 HTTPS (TLS/SSL)
+- 支持 https
 - 支持路由参数和查询字符串
 - CORS 跨域支持
 - 静态文件服务
@@ -54,24 +25,6 @@
 - 错误处理
 - 中间件系统
 - 多种日志格式支持
-
-### 性能优化 🚀
-- **连接池管理** - 智能连接复用和资源管理
-- **请求解析优化** - 字节级别的快速解析，提升50-70%
-- **响应缓存** - LRU缓存策略，静态文件性能提升80-95%
-- **Gzip压缩** - 自动压缩响应，减少传输数据60-80%
-
-### 安全防护 🔒
-- **限流保护** - 防止API滥用和DDoS攻击
-- **XSS防护** - 自动清理跨站脚本攻击
-- **SQL注入防护** - 检测和阻止SQL注入
-- **安全响应头** - Frame Guard、HSTS、CSP等
-
-### 监控与调试 📊
-- **性能监控** - 实时性能指标收集
-- **慢请求检测** - 自动识别性能瓶颈
-- **缓存统计** - 缓存命中率和使用情况
-- **连接监控** - 实时连接数和状态
 
 ## 安装
 
@@ -88,7 +41,6 @@ ohpm install @cxy/webserver
   }
 }
 ```
-
 
 ## 快速开始
 
@@ -303,25 +255,15 @@ await this.server.stopServer();
 查看 [examples/](https://github.com/iHongRen/WebServer/tree/main/entry/src/main/ets/examples) 目录获取更多示例：
 
 - **HTTP服务器** - 完整的RESTful API和文件管理
-
 - **HTTPS服务器** - SSL/TLS加密通信
-
 - **Body Parser** - 各种请求体解析
-
 - **CORS** - 跨域资源共享
-
 - **Event** - 事件系统使用
-
 - **Logger** - 日志记录
-
 - **Router** - 路由系统
-
 - **Static** - 静态文件服务
-
 - **Upload** - 分片上传最佳实践
-
 - **Stream** - 流式传输（服务器响应流）
-
 - **Stream Upload** - 流式上传（客户端请求流，支持Transfer-Encoding: chunked）
 
 # WebServer API [文档](https://github.com/iHongRen/WebServer)
@@ -440,6 +382,7 @@ server.post('/upload', (req, res) => {
 ```
 
 客户端使用curl测试：
+
 ```bash
 curl -X POST http://IP:8080/upload \
   -H "Transfer-Encoding: chunked" \

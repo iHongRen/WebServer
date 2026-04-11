@@ -1,4 +1,9 @@
-![Version](https://img.shields.io/badge/version-2.0.2-blue)  ![License](https://img.shields.io/badge/License-Apache%202.0-green.svg) ![GitHub Stars](https://img.shields.io/github/stars/iHongRen/WebServer.svg?style=social)
+<p align="center">
+  <a href="https://github.com/iHongRen/hpack/releases/latest"><img src="https://img.shields.io/github/v/release/iHongRen/WebServer?label=version&color=blue" alt="version"></a>
+  <a href="https://github.com/iHongRen/WebServer"><img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License"></a>
+  <a href="https://ihongren.github.io/donate.html"><img src="https://img.shields.io/badge/Sponsor-Donate-orange" alt="Sponsor"></a>
+</p>
+<p align="center">
 
 # WebServer - 鸿蒙Web服务器框架
 
