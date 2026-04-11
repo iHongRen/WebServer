@@ -1,3 +1,5 @@
 {
-    "html.autoClosingTags": false
+    "html.autoClosingTags": false,
+    "typescript.validate.enable": false,
+    "typescript.suggest.enabled": false
 }

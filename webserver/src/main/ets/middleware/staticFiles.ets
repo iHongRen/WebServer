@@ -10,12 +10,15 @@ import { HttpResponse } from '../HttpResponse';
 import { NextFunction, RequestHandler, CacheOptions } from './types';
 import { Utils } from '../Utils';
 import { fileIo } from '@kit.CoreFileKit';
+import { ResponseCache, CacheStats } from '../ResponseCache';
 
 /**
  * 静态文件服务类
- * 提供静态文件访问功能，支持缓存控制
+ * 提供静态文件访问功能，支持缓存控制和性能优化
  */
 export class StaticFiles {
+  private static cache: ResponseCache = new ResponseCache();
+
   /**
    * 创建静态文件服务中间件
    * 处理静态文件请求，支持缓存和ETag
@@ -24,16 +27,21 @@ export class StaticFiles {
    * @returns 中间件处理函数
    */
   static serve(directoryPath: string, options?: CacheOptions): RequestHandler {
+    const cache = StaticFiles.cache;
+    
     return async (req: HttpRequest, res: HttpResponse, next: NextFunction) => {
       if (req.method !== 'GET') {
-        return next();
+        next();
+        return;
       }
       
       const decodedPath = decodeURIComponent(req.path);
       const requestedPath = Utils.normalizePath(decodedPath);
       
+      // 安全检查：防止路径遍历攻击
       if (requestedPath.includes('..')) {
-        return res.status(400).send('Invalid Path');
+        res.status(400).send('Invalid Path');
+        return;
       }
       
       let fullPath = directoryPath + (requestedPath === '/' ? '/index.html' : requestedPath);
@@ -53,20 +61,44 @@ export class StaticFiles {
         // 检查客户端缓存
         const ifNoneMatch = req.get('if-none-match');
         if (ifNoneMatch === etag) {
-          return res.status(304).send(); // Not Modified
+          res.status(304).send(); // Not Modified
+          return;
         }
 
-        // 设置缓存头
-        res.setHeader('Cache-Control', `public, max-age=${maxAge}`);
-        res.setHeader('ETag', etag);
+        // 尝试从服务器缓存获取
+        const cacheKey = fullPath;
+        const cached = cache.get(cacheKey);
 
-        const mimeType = Utils.getMimeType(fullPath);
-        res.setHeader('Content-Type', mimeType);
-        
+        if (cached && cached.etag === etag) {
+          // 使用缓存数据
+          cached.headers.forEach((value: string, key: string) => {
+            res.setHeader(key, value);
+          });
+          res.send(cached.data);
+          return;
+        }
+
+        // 读取文件
         const buf = new ArrayBuffer(stat.size);
-        const file = fileIo.openSync(fullPath, fileIo.OpenMode.READ_WRITE);
+        const file = fileIo.openSync(fullPath, fileIo.OpenMode.READ_ONLY);
         fileIo.readSync(file.fd, buf);
         fileIo.closeSync(file.fd);
+
+        // 设置响应头
+        const mimeType = Utils.getMimeType(fullPath);
+        const headers = new Map<string, string>();
+        headers.set('Content-Type', mimeType);
+        headers.set('Cache-Control', `public, max-age=${maxAge}`);
+        headers.set('ETag', etag);
+        headers.set('Last-Modified', new Date(stat.mtime).toUTCString());
+
+        // 存入缓存
+        cache.set(cacheKey, buf, headers, etag);
+
+        // 设置响应头
+        headers.forEach((value: string, key: string) => {
+          res.setHeader(key, value);
+        });
         
         res.send(buf);
       } catch (e) {
@@ -74,5 +106,19 @@ export class StaticFiles {
         next();
       }
     };
+  }
+
+  /**
+   * 清空静态文件缓存
+   */
+  static clearCache(): void {
+    StaticFiles.cache.clear();
+  }
+
+  /**
+   * 获取缓存统计
+   */
+  static getCacheStats(): CacheStats {
+    return StaticFiles.cache.getStats();
   }
 }

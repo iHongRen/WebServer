@@ -21,5 +21,21 @@ export { Logger, LogFormat } from './logger';
 export { FileUpload } from './fileUpload';
 export type { FileUploadOptions, UploadedFile, FileLimits, ParseResult, PartResult } from './fileUpload';
 
+// 导出限流中间件
+export { RateLimit } from './rateLimit';
+export type { RateLimitOptions } from './rateLimit';
+
+// 导出压缩中间件
+export { Compression } from './compression';
+export type { CompressionOptions } from './compression';
+
+// 导出性能监控中间件
+export { Performance } from './performance';
+export type { PerformanceOptions, PerformanceMetrics } from './performance';
+
+// 导出安全中间件
+export { Security } from './security';
+export type { SecurityOptions } from './security';
+
 // 导出所有类型定义
 export * from './types';

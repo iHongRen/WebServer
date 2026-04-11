@@ -13,6 +13,9 @@ import { HttpResponse } from './HttpResponse';
 import { Router } from './Router';
 import { LoggerOptions } from './middleware/logger';
 import { deviceInfo } from '@kit.BasicServicesKit';
+import { ConnectionPool, PoolConfig } from './ConnectionPool';
+import { RequestParser } from './RequestParser';
+import { ResponseCache, CacheConfig, CacheStats } from './ResponseCache';
 
 import {
   NextFunction,
@@ -44,13 +47,18 @@ export class HttpServer {
   protected clients: Map<number, socket.TCPSocketConnection | socket.TLSSocketConnection> = new Map(); // 客户端连接映射
   protected tcpServer: socket.TCPSocketServer | null = null; // TCP服务器实例
   protected eventEmitter: ServerEventEmitter = new ServerEventEmitter(); // 事件发射器
+  protected connectionPool: ConnectionPool; // 连接池
+  protected responseCache: ResponseCache; // 响应缓存
+  protected requestBuffers: Map<number, ArrayBuffer> = new Map(); // 请求缓冲区
 
   /**
    * 构造函数
    * 初始化服务器并设置默认404处理
    */
-  constructor() {
-    this.use404()
+  constructor(poolConfig?: PoolConfig, cacheConfig?: CacheConfig) {
+    this.connectionPool = new ConnectionPool(poolConfig);
+    this.responseCache = new ResponseCache(cacheConfig);
+    this.use404();
   }
 
   /**
@@ -243,7 +251,7 @@ export class HttpServer {
    * @returns 客户端数量
    */
   public getClientCount(): number {
-    return this.clients.size;
+    return this.connectionPool.size();
   }
 
   /**
@@ -251,7 +259,7 @@ export class HttpServer {
    * @returns 客户端信息数组
    */
   public getClients(): (socket.TCPSocketConnection | socket.TLSSocketConnection)[] {
-    return Array.from(this.clients.values());
+    return this.connectionPool.getAll().map(info => info.socket);
   }
 
   /**
@@ -260,7 +268,8 @@ export class HttpServer {
    * @returns 客户端信息或undefined
    */
   public getClient(clientId: number): socket.TCPSocketConnection | socket.TLSSocketConnection | undefined {
-    return this.clients.get(clientId);
+    const info = this.connectionPool.get(clientId);
+    return info?.socket;
   }
 
   /**
@@ -268,10 +277,11 @@ export class HttpServer {
    * @param clientId 客户端ID
    */
   public async disconnectClient(clientId: number): Promise<boolean> {
-    const clientInfo = this.clients.get(clientId);
-    if (clientInfo) {
+    const info = this.connectionPool.get(clientId);
+    if (info) {
       try {
-        await clientInfo.close();
+        await info.socket.close();
+        this.connectionPool.remove(clientId);
         return true;
       } catch (error) {
         this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
@@ -279,6 +289,20 @@ export class HttpServer {
       }
     }
     return false;
+  }
+
+  /**
+   * 获取缓存统计信息
+   */
+  public getCacheStats(): CacheStats {
+    return this.responseCache.getStats();
+  }
+
+  /**
+   * 清空响应缓存
+   */
+  public clearCache(): void {
+    this.responseCache.clear();
   }
 
   /**
@@ -329,10 +353,11 @@ export class HttpServer {
   public async stopServer(): Promise<void> {
     if (this.tcpServer) {
       try {
-        this.clients.forEach(async (client, _) => {
-          client.close();
-        })
+        // 清理连接池
+        await this.connectionPool.destroy();
+        
         this.clients.clear();
+        this.requestBuffers.clear();
         this.tcpServer.off('connect');
         this.tcpServer.off('error');
 
@@ -354,31 +379,7 @@ export class HttpServer {
    * @returns 是否为完整请求
    */
   protected isRequestComplete(buffer: ArrayBuffer): boolean {
-    const bufferStr = Utils.arrayBufferToStr(buffer);
-    const headerEndIndex = bufferStr.indexOf('\r\n\r\n');
-
-    if (headerEndIndex === -1) {
-      return false; // 头部不完整
-    }
-
-    const headerStr = bufferStr.substring(0, headerEndIndex);
-    
-    // 检查是否使用分块传输编码
-    const transferEncodingMatch = headerStr.match(/Transfer-Encoding:\s*chunked/i);
-    if (transferEncodingMatch) {
-      // 分块传输：检查是否收到结束标记 "0\r\n\r\n"
-      return bufferStr.endsWith('0\r\n\r\n');
-    }
-
-    // 解析Content-Length
-    const contentLengthMatch = headerStr.match(/Content-Length:\s*(\d+)/i);
-    const contentLength = contentLengthMatch ? parseInt(contentLengthMatch[1]) : 0;
-
-    // 计算完整请求的总长度
-    const headerLength = headerEndIndex + 4; // 包括 \r\n\r\n
-    const totalRequestLength = headerLength + contentLength;
-
-    return buffer.byteLength >= totalRequestLength;
+    return RequestParser.isComplete(buffer);
   }
 
   /**
@@ -387,7 +388,10 @@ export class HttpServer {
    * @param error 错误信息（可选）
    */
   protected removeClient(clientSocket: socket.TCPSocketConnection | socket.TLSSocketConnection, error?: BusinessError) {
+    this.connectionPool.remove(clientSocket.clientId);
     this.clients.delete(clientSocket.clientId);
+    this.requestBuffers.delete(clientSocket.clientId);
+    
     if (error) {
       this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
     }
@@ -398,18 +402,32 @@ export class HttpServer {
    * @param clientSocket 客户端Socket连接
    */
   protected handleClient(clientSocket: socket.TCPSocketConnection | socket.TLSSocketConnection) {
+    // 检查连接池是否已满
+    if (!this.connectionPool.add(clientSocket)) {
+      console.warn('Connection pool full, rejecting connection');
+      clientSocket.close();
+      return;
+    }
+
     this.clients.set(clientSocket.clientId, clientSocket);
-    let buffer = new ArrayBuffer(0);
+    const clientId = clientSocket.clientId;
+
     clientSocket.on('message', async (data) => {
       try {
+        // 更新连接活动时间
+        this.connectionPool.updateActivity(clientId);
+
+        // 获取或创建缓冲区
+        let buffer = this.requestBuffers.get(clientId) || new ArrayBuffer(0);
+        
         // 将新数据追加到缓冲区
         buffer = Utils.mergeArrayBuffers(buffer, data.message);
+        this.requestBuffers.set(clientId, buffer);
 
         // 检查是否有完整的HTTP请求
-        const completeRequest = this.isRequestComplete(buffer);
-        if (completeRequest) {
+        if (this.isRequestComplete(buffer)) {
           // 处理请求
-          data.message = buffer
+          data.message = buffer;
 
           // 发射请求接收事件
           this.eventEmitter.emit({
@@ -417,27 +435,44 @@ export class HttpServer {
             data: { clientSocket, data }
           });
 
-          const req = new HttpRequest(data);
-          const res = new HttpResponse(clientSocket);
-
-          // 添加响应完成回调
-          res.onFinish((statusCode, responseSize) => {
-            this.eventEmitter.emit({
-              type: ServerEventType.RESPONSE_SENT,
-              data: { clientSocket, statusCode, responseSize }
-            });
+          // 异步处理请求，避免阻塞
+          this.processRequest(clientSocket, data).catch((error: Error) => {
+            this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
           });
 
-          this.router.handle(req, res);
           // 清空缓冲区
-          buffer = new ArrayBuffer(0);
+          this.requestBuffers.delete(clientId);
         }
       } catch (error) {
         this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
+        this.requestBuffers.delete(clientId);
       }
     });
+
     clientSocket.on('error', (err) => this.removeClient(clientSocket, err));
     clientSocket.on('close', () => this.removeClient(clientSocket));
+  }
+
+  /**
+   * 异步处理单个请求
+   */
+  private async processRequest(
+    clientSocket: socket.TCPSocketConnection | socket.TLSSocketConnection,
+    data: socket.SocketMessageInfo
+  ): Promise<void> {
+    const req = new HttpRequest(data);
+    const res = new HttpResponse(clientSocket);
+
+    // 添加响应完成回调
+    res.onFinish((statusCode, responseSize) => {
+      this.eventEmitter.emit({
+        type: ServerEventType.RESPONSE_SENT,
+        data: { clientSocket, statusCode, responseSize }
+      });
+    });
+
+    // 执行路由处理
+    this.router.handle(req, res);
   }
 
   /**
