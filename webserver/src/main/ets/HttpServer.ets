@@ -23,9 +23,11 @@ import {
   ErrorHandler,
   CorsOptions,
   CacheOptions,
+  StaticSiteOptions,
   BodyParser,
   Cors,
   StaticFiles,
+  StaticSiteConfig,
   Logger,
 } from './middleware';
 import {
@@ -176,6 +178,47 @@ export class HttpServer {
    */
   public serveStatic(directoryPath: string, options?: CacheOptions) {
     this.router.addRoute('GET', '*', StaticFiles.serve(directoryPath, options));
+  }
+
+  /**
+   * 注册静态站点
+   * 支持多个静态站点，每个站点有独立的路径前缀和配置
+   * @param prefix URL路径前缀
+   * @param root 站点根目录
+   * @param options 站点配置选项
+   */
+  public registerStaticSite(prefix: string, root: string, options?: StaticSiteOptions) {
+    const config: StaticSiteConfig = {
+      prefix: prefix,
+      root: root,
+      maxAge: options?.maxAge,
+      index: options?.index,
+      directoryListing: options?.directoryListing
+    };
+    StaticFiles.registerSite(config);
+  }
+
+  /**
+   * 启用多站点静态文件服务
+   * 必须在注册站点后调用
+   */
+  public serveMultiSite() {
+    this.router.addRoute('GET', '*', StaticFiles.serveMultiSite());
+  }
+
+  /**
+   * 注销静态站点
+   * @param prefix 站点路径前缀
+   */
+  public unregisterStaticSite(prefix: string): boolean {
+    return StaticFiles.unregisterSite(prefix);
+  }
+
+  /**
+   * 获取所有已注册的静态站点
+   */
+  public getStaticSites() {
+    return StaticFiles.getSites();
   }
 
   /**

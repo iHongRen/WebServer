@@ -42,3 +42,12 @@ export interface CacheOptions {
   maxAge?: number // 缓存最大时间（秒）
 }
 
+/**
+ * 静态站点配置选项接口
+ */
+export interface StaticSiteOptions {
+  maxAge?: number // 缓存最大时间（秒）
+  index?: string[] // 默认索引文件列表
+  directoryListing?: boolean // 是否启用目录浏览
+}
+
