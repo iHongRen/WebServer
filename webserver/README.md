@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/iHongRen/hpack/releases/latest"><img src="https://img.shields.io/github/v/release/iHongRen/WebServer?label=version&color=blue" alt="version"></a>
+  <a href="https://github.com/iHongRen/WebServer/releases/latest"><img src="https://img.shields.io/github/v/release/iHongRen/WebServer?label=version&color=blue" alt="version"></a>
   <a href="https://github.com/iHongRen/WebServer"><img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License"></a>
   <a href="https://ihongren.github.io/donate.html"><img src="https://img.shields.io/badge/Sponsor-Donate-orange" alt="Sponsor"></a>
 </p>
