@@ -499,7 +499,6 @@ export class HttpServer {
    * @param clientSocket 客户端Socket连接
    */
   protected handleClient(clientSocket: socket.TCPSocketConnection | socket.TLSSocketConnection) {
-    // 检查连接池是否已满
     if (!this.connectionPool.add(clientSocket)) {
       console.warn('Connection pool full, rejecting connection');
       clientSocket.close();
@@ -511,167 +510,134 @@ export class HttpServer {
 
     clientSocket.on('message', async (data) => {
       try {
-        // 更新连接活动时间
         this.connectionPool.updateActivity(clientId);
 
-        // ── 流式会话：继续推送 body 数据块 ──────────────────────────
-        const session = this.streamSessions.get(clientId);
-        if (session) {
-          const chunk = data.message;
-          const stream = session.stream;
-
-          if (session.remaining >= 0) {
-            // Content-Length 模式
-            session.remaining -= chunk.byteLength;
-            stream._push(chunk);
-            if (session.remaining <= 0) {
-              this.streamSessions.delete(clientId);
-              stream._end();
-            }
-          } else {
-            // chunked 模式：等终止块 "0\r\n\r\n"
-            stream._push(chunk);
-
-            // 检测是否结束
-            let buffer = this.requestBuffers.get(clientId) || new ArrayBuffer(0);
-            buffer = Utils.mergeArrayBuffers(buffer, chunk);
-            this.requestBuffers.set(clientId, buffer);
-
-            if (RequestParser.isChunkedComplete(buffer)) {
-              this.streamSessions.delete(clientId);
-              this.requestBuffers.delete(clientId);
-              stream._end();
-            }
-          }
+        // 优先处理已建立的流式会话
+        if (this.streamSessions.has(clientId)) {
+          this.handleStreamChunk(clientId, data.message);
           return;
         }
 
-        // ── 普通模式：缓冲直到请求完整 ──────────────────────────────
+        // 普通模式：缓冲数据，等 header 到齐后决定走哪条分支
         let buffer = this.requestBuffers.get(clientId) || new ArrayBuffer(0);
-
-        // 将新数据追加到缓冲区
         buffer = Utils.mergeArrayBuffers(buffer, data.message);
         this.requestBuffers.set(clientId, buffer);
 
-        // 检测 header 是否已到达
         const headerEnd = RequestParser.findHeaderEnd(buffer);
         if (headerEnd === -1) {
-          // header 还没收完，继续等待
-          return;
+          return; // header 尚未收完
         }
 
-        // header 已到达：判断是否为流式请求（由路由标记）
         const parsedHeader = RequestParser.parseHeaderOnly(buffer);
-        const isStreamRequest = this.isStreamRoute(parsedHeader.method, parsedHeader.path);
-
-        if (isStreamRequest) {
-          // ── 流式模式：立即触发路由，body 增量推送 ──────────────────
+        if (this.isStreamRoute(parsedHeader.method, parsedHeader.path)) {
           this.requestBuffers.delete(clientId);
-
-          // 构造仅含 header 的 SocketMessageInfo（body 部分截断）
-          const headerOnlyBuffer = buffer.slice(0, headerEnd + 4);
-          const headerOnlyData: socket.SocketMessageInfo = {
-            message: headerOnlyBuffer,
-            remoteInfo: data.remoteInfo
-          };
-
-          const req = new HttpRequest(headerOnlyData, true);
-          const res = new HttpResponse(clientSocket);
-
-          // 创建 UploadStream 并挂载到 req
-          const contentLengthStr = req.get('content-length');
-          const transferEncoding = req.get('transfer-encoding') ?? '';
-          const isChunked = transferEncoding.toLowerCase().includes('chunked');
-          const contentLength = contentLengthStr ? parseInt(contentLengthStr) : 0;
-          const stream = new UploadStream(isChunked ? -1 : contentLength);
-          req.uploadStream = stream;
-
-          // 先将 header 后紧跟的 body 初始部分推入 stream
-          const bodyStart = buffer.slice(headerEnd + 4);
-
-          // 计算剩余字节
-          let remaining: number;
-          if (isChunked) {
-            remaining = -1;
-            // 缓存已收到的 body 片段用于 chunked 结束检测
-            this.requestBuffers.set(clientId, bodyStart);
-          } else {
-            remaining = Math.max(0, contentLength - bodyStart.byteLength);
-          }
-
-          this.streamSessions.set(clientId, { stream, req, res, remaining } as StreamSession);
-
-          // 推送已有的 body 片段
-          if (bodyStart.byteLength > 0) {
-            stream._push(bodyStart);
-
-            // 检查是否已经收完
-            if (!isChunked && remaining <= 0) {
-              this.streamSessions.delete(clientId);
-              stream._end();
-            } else if (isChunked && RequestParser.isChunkedComplete(bodyStart)) {
-              this.streamSessions.delete(clientId);
-              this.requestBuffers.delete(clientId);
-              stream._end();
-            }
-          } else if (!isChunked && contentLength === 0) {
-            // 没有 body，直接结束
-            this.streamSessions.delete(clientId);
-            stream._end();
-          }
-
-          // 添加响应完成回调
-          res.onFinish((statusCode, responseSize) => {
-            this.eventEmitter.emit({
-              type: ServerEventType.RESPONSE_SENT,
-              data: { clientSocket, statusCode, responseSize }
-            });
-          });
-
-          // 触发路由（不等 body）
-          this.eventEmitter.emit({
-            type: ServerEventType.REQUEST_RECEIVED,
-            data: { clientSocket, data: headerOnlyData }
-          });
-
-          this.router.handle(req, res);
-          return;
-        }
-
-        // ── 非流式：等请求完整再处理 ────────────────────────────────
-        if (this.isRequestComplete(buffer)) {
-          // 处理请求
+          this.initStreamSession(clientSocket, data, buffer, headerEnd);
+        } else if (this.isRequestComplete(buffer)) {
+          this.requestBuffers.delete(clientId);
           data.message = buffer;
-
-          // 发射请求接收事件
-          this.eventEmitter.emit({
-            type: ServerEventType.REQUEST_RECEIVED,
-            data: { clientSocket, data }
+          this.eventEmitter.emit({ type: ServerEventType.REQUEST_RECEIVED, data: { clientSocket, data } });
+          this.processRequest(clientSocket, data).catch((e: Error) => {
+            this.eventEmitter.emitError(e, ServerErrorType.CLIENT_ERROR);
           });
-
-          // 异步处理请求，避免阻塞
-          this.processRequest(clientSocket, data).catch((error: Error) => {
-            this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
-          });
-
-          // 清空缓冲区
-          this.requestBuffers.delete(clientId);
         }
       } catch (error) {
-        this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
         this.requestBuffers.delete(clientId);
-
-        // 若有流式会话，通知 stream 出错
         const session = this.streamSessions.get(clientId);
         if (session) {
           session.stream._error(error as Error);
           this.streamSessions.delete(clientId);
         }
+        this.eventEmitter.emitError(error, ServerErrorType.CLIENT_ERROR);
       }
     });
 
     clientSocket.on('error', (err) => this.removeClient(clientSocket, err));
     clientSocket.on('close', () => this.removeClient(clientSocket));
+  }
+
+  /**
+   * 处理流式会话中的后续 body 数据块
+   */
+  private handleStreamChunk(clientId: number, chunk: ArrayBuffer): void {
+    const session = this.streamSessions.get(clientId)!;
+    const stream = session.stream;
+
+    if (session.remaining >= 0) {
+      // Content-Length 模式：按剩余字节计数
+      session.remaining -= chunk.byteLength;
+      stream._push(chunk);
+      if (session.remaining <= 0) {
+        this.streamSessions.delete(clientId);
+        stream._end();
+      }
+    } else {
+      // chunked 模式：累积检测终止标记 "0\r\n\r\n"
+      stream._push(chunk);
+      let buf = this.requestBuffers.get(clientId) || new ArrayBuffer(0);
+      buf = Utils.mergeArrayBuffers(buf, chunk);
+      this.requestBuffers.set(clientId, buf);
+      if (RequestParser.isChunkedComplete(buf)) {
+        this.streamSessions.delete(clientId);
+        this.requestBuffers.delete(clientId);
+        stream._end();
+      }
+    }
+  }
+
+  /**
+   * 初始化流式上传会话：解析 header、创建 stream、触发路由，并推送已收到的 body 片段
+   */
+  private initStreamSession(
+    clientSocket: socket.TCPSocketConnection | socket.TLSSocketConnection,
+    data: socket.SocketMessageInfo,
+    buffer: ArrayBuffer,
+    headerEnd: number
+  ): void {
+    const clientId = clientSocket.clientId;
+
+    const headerOnlyBuffer = buffer.slice(0, headerEnd + 4);
+    const headerOnlyData: socket.SocketMessageInfo = { message: headerOnlyBuffer, remoteInfo: data.remoteInfo };
+
+    const req = new HttpRequest(headerOnlyData, true);
+    const res = new HttpResponse(clientSocket);
+
+    const contentLengthStr = req.get('content-length');
+    const isChunked = (req.get('transfer-encoding') ?? '').toLowerCase().includes('chunked');
+    const contentLength = contentLengthStr ? parseInt(contentLengthStr) : 0;
+    const stream = new UploadStream(isChunked ? -1 : contentLength);
+    req.uploadStream = stream;
+
+    const bodyStart = buffer.slice(headerEnd + 4);
+    const remaining = isChunked ? -1 : Math.max(0, contentLength - bodyStart.byteLength);
+
+    if (isChunked && bodyStart.byteLength > 0) {
+      this.requestBuffers.set(clientId, bodyStart);
+    }
+
+    this.streamSessions.set(clientId, { stream, req, res, remaining } as StreamSession);
+
+    res.onFinish((statusCode, responseSize) => {
+      this.eventEmitter.emit({ type: ServerEventType.RESPONSE_SENT, data: { clientSocket, statusCode, responseSize } });
+    });
+
+    this.eventEmitter.emit({ type: ServerEventType.REQUEST_RECEIVED, data: { clientSocket, data: headerOnlyData } });
+    this.router.handle(req, res);
+
+    // 推送 header 包中已携带的 body 初始片段
+    if (bodyStart.byteLength > 0) {
+      stream._push(bodyStart);
+      if (!isChunked && remaining <= 0) {
+        this.streamSessions.delete(clientId);
+        stream._end();
+      } else if (isChunked && RequestParser.isChunkedComplete(bodyStart)) {
+        this.streamSessions.delete(clientId);
+        this.requestBuffers.delete(clientId);
+        stream._end();
+      }
+    } else if (!isChunked && contentLength === 0) {
+      this.streamSessions.delete(clientId);
+      stream._end();
+    }
   }
 
   /**
