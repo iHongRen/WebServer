@@ -12,7 +12,7 @@
 # ==============================================================================
 
 # --- 配置 ---
-HOST="192.168.2.38"
+HOST="192.168.2.74"
 PORT="8080"
 BASE_URL="http://${HOST}:${PORT}"
 
@@ -107,6 +107,63 @@ echo ""
 curl -v ${BASE_URL}/api/stream/text 2>&1 | grep -i 'transfer-encoding' || echo "未找到Transfer-Encoding头"
 echo ""
 echo "------------------------------------------------------------------------------"
+
+# =============================================================================
+# 流式上传测试（POST，使用 server.stream() 注册的路由）
+# =============================================================================
+
+# --- 9. 创建测试文件 ---
+print_header "9. 准备测试文件"
+TEST_FILE="/tmp/stream_upload_test.bin"
+# 用 /dev/zero 生成 1GB 文件，比 /dev/urandom 快得多
+dd if=/dev/zero of="${TEST_FILE}" bs=1048576 count=1024 2>/dev/null
+echo "✅ 已生成测试文件: ${TEST_FILE} ($(du -sh ${TEST_FILE} | cut -f1))"
+echo ""
+echo "------------------------------------------------------------------------------"
+
+# --- 10. 流式上传写入磁盘 ---
+print_header "10. 流式上传 - 写入磁盘"
+echo "▶️  命令: curl -X POST ${BASE_URL}/api/stream/upload \\"
+echo "         -H 'Content-Type: application/octet-stream' \\"
+echo "         -H 'X-File-Name: test_upload.bin' \\"
+echo "         -H 'Expect:' \\"
+echo "         -T ${TEST_FILE}"
+echo ""
+echo "◀️  响应:"
+curl -s -X POST "${BASE_URL}/api/stream/upload" \
+     -H "Content-Type: application/octet-stream" \
+     -H "X-File-Name: test_upload.bin" \
+     -H "Expect:" \
+     -T "${TEST_FILE}" | jq .
+echo ""
+echo "------------------------------------------------------------------------------"
+
+# --- 11. 流式上传 - 仅统计字节数 ---
+print_header "11. 流式上传 - 字节统计（不落盘）"
+echo "▶️  命令: curl -X POST ${BASE_URL}/api/stream/count \\"
+echo "         -H 'Content-Type: application/octet-stream' \\"
+echo "         -H 'Expect:' \\"
+echo "         -T ${TEST_FILE}"
+echo ""
+echo "◀️  响应:"
+curl -s -X POST "${BASE_URL}/api/stream/count" \
+     -H "Content-Type: application/octet-stream" \
+     -H "Expect:" \
+     -T "${TEST_FILE}" | jq .
+echo ""
+echo "------------------------------------------------------------------------------"
+
+# --- 12. 查看已上传文件列表 ---
+print_header "12. 查看已上传文件列表"
+echo "▶️  命令: curl ${BASE_URL}/api/stream/files"
+echo ""
+echo "◀️  响应:"
+curl -s "${BASE_URL}/api/stream/files" | jq .
+echo ""
+echo "------------------------------------------------------------------------------"
+
+# --- 清理测试文件 ---
+rm -f "${TEST_FILE}"
 
 print_header "测试完成!"
 echo "✅ 所有流式传输测试用例执行完毕"

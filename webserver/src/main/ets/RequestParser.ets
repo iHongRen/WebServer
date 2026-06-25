@@ -24,6 +24,15 @@ export interface ParsedRequest {
 }
 
 /**
+ * parseHeaderOnly 返回结果接口
+ */
+export interface ParsedHeader {
+  method: string;
+  path: string;
+  headers: Map<string, string>;
+}
+
+/**
  * 高性能HTTP请求解析器
  * 优化解析速度和内存使用
  */
@@ -66,6 +75,54 @@ export class RequestParser {
     // 检查内容长度
     const headerLength = headerEnd + 4; // 包括 \r\n\r\n
     return buffer.byteLength >= headerLength + contentLength;
+  }
+
+  /**
+   * 查找 header 结束位置（\r\n\r\n 的起始字节偏移）
+   * @returns header 结束处的偏移，找不到返回 -1
+   */
+  public static findHeaderEnd(buffer: ArrayBuffer): number {
+    const view = new Uint8Array(buffer);
+    const len = view.length;
+    for (let i = 0; i < len - 3; i++) {
+      if (view[i] === 0x0D && view[i + 1] === 0x0A &&
+        view[i + 2] === 0x0D && view[i + 3] === 0x0A) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * 仅解析 header 部分（不解析 body），用于流式模式
+   */
+  public static parseHeaderOnly(buffer: ArrayBuffer): ParsedHeader {
+    const bufferStr = Utils.arrayBufferToStr(buffer);
+    const headerEndIndex = bufferStr.indexOf(RequestParser.HEADER_END);
+    if (headerEndIndex === -1) {
+      const empty: ParsedHeader = { method: '', path: '', headers: new Map() };
+      return empty;
+    }
+
+    const headerStr = bufferStr.substring(0, headerEndIndex);
+    const lines = headerStr.split(RequestParser.CRLF);
+    const requestLine = lines[0];
+    const parts = requestLine.split(' ');
+    const method = parts[0] || '';
+    const fullPath = parts[1] || '/';
+    const queryIndex = fullPath.indexOf('?');
+    const path = queryIndex !== -1 ? fullPath.substring(0, queryIndex) : fullPath;
+    const headers = RequestParser.parseHeaders(lines.slice(1));
+
+    const result: ParsedHeader = { method, path, headers };
+    return result;
+  }
+
+  /**
+   * 检查 chunked body 片段是否包含结束标记 "0\r\n\r\n"
+   */
+  public static isChunkedComplete(buffer: ArrayBuffer): boolean {
+    return RequestParser.hasChunkEnd(new Uint8Array(buffer));
   }
 
   /**

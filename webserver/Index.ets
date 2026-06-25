@@ -10,8 +10,10 @@ export { HttpResponse } from './src/main/ets/HttpResponse'
 
 export { Router } from './src/main/ets/Router'
 
+export { UploadStream, StreamState } from './src/main/ets/UploadStream'
+
+export type { ChunkHandler, EndHandler, StreamErrorHandler } from './src/main/ets/UploadStream'
+
 export * from './src/main/ets/middleware/index'
 
 export * from './src/main/ets/ServerEvents'
-
-

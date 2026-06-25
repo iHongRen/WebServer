@@ -8,6 +8,7 @@
 import { Utils } from "./Utils";
 import { socket } from '@kit.NetworkKit';
 import { UploadedFile } from "./middleware/fileUpload";
+import { UploadStream } from "./UploadStream";
 
 /**
  * 上传文件接口定义（基础）
@@ -38,14 +39,17 @@ export class HttpRequest {
   public query: Map<string, string> = new Map(); // 查询字符串参数
   public params: Record<string, string> = {}; // 路由参数
   public files: Record<string, File | UploadedFile> = {}; // 上传的文件（支持两种类型）
+  /** 流式上传流对象，仅在使用 streamUpload() 中间件时可用 */
+  public uploadStream: UploadStream | null = null;
   private rawBody: ArrayBuffer = new ArrayBuffer(0); // 原始请求体数据
 
   /**
    * 构造函数
    * @param data Socket消息信息
+   * @param headerOnly 是否只解析头部（流式模式下传 true，body 后续通过 uploadStream 推送）
    */
-  constructor(data: socket.SocketMessageInfo) {
-    this.parseHeadersAndPath(data.message);
+  constructor(data: socket.SocketMessageInfo, headerOnly: boolean = false) {
+    this.parseHeadersAndPath(data.message, headerOnly);
     this.parseClientInfo(data.remoteInfo);
   }
 
@@ -191,8 +195,9 @@ export class HttpRequest {
   /**
    * 解析HTTP请求头和路径
    * @param requestData 原始请求数据
+   * @param headerOnly 是否只解析头部（流式模式）
    */
-  private parseHeadersAndPath(requestData: ArrayBuffer): void {
+  private parseHeadersAndPath(requestData: ArrayBuffer, headerOnly: boolean = false): void {
     const requestStr = Utils.arrayBufferToStr(requestData)
     const headerEndIndex = requestStr.indexOf('\r\n\r\n');
 
@@ -232,7 +237,8 @@ export class HttpRequest {
       }
     });
 
-    if (bodyData.byteLength > 0) {
+    // 流式模式下不把 body 存入 rawBody，由 uploadStream 增量推送
+    if (!headerOnly && bodyData.byteLength > 0) {
       this.rawBody = bodyData;
     }
   }

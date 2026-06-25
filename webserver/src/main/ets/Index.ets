@@ -17,6 +17,10 @@ export { Router } from './Router';
 
 export { TLSServer } from './TLSServer';
 
+// 导出流式上传支持
+export { UploadStream, StreamState } from './UploadStream';
+export type { ChunkHandler, EndHandler, StreamErrorHandler } from './UploadStream';
+
 // 导出优化模块
 export { ConnectionPool } from './ConnectionPool';
 
@@ -24,7 +28,7 @@ export type { ConnectionInfo, PoolConfig } from './ConnectionPool';
 
 export { RequestParser } from './RequestParser';
 
-export type { ParsedRequest } from './RequestParser';
+export type { ParsedRequest, ParsedHeader } from './RequestParser';
 
 export { ResponseCache } from './ResponseCache';
 

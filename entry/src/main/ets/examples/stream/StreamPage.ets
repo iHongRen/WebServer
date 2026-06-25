@@ -115,6 +115,8 @@ struct StreamPage {
               this.featureItem('📄', '文件流', '流式读取和发送文件')
               this.featureItem('📋', '日志流', '实时日志传输')
               this.featureItem('📊', '进度报告', '实时进度更新')
+              this.featureItem('📤', '流式上传', '边接收边写盘，内存占用仅单个TCP包大小')
+              this.featureItem('🔢', '字节统计', '流式接收并实时统计，不落盘')
             }
           }
           .width('100%')
@@ -135,6 +137,9 @@ struct StreamPage {
               this.apiItem('GET', '/api/stream/file', '文件流传输')
               this.apiItem('GET', '/api/stream/logs', '实时日志流')
               this.apiItem('GET', '/api/stream/progress', '进度报告流')
+              this.apiItem('POST', '/api/stream/upload', '流式上传写入磁盘（携带 X-File-Name 头）')
+              this.apiItem('POST', '/api/stream/count', '流式接收，仅统计字节数')
+              this.apiItem('GET', '/api/stream/files', '查看已上传文件列表')
             }
           }
           .width('100%')
@@ -162,6 +167,15 @@ struct StreamPage {
               .width('100%')
 
             Text('# Server-Sent Events\ncurl http://IP:8080/api/stream/events')
+              .fontSize(12)
+              .fontFamily('monospace')
+              .fontColor('#333')
+              .padding(12)
+              .backgroundColor('#F5F5F5')
+              .borderRadius(8)
+              .width('100%')
+
+            Text('# 流式上传文件\ncurl -X POST http://IP:8080/api/stream/upload \\\n     -H "Content-Type: application/octet-stream" \\\n     -H "X-File-Name: test.bin" \\\n     --data-binary "@/path/to/file"')
               .fontSize(12)
               .fontFamily('monospace')
               .fontColor('#333')
@@ -227,7 +241,7 @@ struct StreamPage {
           top: 4,
           bottom: 4
         })
-        .backgroundColor('#4CAF50')
+        .backgroundColor(method === 'POST' ? '#FF9800' : method === 'PUT' ? '#2196F3' : '#4CAF50')
         .borderRadius(4)
 
       Column({ space: 4 }) {

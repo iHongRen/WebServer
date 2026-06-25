@@ -41,7 +41,7 @@ export class ConnectionPool {
   constructor(config?: PoolConfig) {
     this.config = {
       maxConnections: config?.maxConnections ?? 1000,
-      connectionTimeout: config?.connectionTimeout ?? 30000,
+      connectionTimeout: config?.connectionTimeout ?? 3600000, // 1小时，大文件传输场景
       idleTimeout: config?.idleTimeout ?? 60000,
       cleanupInterval: config?.cleanupInterval ?? 10000
     };
@@ -140,9 +140,9 @@ export class ConnectionPool {
 
     this.connections.forEach((conn, clientId) => {
       const idleTime = now - conn.lastActivity;
-      const totalTime = now - conn.createdAt;
 
-      if (idleTime > this.config.idleTimeout || totalTime > this.config.connectionTimeout) {
+      // 只按空闲时间判断，活跃中的连接（如大文件上传）不应被中断
+      if (idleTime > this.config.idleTimeout) {
         toRemove.push(clientId);
       }
     });
