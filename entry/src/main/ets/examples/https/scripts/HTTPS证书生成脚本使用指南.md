@@ -18,7 +18,7 @@
 
 ```bash
 cd scripts
-./generate-dev-cert.sh 192.168.2.38
+./generate-dev-cert.sh 192.168.2.74
 ```
 
 生成文件：

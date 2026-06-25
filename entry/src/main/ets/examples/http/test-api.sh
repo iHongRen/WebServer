@@ -3,7 +3,7 @@
 # HTTP服务器API测试脚本
 # 使用方法: ./test-api.sh [服务器地址] [端口]
 
-SERVER=${1:-192.168.2.38}
+SERVER=${1:-192.168.2.74}
 PORT=${2:-8080}
 BASE_URL="http://${SERVER}:${PORT}"
 

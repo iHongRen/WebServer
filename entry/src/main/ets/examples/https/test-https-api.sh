@@ -4,7 +4,7 @@
 # 专注测试SSL/TLS加密、证书验证、安全头部等HTTPS核心特性
 # 使用方法: ./test-https-api.sh [服务器地址] [端口]
 
-SERVER=${1:-192.168.2.38}
+SERVER=${1:-192.168.2.74}
 PORT=${2:-8443}
 BASE_URL="https://${SERVER}:${PORT}"
 

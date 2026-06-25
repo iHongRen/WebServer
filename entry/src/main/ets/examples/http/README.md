@@ -25,22 +25,22 @@ Default port: `8080`
 ### 2. Access Web Interface
 
 Open your browser and navigate to:
-- Homepage: `http://192.168.2.38:8080/`
-- Upload page: `http://192.168.2.38:8080/upload.html`
+- Homepage: `http://192.168.2.74:8080/`
+- Upload page: `http://192.168.2.74:8080/upload.html`
 
 ### 3. Test with curl
 
 ```bash
 # Get user list
-curl http://192.168.2.38:8080/api/users
+curl http://192.168.2.74:8080/api/users
 
 # Create a user
-curl -X POST http://192.168.2.38:8080/api/users \
+curl -X POST http://192.168.2.74:8080/api/users \
   -H "Content-Type: application/json" \
   -d '{"name":"TestUser"}'
 
 # Upload a file
-curl -X POST http://192.168.2.38:8080/api/upload \
+curl -X POST http://192.168.2.74:8080/api/upload \
   -F "uploadFile=@test.txt"
 ```
 

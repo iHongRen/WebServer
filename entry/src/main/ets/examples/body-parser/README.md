@@ -26,17 +26,17 @@ Default port: `8080`
 
 ```bash
 # JSON parsing
-curl -X POST http://192.168.2.38:8080/api/json \
+curl -X POST http://192.168.2.74:8080/api/json \
   -H "Content-Type: application/json" \
   -d '{"name":"test","value":123}'
 
 # URL-encoded parsing
-curl -X POST http://192.168.2.38:8080/api/urlencoded \
+curl -X POST http://192.168.2.74:8080/api/urlencoded \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "name=test&value=123"
 
 # Multipart form parsing
-curl -X POST http://192.168.2.38:8080/api/multipart \
+curl -X POST http://192.168.2.74:8080/api/multipart \
   -F "name=test" \
   -F "file=@test.txt"
 ```

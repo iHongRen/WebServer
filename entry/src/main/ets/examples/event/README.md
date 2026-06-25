@@ -25,10 +25,10 @@ Default port: `8080`
 
 ```bash
 # Get server status
-curl http://192.168.2.38:8080/status
+curl http://192.168.2.74:8080/status
 
 # Trigger error event
-curl http://192.168.2.38:8080/error
+curl http://192.168.2.74:8080/error
 ```
 
 ### 3. Run Test Script
@@ -63,7 +63,7 @@ server.on(ServerEventType.SERVER_STARTED, (event) => {
 Event Data:
 ```json
 {
-  "address": "192.168.2.38",
+  "address": "192.168.2.74",
   "port": 8080
 }
 ```

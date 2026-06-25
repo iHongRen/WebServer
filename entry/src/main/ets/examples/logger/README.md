@@ -26,13 +26,13 @@ Default port: `8080`
 
 ```bash
 # Get log records
-curl http://192.168.2.38:8080/api/logs
+curl http://192.168.2.74:8080/api/logs
 
 # Get log statistics
-curl http://192.168.2.38:8080/api/logs/stats
+curl http://192.168.2.74:8080/api/logs/stats
 
 # Test error log
-curl -X POST http://192.168.2.38:8080/api/logs/test/error \
+curl -X POST http://192.168.2.74:8080/api/logs/test/error \
   -H "Content-Type: application/json" \
   -d '{"message":"Test error"}'
 ```

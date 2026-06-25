@@ -3,7 +3,7 @@
 # 创建完整的CA和服务器证书脚本
 # 用法: ./generate-cert.sh [域名] [有效期天数] [是否生成CA]
 
-DOMAIN=${1:-192.168.2.38}
+DOMAIN=${1:-192.168.2.74}
 DAYS=${2:-365}
 GENERATE_CA=${3:-true}
 

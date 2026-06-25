@@ -25,17 +25,17 @@ Default port: `8080`
 
 ```bash
 # Simple CORS request
-curl -X GET http://192.168.2.38:8080/api/cors/simple \
+curl -X GET http://192.168.2.74:8080/api/cors/simple \
   -H "Origin: http://example.com"
 
 # Preflight request
-curl -X OPTIONS http://192.168.2.38:8080/api/cors/preflight \
+curl -X OPTIONS http://192.168.2.74:8080/api/cors/preflight \
   -H "Origin: http://example.com" \
   -H "Access-Control-Request-Method: POST" \
   -H "Access-Control-Request-Headers: Content-Type"
 
 # Request with credentials
-curl -X POST http://192.168.2.38:8080/api/cors/credentials \
+curl -X POST http://192.168.2.74:8080/api/cors/credentials \
   -H "Origin: http://example.com" \
   -H "Content-Type: application/json" \
   --cookie "session=abc123" \

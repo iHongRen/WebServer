@@ -25,13 +25,13 @@ Default port: `8080`
 
 ```bash
 # Basic route
-curl http://192.168.2.38:8080/
+curl http://192.168.2.74:8080/
 
 # Parameterized route
-curl http://192.168.2.38:8080/api/users/123
+curl http://192.168.2.74:8080/api/users/123
 
 # Route statistics
-curl http://192.168.2.38:8080/api/routes/stats
+curl http://192.168.2.74:8080/api/routes/stats
 ```
 
 ### 3. Run Test Script
