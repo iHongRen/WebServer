@@ -17,7 +17,6 @@ struct Index {
     ['日志示例', 'LoggerPage'],
     ['静态文件服务示例', 'StaticPage'],
     ['事件处理示例', 'EventPage'],
-    ['分片上传示例', 'UploadPage'],
     ['流式传输示例', 'StreamPage'],
     ['文件上传示例', 'FileUploadPage'],
   ]

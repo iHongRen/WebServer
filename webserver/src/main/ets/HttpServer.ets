@@ -55,6 +55,17 @@ interface StreamSession {
 }
 
 /**
+ * HttpServer 配置选项
+ */
+export interface ServerOptions {
+  /** 单次请求体预分配内存上限（字节），超出返回 413。默认 200MB。
+   *  仅限普通缓冲路由（非 server.stream() 流式路由）。
+   *  设为 0 表示不限制（不推荐）。
+   */
+  maxBodySize?: number;
+}
+
+/**
  * Http 服务器类
  * 提供HTTP服务器功能，支持路由、中间件等特性
  */
@@ -67,15 +78,22 @@ export class HttpServer {
   protected connectionPool: ConnectionPool; // 连接池
   protected responseCache: ResponseCache; // 响应缓存
   protected requestBuffers: Map<number, ArrayBuffer> = new Map(); // 请求缓冲区
+  private requestOffsets: Map<number, number> = new Map(); // 每个连接已写入字节数（预分配模式）
   private streamSessions: Map<number, StreamSession> = new Map(); // 流式上传会话，key = clientId
+  private maxBodySize: number; // 请求体预分配内存上限
 
   /**
    * 构造函数
-   * 初始化服务器并设置默认404处理
+   * @param poolConfig 连接池配置
+   * @param cacheConfig 响应缓存配置
+   * @param options 服务器选项（含 maxBodySize）
    */
-  constructor(poolConfig?: PoolConfig, cacheConfig?: CacheConfig) {
+  constructor(poolConfig?: PoolConfig, cacheConfig?: CacheConfig, options?: ServerOptions) {
     this.connectionPool = new ConnectionPool(poolConfig);
     this.responseCache = new ResponseCache(cacheConfig);
+    this.maxBodySize = (options?.maxBodySize !== undefined && options.maxBodySize > 0)
+      ? options.maxBodySize
+      : 200 * 1024 * 1024; // 默认 200MB
     this.use404();
   }
 
@@ -438,6 +456,7 @@ export class HttpServer {
 
         this.clients.clear();
         this.requestBuffers.clear();
+        this.requestOffsets.clear();
         this.streamSessions.clear();
         this.tcpServer.off('connect');
         this.tcpServer.off('error');
@@ -481,6 +500,7 @@ export class HttpServer {
     this.connectionPool.remove(clientId);
     this.clients.delete(clientId);
     this.requestBuffers.delete(clientId);
+    this.requestOffsets.delete(clientId);
 
     // 若客户端断开时仍有流式会话，通知 stream 出错
     const session = this.streamSessions.get(clientId);
@@ -518,30 +538,93 @@ export class HttpServer {
           return;
         }
 
-        // 普通模式：缓冲数据，等 header 到齐后决定走哪条分支
-        let buffer = this.requestBuffers.get(clientId) || new ArrayBuffer(0);
-        buffer = Utils.mergeArrayBuffers(buffer, data.message);
-        this.requestBuffers.set(clientId, buffer);
+        const incoming = new Uint8Array(data.message);
+
+        // ── 预分配模式：header 已解析，直接按偏移写入 ──────────────────
+        if (this.requestOffsets.has(clientId)) {
+          const buf = this.requestBuffers.get(clientId)!;
+          const offset = this.requestOffsets.get(clientId)!;
+          const view = new Uint8Array(buf);
+          const writeLen = Math.min(incoming.length, buf.byteLength - offset);
+          view.set(incoming.subarray(0, writeLen), offset);
+          const newOffset = offset + writeLen;
+          this.requestOffsets.set(clientId, newOffset);
+
+          if (newOffset >= buf.byteLength) {
+            // 数据已全部收完
+            this.requestBuffers.delete(clientId);
+            this.requestOffsets.delete(clientId);
+            data.message = buf;
+            this.eventEmitter.emit({ type: ServerEventType.REQUEST_RECEIVED, data: { clientSocket, data } });
+            this.processRequest(clientSocket, data).catch((e: Error) => {
+              this.eventEmitter.emitError(e, ServerErrorType.CLIENT_ERROR);
+            });
+          }
+          return;
+        }
+
+        // ── 首包处理：拼接直到 header 结束 ─────────────────────────────
+        let buffer = this.requestBuffers.get(clientId);
+        if (!buffer) {
+          // 大多数请求首包就包含完整 header，直接引用避免拷贝
+          buffer = data.message;
+        } else {
+          buffer = Utils.mergeArrayBuffers(buffer, data.message);
+        }
 
         const headerEnd = RequestParser.findHeaderEnd(buffer);
         if (headerEnd === -1) {
-          return; // header 尚未收完
+          // header 还没收完，继续缓冲（此阶段数据量极小，merge 开销可忽略）
+          this.requestBuffers.set(clientId, buffer);
+          return;
         }
 
+        // header 已收到，判断路由类型
         const parsedHeader = RequestParser.parseHeaderOnly(buffer);
         if (this.isStreamRoute(parsedHeader.method, parsedHeader.path)) {
           this.requestBuffers.delete(clientId);
+          this.requestOffsets.delete(clientId);
           this.initStreamSession(clientSocket, data, buffer, headerEnd);
-        } else if (this.isRequestComplete(buffer)) {
+          return;
+        }
+
+        // 普通路由：按 Content-Length 预分配完整 buffer
+        const headerLen = headerEnd + 4; // \r\n\r\n
+        const clStr = parsedHeader.headers.get('content-length');
+        const contentLength = clStr ? parseInt(clStr) : 0;
+        const totalSize = headerLen + contentLength;
+
+        // 预分配上限，超出则返回 413（上限由构造函数 options.maxBodySize 配置）
+        if (this.maxBodySize > 0 && totalSize > this.maxBodySize) {
+          this.requestBuffers.delete(clientId);
+          const errBuf = Utils.strToArrayBuffer(
+            'HTTP/1.1 413 Content Too Large\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
+          );
+          const tmpData: socket.SocketMessageInfo = { message: errBuf, remoteInfo: data.remoteInfo };
+          await (this.connectionPool.get(clientId)?.socket as socket.TCPSocketConnection)
+            ?.send({ data: errBuf }).catch(() => {});
+          this.removeClient(clientSocket);
+          return;
+        }
+
+        if (buffer.byteLength >= totalSize) {
+          // 首包已包含完整请求（小文件常见路径，无需预分配）
           this.requestBuffers.delete(clientId);
           data.message = buffer;
           this.eventEmitter.emit({ type: ServerEventType.REQUEST_RECEIVED, data: { clientSocket, data } });
           this.processRequest(clientSocket, data).catch((e: Error) => {
             this.eventEmitter.emitError(e, ServerErrorType.CLIENT_ERROR);
           });
+        } else {
+          // 预分配完整 buffer，把已收到的数据拷贝进去
+          const preallocated = new ArrayBuffer(totalSize);
+          new Uint8Array(preallocated).set(new Uint8Array(buffer), 0);
+          this.requestBuffers.set(clientId, preallocated);
+          this.requestOffsets.set(clientId, buffer.byteLength);
         }
       } catch (error) {
         this.requestBuffers.delete(clientId);
+        this.requestOffsets.delete(clientId);
         const session = this.streamSessions.get(clientId);
         if (session) {
           session.stream._error(error as Error);

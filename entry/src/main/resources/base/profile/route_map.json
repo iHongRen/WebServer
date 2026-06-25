@@ -65,14 +65,6 @@
       }
     },
     {
-      "name": "UploadPage",
-      "pageSourceFile": "src/main/ets/examples/upload/UploadPage.ets",
-      "buildFunction": "uploadBuilder",
-      "data": {
-        "description": "page"
-      }
-    },
-    {
       "name": "StreamPage",
       "pageSourceFile": "src/main/ets/examples/stream/StreamPage.ets",
       "buildFunction": "streamBuilder",

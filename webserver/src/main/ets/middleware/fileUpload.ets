@@ -185,14 +185,15 @@ class FileUploadParser {
    */
   private splitMultipartData(data: Uint8Array, boundary: Uint8Array): Uint8Array[] {
     const parts: Uint8Array[] = [];
+    // 预计算 KMP 失败函数
+    const kmpTable = this.buildKmpTable(boundary);
     let startIndex = 0;
 
     while (true) {
-      const endIndex = this.findBoundary(data, boundary, startIndex);
+      const endIndex = this.findBoundaryKmp(data, boundary, kmpTable, startIndex);
       if (endIndex === -1) {
         break;
       }
-
       if (endIndex > startIndex) {
         parts.push(data.slice(startIndex, endIndex));
       }
@@ -203,21 +204,50 @@ class FileUploadParser {
   }
 
   /**
-   * 查找边界
+   * 构建 KMP 失败函数表
    */
-  private findBoundary(data: Uint8Array, boundary: Uint8Array, start: number): number {
-    for (let i = start; i <= data.length - boundary.length; i++) {
-      let match = true;
-      for (let j = 0; j < boundary.length; j++) {
-        if (data[i + j] !== boundary[j]) {
-          match = false;
-          break;
-        }
+  private buildKmpTable(pattern: Uint8Array): number[] {
+    const table = new Array<number>(pattern.length).fill(0);
+    let len = 0;
+    let i = 1;
+    while (i < pattern.length) {
+      if (pattern[i] === pattern[len]) {
+        len++;
+        table[i] = len;
+        i++;
+      } else if (len !== 0) {
+        len = table[len - 1];
+      } else {
+        table[i] = 0;
+        i++;
       }
-      if (match) {
-        if (i > 0 && data[i - 1] === 0x0A && data[i - 2] === 0x0D) {
-          return i - 2;
+    }
+    return table;
+  }
+
+  /**
+   * 使用 KMP 算法查找边界（O(n) 时间复杂度）
+   */
+  private findBoundaryKmp(data: Uint8Array, boundary: Uint8Array, table: number[], start: number): number {
+    let i = start; // data 指针
+    let j = 0;     // boundary 指针
+    while (i < data.length) {
+      if (data[i] === boundary[j]) {
+        i++;
+        j++;
+        if (j === boundary.length) {
+          // 找到匹配，检查前面是否有 \r\n
+          const matchPos = i - j;
+          if (matchPos >= 2 && data[matchPos - 1] === 0x0A && data[matchPos - 2] === 0x0D) {
+            return matchPos - 2;
+          }
+          // 不满足前缀条件，继续搜索
+          j = table[j - 1];
         }
+      } else if (j !== 0) {
+        j = table[j - 1];
+      } else {
+        i++;
       }
     }
     return -1;
@@ -348,13 +378,11 @@ class FileUploadParser {
    * 使用流式方式写入文件
    */
   private async writeFileStream(filePath: string, data: ArrayBuffer): Promise<void> {
-    const stream = fs.createWriteStream(filePath);
+    const file = await fs.open(filePath, fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY | fs.OpenMode.TRUNC);
     try {
-      stream.write(Utils.arrayBufferToStr(data));
-    } catch (e) {
-      this.throwError(e)
+      await fs.write(file.fd, data);
     } finally {
-      stream.close();
+      await fs.close(file.fd);
     }
   }
 
@@ -457,6 +485,11 @@ export class FileUpload {
 
     return async (req: HttpRequest, res: HttpResponse, next: NextFunction) => {
       const contentType = req.get('content-type');
+
+      // 流式上传路由（req.uploadStream 已挂载）不经过此中间件，直接透传
+      if (req.uploadStream) {
+        return next();
+      }
 
       // 只处理文件上传相关的 Content-Type
       if (!contentType ||
