@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ocr llm *)",
+      "Bash(ocr *)"
+    ]
+  }
+}

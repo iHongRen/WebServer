@@ -239,7 +239,7 @@ await this.server.stopServer();
 <table>
 <tr>
 <td valign="top" align="center">
-<img src="hhttps://7up.pics/images/2026/06/26/webserver-demo.png" alt="webserver demo" border="0">
+<img src="https://7up.pics/images/2026/06/26/webserver-demo.png" alt="webserver demo" border="0">
 </td>
 <td valign="top" align="center">
 <img src="https://7up.pics/images/2026/03/02/http.jpg" alt="http" border="0">
