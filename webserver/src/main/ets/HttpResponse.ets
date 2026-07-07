@@ -76,8 +76,20 @@ export class HttpResponse {
       console.error("Cannot set headers after they are sent.");
       return this;
     }
+    // 防止 HTTP 响应拆分 / CRLF 注入：拒绝含 CR/LF 的头名与头值
+    if (this.hasCRLF(name) || this.hasCRLF(value)) {
+      console.error("Invalid header: name and value must not contain CR/LF.");
+      return this;
+    }
     this.headers.set(name, value);
     return this;
+  }
+
+  /**
+   * 检测字符串中是否包含 CR 或 LF
+   */
+  private hasCRLF(s: string): boolean {
+    return s.indexOf('\r') !== -1 || s.indexOf('\n') !== -1;
   }
 
   /**
