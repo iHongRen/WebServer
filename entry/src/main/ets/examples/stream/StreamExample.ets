@@ -108,7 +108,7 @@ export class StreamExample {
 
     // 示例2：流式发送JSON数据（Server-Sent Events风格）
     this.server.get('/api/stream/events', async (req: HttpRequest, res: HttpResponse) => {
-      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Content-Type', 'text/event-stream;charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
@@ -138,7 +138,7 @@ export class StreamExample {
         // 生成1KB的数据
         const data = 'A'.repeat(chunkSize);
         await res.write(data);
-        
+
         // 每10个块打印一次进度
         if ((i + 1) % 10 === 0) {
           console.log(`已发送: ${(i + 1) * chunkSize / 1024}KB`);
@@ -163,7 +163,7 @@ export class StreamExample {
 
         // 获取文件大小
         const stat = await fileIo.stat(filePath);
-        
+
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.setHeader('Content-Length', stat.size.toString());
 
@@ -178,10 +178,10 @@ export class StreamExample {
           while (offset < stat.size) {
             const readSize = Math.min(chunkSize, stat.size - offset);
             const buffer = new ArrayBuffer(readSize);
-            
+
             await fileIo.read(file.fd, buffer, { offset: offset });
             await res.write(buffer);
-            
+
             offset += readSize;
           }
 
@@ -226,7 +226,7 @@ export class StreamExample {
       res.setHeader('Transfer-Encoding', 'chunked');
 
       const totalSteps = 10;
-      
+
       for (let step = 1; step <= totalSteps; step++) {
         const progress: Record<string, Object> = {
           'step': step,
@@ -235,7 +235,7 @@ export class StreamExample {
           'message': `处理步骤 ${step}/${totalSteps}`,
           'timestamp': Date.now()
         };
-        
+
         await res.write(JSON.stringify(progress) + '\n');
         await this.sleep(1000);
       }
@@ -277,7 +277,7 @@ export class StreamExample {
 
       // 每个 TCP 包到达时触发，逐块写入磁盘
       stream.on('data', async (chunk: ArrayBuffer) => {
-        if (hasError) {
+        if (hasError || fd < 0) {
           return;
         }
         try {
@@ -298,6 +298,10 @@ export class StreamExample {
 
       // body 全部收完
       stream.on('end', async () => {
+        // error 路径已关闭 fd 并清理，此处只处理正常结束
+        if (hasError || fd < 0) {
+          return;
+        }
         try {
           await fileIo.close(fd);
           fd = -1;
@@ -315,11 +319,14 @@ export class StreamExample {
       // 上传出错（客户端断连等）
       stream.on('error', async (err: Error) => {
         console.error('[StreamUpload] error:', err.message);
+        hasError = true;
         if (fd >= 0) {
-          await fileIo.close(fd).catch(() => {});
+          await fileIo.close(fd).catch(() => {
+          });
           fd = -1;
         }
-        await fileIo.unlink(destPath).catch(() => {});
+        await fileIo.unlink(destPath).catch(() => {
+        });
         if (!res.isHeadersSent()) {
           res.status(500).json({ success: false, error: '上传失败', detail: err.message } as ESObject);
         }

@@ -449,7 +449,7 @@ export class FileUploadExample {
       }
 
       stream.on('data', async (chunk: ArrayBuffer) => {
-        if (hasError) {
+        if (hasError || fd < 0) {
           return;
         }
         try {
@@ -466,6 +466,10 @@ export class FileUploadExample {
       });
 
       stream.on('end', async () => {
+        // error 路径已关闭 fd 并清理，此处只处理正常结束
+        if (hasError || fd < 0) {
+          return;
+        }
         try {
           await fileIo.close(fd);
           fd = -1;
@@ -483,6 +487,7 @@ export class FileUploadExample {
 
       stream.on('error', async (err: Error) => {
         console.error('[StreamUpload] error:', err.message);
+        hasError = true;
         if (fd >= 0) {
           await fileIo.close(fd).catch(() => {
           });
