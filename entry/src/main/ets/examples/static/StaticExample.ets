@@ -8,7 +8,7 @@
 import { fileIo } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
 import {
-  HttpServer, HttpRequest, HttpResponse, NextFunction,
+  HttpServer, HttpRequest, HttpResponse, NextFunction, Utils,
 } from '@cxy/webserver';
 import { util } from '@kit.ArkTS';
 import { socket } from '@kit.NetworkKit';
@@ -147,16 +147,6 @@ export class StaticExample {
   }
 
   /**
-   * 确保目录存在
-   */
-  private async ensureDirectory(path: string): Promise<void> {
-    const access = await fileIo.access(path);
-    if (!access) {
-      await fileIo.mkdir(path);
-    }
-  }
-
-  /**
    * 初始化服务器
    */
   public initializeServer(): void {
@@ -194,6 +184,15 @@ export class StaticExample {
     }
   }
 
+  /**
+   * 确保目录存在
+   */
+  private async ensureDirectory(path: string): Promise<void> {
+    const access = await fileIo.access(path);
+    if (!access) {
+      await fileIo.mkdir(path);
+    }
+  }
 
   /**
    * 创建示例文件（主站点）
@@ -586,7 +585,14 @@ Created: ${new Date().toISOString()}`);
     // 文件浏览器API
     this.server.get('/api/files', async (req: HttpRequest, res: HttpResponse) => {
       try {
-        const path = req.query.get('path') || '';
+        const rawPath = req.query.get('path') || '';
+        const normalizedPath = Utils.normalizePath(rawPath);
+        // 路径穿越检测：规范化后若仍含 .. segment，说明试图越界
+        if (normalizedPath.split('/').some(s => s === '..')) {
+          res.status(400).json({ error: 'Invalid path' });
+          return;
+        }
+        const path = normalizedPath;
         const fullPath = `${this.staticRoot}/${path}`.replace(/\/+/g, '/');
 
         const files = await fileIo.listFile(fullPath);
@@ -635,7 +641,10 @@ Created: ${new Date().toISOString()}`);
         }
 
         const file = uploadedFile;
-        const fileName = file.name;
+        const fileName = file.name ? Utils.sanitizeFilename(file.name) : '';
+        if (!fileName) {
+          return res.status(400).json({ error: 'Invalid filename' } as ESObject);
+        }
         const filePath = `${this.staticRoot}/${fileName}`;
 
         const fileHandle = await fileIo.open(filePath,
@@ -658,7 +667,13 @@ Created: ${new Date().toISOString()}`);
     // 文件删除API
     this.server.delete('/api/files/*', async (req: HttpRequest, res: HttpResponse) => {
       try {
-        const filePath = req.path.replace('/api/files/', '');
+        const rawFilePath = req.path.replace('/api/files/', '');
+        const normalizedPath = Utils.normalizePath(rawFilePath);
+        if (normalizedPath.split('/').some(s => s === '..')) {
+          res.status(400).json({ error: 'Invalid path' });
+          return;
+        }
+        const filePath = normalizedPath;
         const fullPath = `${this.staticRoot}/${filePath}`;
 
         await fileIo.unlink(fullPath);

@@ -116,9 +116,11 @@ export class Utils {
         // 忽略当前目录
         continue;
       } else if (segment === '..') {
-        // 处理上级目录（若有可回退的路径）
+        // 处理上级目录：若已到根之上则保留 .. 让调用者能够检测并拒绝路径穿越
         if (result.length > 0) {
           result.pop();
+        } else {
+          result.push('..');
         }
       } else {
         // 普通路径片段
@@ -171,13 +173,15 @@ export class Utils {
   }
 
   /**
-   * 清理文件名，移除非法字符
+   * 清理文件名，移除路径分隔符与控制字符，保留中文等合法字符
    * @param filename 原始文件名
-   * @returns 清理后的安全文件名
+   * @returns 清理后的安全文件名；若为空或仅 . / .. 则返回空串
    */
   static sanitizeFilename(filename: string): string {
-    // 移除路径遍历字符和其它非法字符
-    // 只允许字母、数字、下划线、连字符、点
-    return filename.replace(/[^a-zA-Z0-9_.-]/g, '');
+    const cleaned = filename.replace(/[/\\:*?"<>|\x00-\x1f]/g, '_').trim();
+    if (!cleaned || cleaned === '.' || cleaned === '..') {
+      return '';
+    }
+    return cleaned;
   }
 }

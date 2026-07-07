@@ -8,7 +8,7 @@
 import { fileIo } from '@kit.CoreFileKit';
 import { common } from '@kit.AbilityKit';
 import {
-  HttpServer, ErrorHandler, ServerEventType, HttpRequest, HttpResponse, File,
+  HttpServer, ErrorHandler, ServerEventType, HttpRequest, HttpResponse, File, Utils,
 } from '@cxy/webserver';
 import { socket } from '@kit.NetworkKit';
 
@@ -335,9 +335,10 @@ export class HttpExample {
 
         const uploadedFileObj = uploadedFile as File;
 
-        // 生成唯一文件名
+        // 生成唯一文件名：清理客户端文件名，空则回退到时间戳
         const timestamp = Date.now();
-        const fileName = `${timestamp}_${uploadedFileObj.fileName}`;
+        const safeBaseName = Utils.sanitizeFilename(uploadedFileObj.fileName);
+        const fileName = safeBaseName ? `${timestamp}_${safeBaseName}` : `${timestamp}.bin`;
         const filePath = `${this.context?.filesDir}/${fileName}`;
 
         // 保存文件

@@ -8,7 +8,7 @@
  *   - 分片上传：断点续传、分片合并，适合超大文件或弱网环境
  */
 
-import { HttpServer, HttpRequest, HttpResponse, FileUpload, UploadStream } from '@cxy/webserver';
+import { HttpServer, HttpRequest, HttpResponse, FileUpload, UploadStream, Utils } from '@cxy/webserver';
 import type { UploadedFile } from '@cxy/webserver';
 import { socket } from '@kit.NetworkKit';
 import { fileIo } from '@kit.CoreFileKit';
@@ -298,10 +298,16 @@ export class FileUploadExample {
         const uploadedFiles: UploadFileInfo[] = [];
         for (const key of Object.keys(files)) {
           const file = files[key] as UploadedFile;
-          const destPath = `${this.uploadDir}/${file.name}`;
+          const safeName = Utils.sanitizeFilename(file.name);
+          if (!safeName) {
+            const err: ErrResp = { success: false, error: 'Invalid filename' };
+            res.status(400).json(err as ESObject);
+            return;
+          }
+          const destPath = `${this.uploadDir}/${safeName}`;
           await file.mv(destPath);
           const fileInfo: UploadFileInfo = {
-            fieldName: key, fileName: file.name,
+            fieldName: key, fileName: safeName,
             size: file.size, mimetype: file.mimetype, path: destPath
           };
           uploadedFiles.push(fileInfo);
@@ -321,11 +327,17 @@ export class FileUploadExample {
         let totalSize = 0;
         for (const key of Object.keys(files)) {
           const file = files[key] as UploadedFile;
-          const destPath = `${this.uploadDir}/${file.name}`;
+          const safeName = Utils.sanitizeFilename(file.name);
+          if (!safeName) {
+            const err: ErrResp = { success: false, error: 'Invalid filename' };
+            res.status(400).json(err as ESObject);
+            return;
+          }
+          const destPath = `${this.uploadDir}/${safeName}`;
           await file.mv(destPath);
           totalSize += file.size;
           const fileInfo: UploadFileInfo = {
-            fieldName: key, fileName: file.name,
+            fieldName: key, fileName: safeName,
             size: file.size, sizeMB: (file.size / 1024 / 1024).toFixed(2), mimetype: file.mimetype, path: destPath
           };
           uploadedFiles.push(fileInfo);
@@ -348,11 +360,17 @@ export class FileUploadExample {
         const uploadedFiles: UploadFileInfo[] = [];
         for (const key of Object.keys(files)) {
           const file = files[key] as UploadedFile;
-          const destPath = `${this.uploadDir}/${file.name}`;
+          const safeName = Utils.sanitizeFilename(file.name);
+          if (!safeName) {
+            const err: ErrResp = { success: false, error: 'Invalid filename' };
+            res.status(400).json(err as ESObject);
+            return;
+          }
+          const destPath = `${this.uploadDir}/${safeName}`;
           await file.mv(destPath);
           const fileInfo: UploadFileInfo = {
-            fieldName: key, originalName: key, safeName: file.name,
-            fileName: file.name, size: file.size, mimetype: file.mimetype, path: destPath
+            fieldName: key, originalName: file.name, safeName,
+            fileName: safeName, size: file.size, mimetype: file.mimetype, path: destPath
           };
           uploadedFiles.push(fileInfo);
         }
@@ -370,10 +388,16 @@ export class FileUploadExample {
         const uploadedFiles: UploadFileInfo[] = [];
         for (const key of Object.keys(files)) {
           const file = files[key] as UploadedFile;
-          const destPath = `${this.uploadDir}/${file.name}`;
+          const safeName = Utils.sanitizeFilename(file.name);
+          if (!safeName) {
+            const err: ErrResp = { success: false, error: 'Invalid filename' };
+            res.status(400).json(err as ESObject);
+            return;
+          }
+          const destPath = `${this.uploadDir}/${safeName}`;
           await file.mv(destPath);
           const fileInfo: UploadFileInfo = {
-            fieldName: key, fileName: file.name,
+            fieldName: key, fileName: safeName,
             size: file.size, mimetype: file.mimetype, path: destPath, truncated: file.truncated
           };
           uploadedFiles.push(fileInfo);
@@ -515,12 +539,13 @@ export class FileUploadExample {
           return;
         }
         const info: ChunkInfo = {
-          chunkIndex: parseInt(data.chunkIndex),
-          totalChunks: parseInt(data.totalChunks),
+          chunkIndex: parseInt(data.chunkIndex, 10),
+          totalChunks: parseInt(data.totalChunks, 10),
           fileName: data.fileName,
           fileHash: data.fileHash
         };
-        if (!info.fileHash || !info.fileName || isNaN(info.chunkIndex) || isNaN(info.totalChunks)) {
+        if (!info.fileHash || !info.fileName || isNaN(info.chunkIndex) || isNaN(info.totalChunks)
+          || !/^[a-zA-Z0-9_-]+$/.test(info.fileHash) || info.chunkIndex < 0 || info.totalChunks <= 0) {
           const err: SimpleErrResp = { error: 'Invalid chunk parameters' };
           res.status(400).json(err as ESObject);
           return;
@@ -570,9 +595,20 @@ export class FileUploadExample {
       try {
         const data = req.body as Record<string, string>;
         const fileHash = data.fileHash;
-        const fileName = data.fileName;
-        if (!fileHash || !fileName) {
+        const rawFileName = data.fileName;
+        if (!fileHash || !rawFileName) {
           const err: SimpleErrResp = { error: 'fileHash and fileName are required' };
+          res.status(400).json(err as ESObject);
+          return;
+        }
+        if (!/^[a-zA-Z0-9_-]+$/.test(fileHash)) {
+          const err: SimpleErrResp = { error: 'Invalid fileHash' };
+          res.status(400).json(err as ESObject);
+          return;
+        }
+        const fileName = Utils.sanitizeFilename(rawFileName);
+        if (!fileName) {
+          const err: SimpleErrResp = { error: 'Invalid fileName' };
           res.status(400).json(err as ESObject);
           return;
         }
@@ -707,7 +743,12 @@ export class FileUploadExample {
 
     this.server.delete('/api/upload/files/:filename', async (req: HttpRequest, res: HttpResponse) => {
       try {
-        const filename = req.params['filename'];
+        const filename = Utils.sanitizeFilename(req.params['filename']);
+        if (!filename) {
+          const err: SimpleErrResp = { error: 'Invalid filename' };
+          res.status(400).json(err as ESObject);
+          return;
+        }
         const filePath = `${this.uploadDir}/${filename}`;
         const exists = await fileIo.access(filePath).catch(() => false);
         if (exists) {

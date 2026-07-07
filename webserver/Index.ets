@@ -14,6 +14,8 @@ export { UploadStream, StreamState } from './src/main/ets/UploadStream'
 
 export type { ChunkHandler, EndHandler, StreamErrorHandler } from './src/main/ets/UploadStream'
 
+export { Utils } from './src/main/ets/Utils'
+
 export * from './src/main/ets/middleware/index'
 
 export * from './src/main/ets/ServerEvents'

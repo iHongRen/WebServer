@@ -64,12 +64,12 @@ export class StaticFiles {
       const decodedPath = decodeURIComponent(req.path);
       const requestedPath = Utils.normalizePath(decodedPath);
       
-      // 安全检查：防止路径遍历攻击
-      if (requestedPath.includes('..')) {
+      // 安全检查：检测路径穿越（segment 级严格匹配，避免 a..b 误判）
+      if (requestedPath.split('/').some(s => s === '..')) {
         res.status(400).send('Invalid Path');
         return;
       }
-      
+
       let fullPath = directoryPath + (requestedPath === '/' ? '/index.html' : requestedPath);
       
       try {
@@ -222,8 +222,8 @@ export class StaticFiles {
       const decodedPath = decodeURIComponent(req.path);
       const requestedPath = Utils.normalizePath(decodedPath);
 
-      // 安全检查：防止路径遍历攻击
-      if (requestedPath.includes('..')) {
+      // 安全检查：检测路径穿越（segment 级严格匹配，避免 a..b 误判）
+      if (requestedPath.split('/').some(s => s === '..')) {
         res.status(400).send('Invalid Path');
         return;
       }
