@@ -591,8 +591,10 @@ export class HttpServer {
         // 普通路由：按 Content-Length 预分配完整 buffer
         const headerLen = headerEnd + 4; // \r\n\r\n
         const clStr = parsedHeader.headers.get('content-length');
-        const contentLength = clStr ? parseInt(clStr) : 0;
-        const totalSize = headerLen + contentLength;
+        const contentLength = clStr ? parseInt(clStr, 10) : 0;
+        // NaN 不可与 maxBodySize 比较（NaN > x 恒为 false），视为 0 以触发 413/短路逻辑
+        const safeContentLength = Number.isFinite(contentLength) ? contentLength : 0;
+        const totalSize = headerLen + safeContentLength;
 
         // 预分配上限，超出则返回 413（上限由构造函数 options.maxBodySize 配置）
         if (this.maxBodySize > 0 && totalSize > this.maxBodySize) {
@@ -686,7 +688,9 @@ export class HttpServer {
 
     const contentLengthStr = req.get('content-length');
     const isChunked = (req.get('transfer-encoding') ?? '').toLowerCase().includes('chunked');
-    const contentLength = contentLengthStr ? parseInt(contentLengthStr) : 0;
+    const rawContentLength = contentLengthStr ? parseInt(contentLengthStr, 10) : 0;
+    // NaN 视为 0，避免流式分支误判为无限制
+    const contentLength = Number.isFinite(rawContentLength) ? rawContentLength : 0;
     const stream = new UploadStream(isChunked ? -1 : contentLength);
     req.uploadStream = stream;
 

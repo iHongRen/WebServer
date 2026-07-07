@@ -97,19 +97,21 @@ export class RequestParser {
    * 仅解析 header 部分（不解析 body），用于流式模式
    */
   public static parseHeaderOnly(buffer: ArrayBuffer): ParsedHeader {
-    const bufferStr = Utils.arrayBufferToStr(buffer);
-    const headerEndIndex = bufferStr.indexOf(RequestParser.HEADER_END);
-    if (headerEndIndex === -1) {
+    const view = new Uint8Array(buffer);
+    const headerEndByte = RequestParser.findHeaderEnd(buffer);
+    if (headerEndByte === -1) {
       const empty: ParsedHeader = { method: '', path: '', headers: new Map() };
       return empty;
     }
 
-    const headerStr = bufferStr.substring(0, headerEndIndex);
+    // 按字节偏移切片，避免多字节字符导致偏移错位
+    const headerBytes = view.slice(0, headerEndByte);
+    const headerStr = Utils.uint8ToStr(headerBytes);
     const lines = headerStr.split(RequestParser.CRLF);
-    const requestLine = lines[0];
+    const requestLine = lines[0] || '';
     const parts = requestLine.split(' ');
     const method = parts[0] || '';
-    const fullPath = parts[1] || '/';
+    const fullPath = parts.length > 1 ? parts[1] : '/';
     const queryIndex = fullPath.indexOf('?');
     const path = queryIndex !== -1 ? fullPath.substring(0, queryIndex) : fullPath;
     const headers = RequestParser.parseHeaders(lines.slice(1));
@@ -130,23 +132,25 @@ export class RequestParser {
    * 优化：减少字符串操作，提升解析速度
    */
   public static parse(buffer: ArrayBuffer): ParsedRequest {
-    const bufferStr = Utils.arrayBufferToStr(buffer);
-    const headerEndIndex = bufferStr.indexOf(RequestParser.HEADER_END);
+    const view = new Uint8Array(buffer);
+    const headerEndByte = RequestParser.findHeaderEnd(buffer);
 
-    if (headerEndIndex === -1) {
+    if (headerEndByte === -1) {
       return RequestParser.createEmptyResult();
     }
 
-    const headerStr = bufferStr.substring(0, headerEndIndex);
-    const bodyData = buffer.slice(headerEndIndex + 4);
+    // 按字节偏移切片，避免多字节字符导致偏移错位
+    const headerBytes = view.slice(0, headerEndByte);
+    const headerStr = Utils.uint8ToStr(headerBytes);
+    const bodyData = buffer.slice(headerEndByte + 4);
 
     const lines = headerStr.split(RequestParser.CRLF);
-    const requestLine = lines[0];
+    const requestLine = lines[0] || '';
     const parts = requestLine.split(' ');
 
-    const method = parts[0];
-    const fullPath = parts[1];
-    const version = parts[2];
+    const method = parts[0] || '';
+    const fullPath = parts.length > 1 ? parts[1] : '/';
+    const version = parts.length > 2 ? parts[2] : '';
 
     // 解析路径和查询字符串
     const queryIndex = fullPath.indexOf('?');
@@ -159,9 +163,11 @@ export class RequestParser {
     const transferEncoding = headers.get('transfer-encoding');
     const isChunked = transferEncoding?.toLowerCase().includes('chunked') ?? false;
 
-    // 获取内容长度
+    // 获取内容长度：使用 radix=10 并校验 NaN，防止 NaN 绕过大小限制比较
     const contentLengthStr = headers.get('content-length');
-    const contentLength = contentLengthStr ? parseInt(contentLengthStr) : 0;
+    const contentLength = contentLengthStr
+      ? RequestParser.parseSafeInt(contentLengthStr, 0)
+      : 0;
 
     const result: ParsedRequest = {
       method,
@@ -178,8 +184,17 @@ export class RequestParser {
   }
 
   /**
+   * 安全解析整数：radix=10，非有限数返回 fallback
+   */
+  private static parseSafeInt(s: string, fallback: number): number {
+    const n = parseInt(s, 10);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  /**
    * 快速解析请求头
    * 优化：使用 Map 提升查找性能
+   * RFC 7230 §3.2.2：重复头用逗号合并
    */
   private static parseHeaders(lines: string[]): Map<string, string> {
     const headers = new Map<string, string>();
@@ -194,7 +209,8 @@ export class RequestParser {
       if (colonIndex !== -1) {
         const name = line.substring(0, colonIndex).toLowerCase();
         const value = line.substring(colonIndex + 2);
-        headers.set(name, value);
+        const existing = headers.get(name);
+        headers.set(name, existing ? `${existing}, ${value}` : value);
       }
     }
 
@@ -207,7 +223,7 @@ export class RequestParser {
   private static extractContentLength(headerBytes: Uint8Array): number {
     const headerStr = Utils.uint8ToStr(headerBytes);
     const match = headerStr.match(/Content-Length:\s*(\d+)/i);
-    return match ? parseInt(match[1]) : 0;
+    return match ? RequestParser.parseSafeInt(match[1], 0) : 0;
   }
 
   /**
@@ -220,25 +236,31 @@ export class RequestParser {
 
   /**
    * 检查是否有分块结束标记
+   * 必须以 "0\r\n\r\n" 结尾，且 '0' 位于 chunk 起始位置（前面是 \r\n 或 buffer 起始），
+   * 防止 chunk 数据中恰好出现 0x30 0x0D 0x0A 0x0D 0x0A 字节序列时误判
    */
   private static hasChunkEnd(view: Uint8Array): boolean {
     const len = view.length;
     if (len < 5) {
       return false;
     }
-
-    // 查找 "0\r\n\r\n"
-    for (let i = len - 5; i >= 0; i--) {
-      if (view[i] === 0x30 && // '0'
-        view[i + 1] === 0x0D && // '\r'
-        view[i + 2] === 0x0A && // '\n'
-        view[i + 3] === 0x0D && // '\r'
-        view[i + 4] === 0x0A) { // '\n'
-        return true;
-      }
+    // 末尾必须是 "0\r\n\r\n"
+    if (view[len - 5] !== 0x30 ||
+      view[len - 4] !== 0x0D ||
+      view[len - 3] !== 0x0A ||
+      view[len - 2] !== 0x0D ||
+      view[len - 1] !== 0x0A) {
+      return false;
     }
-
-    return false;
+    // 整个 buffer 就是 "0\r\n\r\n"
+    if (len === 5) {
+      return true;
+    }
+    // '0' 前一字节必须是 \n，再前一字节必须是 \r（前一个 chunk 的终止符）
+    if (len < 7) {
+      return false;
+    }
+    return view[len - 7] === 0x0D && view[len - 6] === 0x0A;
   }
 
   /**
