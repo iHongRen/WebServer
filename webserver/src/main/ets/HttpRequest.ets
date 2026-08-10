@@ -71,11 +71,16 @@ export class HttpRequest {
 
   /**
    * 获取请求的Content-Length
-   * @returns 内容长度
+   * @returns 内容长度；缺失或非法返回 0
    */
   public get contentLength(): number {
     const length = this.get('content-length');
-    return length ? parseInt(length) : 0;
+    if (!length) {
+      return 0;
+    }
+    const n = parseInt(length, 10);
+    // NaN 与 Infinity 不可与上限比较（NaN > x 恒为 false），统一回退为 0
+    return Number.isFinite(n) ? n : 0;
   }
 
   /**

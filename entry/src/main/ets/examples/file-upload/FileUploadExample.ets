@@ -239,6 +239,7 @@ export class FileUploadExample {
   }
 
   private async copyStaticFile(fileName: string): Promise<void> {
+    let fd: number = -1;
     try {
       const uint8 = await this.context?.resourceManager.getRawFileContent(fileName);
       if (!uint8) {
@@ -247,10 +248,18 @@ export class FileUploadExample {
       const filePath = `${this.staticDir}/${fileName}`;
       const file = await fileIo.open(filePath,
         fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
-      await fileIo.write(file.fd, uint8.buffer as ArrayBuffer);
-      await fileIo.close(file.fd);
+      fd = file.fd;
+      await fileIo.write(fd, uint8.buffer as ArrayBuffer);
     } catch (e) {
       console.error(`复制静态文件失败: ${fileName}`, e);
+    } finally {
+      if (fd >= 0) {
+        try {
+          await fileIo.close(fd);
+        } catch (_) {
+          // 忽略 close 异常
+        }
+      }
     }
   }
 
@@ -475,7 +484,12 @@ export class FileUploadExample {
           fd = -1;
         } catch (_) {
         }
-        const stat = await fileIo.stat(destPath).catch(() => null);
+        let stat: fileIo.Stat | null = null;
+        try {
+          stat = await fileIo.stat(destPath);
+        } catch (_) {
+          // 忽略 stat 异常
+        }
         const streamResult: StreamResp = {
           success: true,
           message: '流式上传完成',
@@ -489,12 +503,18 @@ export class FileUploadExample {
         console.error('[StreamUpload] error:', err.message);
         hasError = true;
         if (fd >= 0) {
-          await fileIo.close(fd).catch(() => {
-          });
+          try {
+            await fileIo.close(fd);
+          } catch (_) {
+            // 忽略 close 异常
+          }
           fd = -1;
         }
-        await fileIo.unlink(destPath).catch(() => {
-        });
+        try {
+          await fileIo.unlink(destPath);
+        } catch (_) {
+          // 忽略 unlink 异常
+        }
         if (!res.isHeadersSent()) {
           const streamErr: ErrResp = { success: false, error: err.message };
           res.status(500).json(streamErr as ESObject);
@@ -574,8 +594,16 @@ export class FileUploadExample {
         const chunkPath = `${this.tempDir}/${info.fileHash}_${info.chunkIndex}`;
         const file = await fileIo.open(chunkPath,
           fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
-        await fileIo.write(file.fd, chunkFile.data);
-        await fileIo.close(file.fd);
+        const chunkFd: number = file.fd;
+        try {
+          await fileIo.write(chunkFd, chunkFile.data);
+        } finally {
+          try {
+            await fileIo.close(chunkFd);
+          } catch (_) {
+            // 忽略 close 异常
+          }
+        }
 
         task.uploadedChunks.add(info.chunkIndex);
         task.chunkPaths.set(info.chunkIndex, chunkPath);
@@ -635,30 +663,62 @@ export class FileUploadExample {
         const finalPath = `${this.uploadDir}/${fileName}`;
         const finalFile = await fileIo.open(finalPath,
           fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.TRUNC);
+        let finalFd: number = finalFile.fd;
+        let srcFd: number = -1;
 
-        let writeOffset = 0;
-        for (let i = 0; i < task.totalChunks; i++) {
-          const chunkPath = task.chunkPaths.get(i);
-          if (chunkPath) {
-            // 用 copyFile 的 offset 参数直接系统级追加，省去用户层 read→write 往返
-            const chunkStat = await fileIo.stat(chunkPath);
-            const chunkSize = chunkStat.size;
-            const srcFile = await fileIo.open(chunkPath, fileIo.OpenMode.READ_ONLY);
-            // 分批写入，避免把整个分片读进内存
-            const PIPE_BUF = 512 * 1024; // 512 KB 管道缓冲
-            let readOffset = 0;
-            while (readOffset < chunkSize) {
-              const toRead = Math.min(PIPE_BUF, chunkSize - readOffset);
-              const buf = new ArrayBuffer(toRead);
-              const bytesRead = await fileIo.read(srcFile.fd, buf, { offset: readOffset, length: toRead });
-              await fileIo.write(finalFile.fd, buf, { offset: writeOffset, length: bytesRead });
-              readOffset += bytesRead;
-              writeOffset += bytesRead;
+        try {
+          let writeOffset = 0;
+          for (let i = 0; i < task.totalChunks; i++) {
+            const chunkPath = task.chunkPaths.get(i);
+            if (chunkPath) {
+              const chunkStat = await fileIo.stat(chunkPath);
+              const chunkSize = chunkStat.size;
+              const srcFile = await fileIo.open(chunkPath, fileIo.OpenMode.READ_ONLY);
+              srcFd = srcFile.fd;
+              // 分批写入，避免把整个分片读进内存
+              const PIPE_BUF = 512 * 1024; // 512 KB 管道缓冲
+              let readOffset = 0;
+              while (readOffset < chunkSize) {
+                const toRead = Math.min(PIPE_BUF, chunkSize - readOffset);
+                const buf = new ArrayBuffer(toRead);
+                const bytesRead = await fileIo.read(srcFd, buf, { offset: readOffset, length: toRead });
+                await fileIo.write(finalFd, buf, { offset: writeOffset, length: bytesRead });
+                readOffset += bytesRead;
+                writeOffset += bytesRead;
+              }
+              await fileIo.close(srcFd);
+              srcFd = -1;
             }
-            await fileIo.close(srcFile.fd);
           }
+        } catch (e) {
+          // 异常路径下确保 fd 不泄漏
+          if (srcFd >= 0) {
+            try {
+              await fileIo.close(srcFd);
+            } catch (_) {
+              // 忽略 close 异常
+            }
+          }
+          if (finalFd >= 0) {
+            try {
+              await fileIo.close(finalFd);
+            } catch (_) {
+              // 忽略 close 异常
+            }
+            finalFd = -1;
+          }
+          try {
+            await fileIo.unlink(finalPath);
+          } catch (_) {
+            // 忽略 unlink 异常
+          }
+          const err: SimpleErrResp = { error: 'Failed to merge file' };
+          res.status(500).json(err as ESObject);
+          return;
         }
-        await fileIo.close(finalFile.fd);
+        if (finalFd >= 0) {
+          await fileIo.close(finalFd);
+        }
 
         const stat = await fileIo.stat(finalPath);
         await this.cleanupTaskChunks(task);

@@ -63,6 +63,14 @@ export interface ServerOptions {
    *  设为 0 表示不限制（不推荐）。
    */
   maxBodySize?: number;
+  /** 请求头最大字节数（含请求行与 CRLF），超出返回 431 并断开。默认 16KB。
+   *  防止恶意客户端发送无 \r\n\r\n 终止的巨型 header 撑爆内存。
+   */
+  maxHeaderSize?: number;
+  /** 流式路由（server.stream）累计 body 上限（字节），超出中断流并返回 413。默认 200MB。
+   *  chunked 模式下用于限制累积缓冲；Content-Length 模式下用于在初始化时拒绝过大声明。
+   */
+  maxStreamBodySize?: number;
 }
 
 /**
@@ -81,18 +89,26 @@ export class HttpServer {
   private requestOffsets: Map<number, number> = new Map(); // 每个连接已写入字节数（预分配模式）
   private streamSessions: Map<number, StreamSession> = new Map(); // 流式上传会话，key = clientId
   private maxBodySize: number; // 请求体预分配内存上限
+  private maxHeaderSize: number; // 请求头字节上限（含请求行）
+  private maxStreamBodySize: number; // 流式路由累计 body 上限
 
   /**
    * 构造函数
    * @param poolConfig 连接池配置
    * @param cacheConfig 响应缓存配置
-   * @param options 服务器选项（含 maxBodySize）
+   * @param options 服务器选项（含 maxBodySize / maxHeaderSize / maxStreamBodySize）
    */
   constructor(poolConfig?: PoolConfig, cacheConfig?: CacheConfig, options?: ServerOptions) {
     this.connectionPool = new ConnectionPool(poolConfig);
     this.responseCache = new ResponseCache(cacheConfig);
     this.maxBodySize = (options?.maxBodySize !== undefined && options.maxBodySize > 0)
       ? options.maxBodySize
+      : 200 * 1024 * 1024; // 默认 200MB
+    this.maxHeaderSize = (options?.maxHeaderSize !== undefined && options.maxHeaderSize > 0)
+      ? options.maxHeaderSize
+      : 16 * 1024; // 默认 16KB
+    this.maxStreamBodySize = (options?.maxStreamBodySize !== undefined && options.maxStreamBodySize > 0)
+      ? options.maxStreamBodySize
       : 200 * 1024 * 1024; // 默认 200MB
     this.use404();
   }
@@ -575,6 +591,21 @@ export class HttpServer {
         const headerEnd = RequestParser.findHeaderEnd(buffer);
         if (headerEnd === -1) {
           // header 还没收完，继续缓冲（此阶段数据量极小，merge 开销可忽略）
+          // 防止恶意客户端发送无 \r\n\r\n 终止的巨型 header 撑爆内存
+          if (this.maxHeaderSize > 0 && buffer.byteLength > this.maxHeaderSize) {
+            this.requestBuffers.delete(clientId);
+            const errBuf = Utils.strToArrayBuffer(
+              'HTTP/1.1 431 Request Header Fields Too Large\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
+            );
+            try {
+              await (this.connectionPool.get(clientId)?.socket as socket.TCPSocketConnection)
+                ?.send({ data: errBuf });
+            } catch (_) {
+              // 忽略发送异常
+            }
+            this.removeClient(clientSocket);
+            return;
+          }
           this.requestBuffers.set(clientId, buffer);
           return;
         }
@@ -584,7 +615,7 @@ export class HttpServer {
         if (this.isStreamRoute(parsedHeader.method, parsedHeader.path)) {
           this.requestBuffers.delete(clientId);
           this.requestOffsets.delete(clientId);
-          this.initStreamSession(clientSocket, data, buffer, headerEnd);
+          await this.initStreamSession(clientSocket, data, buffer, headerEnd);
           return;
         }
 
@@ -602,9 +633,12 @@ export class HttpServer {
           const errBuf = Utils.strToArrayBuffer(
             'HTTP/1.1 413 Content Too Large\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
           );
-          const tmpData: socket.SocketMessageInfo = { message: errBuf, remoteInfo: data.remoteInfo };
-          await (this.connectionPool.get(clientId)?.socket as socket.TCPSocketConnection)
-            ?.send({ data: errBuf }).catch(() => {});
+          try {
+            await (this.connectionPool.get(clientId)?.socket as socket.TCPSocketConnection)
+              ?.send({ data: errBuf });
+          } catch (_) {
+            // 忽略发送异常
+          }
           this.removeClient(clientSocket);
           return;
         }
@@ -657,6 +691,13 @@ export class HttpServer {
       }
     } else {
       // chunked 模式：累积检测终止标记 "0\r\n\r\n"
+      // 防止恶意客户端发送永不结束的 chunked 流撑爆内存
+      if (this.maxStreamBodySize > 0 && stream.bytesReceived > this.maxStreamBodySize) {
+        this.streamSessions.delete(clientId);
+        this.requestBuffers.delete(clientId);
+        stream._error(new Error('Stream body exceeds maxStreamBodySize'));
+        return;
+      }
       stream._push(chunk);
       let buf = this.requestBuffers.get(clientId) || new ArrayBuffer(0);
       buf = Utils.mergeArrayBuffers(buf, chunk);
@@ -672,12 +713,12 @@ export class HttpServer {
   /**
    * 初始化流式上传会话：解析 header、创建 stream、触发路由，并推送已收到的 body 片段
    */
-  private initStreamSession(
+  private async initStreamSession(
     clientSocket: socket.TCPSocketConnection | socket.TLSSocketConnection,
     data: socket.SocketMessageInfo,
     buffer: ArrayBuffer,
     headerEnd: number
-  ): void {
+  ): Promise<void> {
     const clientId = clientSocket.clientId;
 
     const headerOnlyBuffer = buffer.slice(0, headerEnd + 4);
@@ -691,6 +732,20 @@ export class HttpServer {
     const rawContentLength = contentLengthStr ? parseInt(contentLengthStr, 10) : 0;
     // NaN 视为 0，避免流式分支误判为无限制
     const contentLength = Number.isFinite(rawContentLength) ? rawContentLength : 0;
+
+    if (this.maxStreamBodySize > 0 && !isChunked && contentLength > this.maxStreamBodySize) {
+      const errBuf = Utils.strToArrayBuffer(
+        'HTTP/1.1 413 Content Too Large\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
+      );
+      try {
+        await (clientSocket as socket.TCPSocketConnection).send({ data: errBuf });
+      } catch (_) {
+        // 忽略发送异常
+      }
+      this.removeClient(clientSocket);
+      return;
+    }
+
     const stream = new UploadStream(isChunked ? -1 : contentLength);
     req.uploadStream = stream;
 

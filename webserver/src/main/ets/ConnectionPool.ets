@@ -84,11 +84,20 @@ export class ConnectionPool {
 
   /**
    * 移除连接
+   * 同时关闭 socket，防止 fd 在异常/错误路径下泄漏（如 413/431 早返回、socket error）
    */
   public remove(clientId: number): void {
     const conn = this.connections.get(clientId);
     if (conn) {
       conn.isActive = false;
+      // 关闭 socket：close 幂等，重复调用无副作用；不 await，避免阻塞调用方
+      void (async (): Promise<void> => {
+        try {
+          await conn.socket.close();
+        } catch (_) {
+          // 忽略 close 异常
+        }
+      })();
       this.connections.delete(clientId);
     }
   }
@@ -124,8 +133,13 @@ export class ConnectionPool {
     }
     const closePromises: Promise<void>[] = [];
     this.connections.forEach((conn) => {
-      closePromises.push(conn.socket.close().catch(() => {
-      }));
+      closePromises.push((async (): Promise<void> => {
+        try {
+          await conn.socket.close();
+        } catch (_) {
+          // 忽略 close 异常
+        }
+      })());
     });
     await Promise.all(closePromises);
     this.connections.clear();

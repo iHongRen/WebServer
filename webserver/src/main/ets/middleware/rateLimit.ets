@@ -20,6 +20,10 @@ export interface RateLimitOptions {
   skipSuccessfulRequests?: boolean; // 跳过成功请求
   skipFailedRequests?: boolean; // 跳过失败请求
   keyGenerator?: (req: HttpRequest) => string; // 自定义键生成器
+  /** store 最大键数，超出时淘汰最早记录。默认 10000。
+   *  防止攻击者通过伪造 X-Forwarded-For 制造海量唯一 key 撑爆内存。
+   */
+  maxKeys?: number;
 }
 
 /**
@@ -41,6 +45,7 @@ interface RateLimitConfig {
   skipSuccessfulRequests: boolean;
   skipFailedRequests: boolean;
   keyGenerator: (req: HttpRequest) => string;
+  maxKeys: number;
 }
 
 /**
@@ -49,6 +54,8 @@ interface RateLimitConfig {
  */
 export class RateLimit {
   private static stores: Map<string, Map<string, RequestRecord>> = new Map();
+  // 每个 store 对应一个清理定时器，reset 时一并清除，避免定时器泄漏
+  private static timers: Map<string, number> = new Map();
 
   /**
    * 创建限流中间件
@@ -61,24 +68,30 @@ export class RateLimit {
       statusCode: options?.statusCode ?? 429,
       skipSuccessfulRequests: options?.skipSuccessfulRequests ?? false,
       skipFailedRequests: options?.skipFailedRequests ?? false,
-      keyGenerator: options?.keyGenerator ?? ((req: HttpRequest): string => req.ip)
+      keyGenerator: options?.keyGenerator ?? ((req: HttpRequest): string => req.ip),
+      maxKeys: options?.maxKeys ?? 10000
     };
 
     const storeId = `${config.windowMs}_${config.max}`;
+    // 仅在新创建 store 时启动定时器，避免重复 create() 导致 setInterval 累积泄漏
     if (!RateLimit.stores.has(storeId)) {
       RateLimit.stores.set(storeId, new Map<string, RequestRecord>());
+      const cleanupTimer = setInterval(() => {
+        const store = RateLimit.stores.get(storeId);
+        if (!store) {
+          return;
+        }
+        const now = Date.now();
+        store.forEach((record: RequestRecord, key: string) => {
+          if (now > record.resetTime) {
+            store.delete(key);
+          }
+        });
+      }, config.windowMs);
+
+      RateLimit.timers.set(storeId, cleanupTimer);
     }
     const store = RateLimit.stores.get(storeId)!;
-
-    // 定期清理过期记录
-    setInterval(() => {
-      const now = Date.now();
-      store.forEach((record: RequestRecord, key: string) => {
-        if (now > record.resetTime) {
-          store.delete(key);
-        }
-      });
-    }, config.windowMs);
 
     return (req: HttpRequest, res: HttpResponse, next: NextFunction): void => {
       const key = config.keyGenerator(req);
@@ -87,6 +100,20 @@ export class RateLimit {
       let record = store.get(key);
 
       if (!record || now > record.resetTime) {
+        // store 已满：淘汰最早记录，避免攻击者通过伪造唯一 key 撑爆内存
+        if (config.maxKeys > 0 && store.size >= config.maxKeys) {
+          let oldestKey: string | null = null;
+          let oldestTime: number = Number.MAX_SAFE_INTEGER;
+          store.forEach((r: RequestRecord, k: string) => {
+            if (r.resetTime < oldestTime) {
+              oldestTime = r.resetTime;
+              oldestKey = k;
+            }
+          });
+          if (oldestKey !== null) {
+            store.delete(oldestKey);
+          }
+        }
         const newRecord: RequestRecord = {
           count: 0,
           resetTime: now + config.windowMs
@@ -129,9 +156,13 @@ export class RateLimit {
   }
 
   /**
-   * 清除所有限流记录
+   * 清除所有限流记录与清理定时器
    */
   public static reset(): void {
+    RateLimit.timers.forEach((timer: number) => {
+      clearInterval(timer);
+    });
+    RateLimit.timers.clear();
     RateLimit.stores.clear();
   }
 }
